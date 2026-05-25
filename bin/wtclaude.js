@@ -12,6 +12,7 @@ import { registerInvite } from '../src/cli/invite.js';
 import { registerSync } from '../src/cli/sync.js';
 import { registerBadges } from '../src/cli/badges.js';
 import { registerShare } from '../src/cli/share.js';
+import { registerDashboard } from '../src/cli/dashboard.js';
 
 const program = new Command();
 
@@ -31,5 +32,6 @@ registerInvite(program);
 registerSync(program);
 registerBadges(program);
 registerShare(program);
+registerDashboard(program);
 
 program.parse();
