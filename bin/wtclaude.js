@@ -9,6 +9,9 @@ import { registerWhatIf } from '../src/cli/whatif.js';
 import { registerDebrief } from '../src/cli/debrief.js';
 import { registerSetup } from '../src/cli/setup.js';
 import { registerInvite } from '../src/cli/invite.js';
+import { registerSync } from '../src/cli/sync.js';
+import { registerBadges } from '../src/cli/badges.js';
+import { registerShare } from '../src/cli/share.js';
 
 const program = new Command();
 
@@ -25,5 +28,8 @@ registerWhatIf(program);
 registerDebrief(program);
 registerSetup(program);
 registerInvite(program);
+registerSync(program);
+registerBadges(program);
+registerShare(program);
 
 program.parse();
