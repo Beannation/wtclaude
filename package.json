@@ -1,0 +1,28 @@
+{
+  "name": "wtclaude",
+  "version": "0.1.0",
+  "description": "The first accurate Claude Code usage tracker. Other tools undercount by 100x.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "wtclaude": "./bin/wtclaude.js",
+    "wtclaude-collector": "./src/collector/index.js"
+  },
+  "files": [
+    "bin/",
+    "src/"
+  ],
+  "keywords": [
+    "claude",
+    "claude-code",
+    "token-tracker",
+    "usage",
+    "anthropic"
+  ],
+  "scripts": {
+    "test": "node --test src/**/*.test.js"
+  },
+  "dependencies": {
+    "commander": "^13.0.0"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "version": "2026-05-25",
+  "models": {
+    "claude-haiku-4-5-20251001": { "input": 1.00, "output": 5.00 },
+    "haiku-4-5": { "input": 1.00, "output": 5.00 },
+    "claude-sonnet-4-6-20250514": { "input": 3.00, "output": 15.00 },
+    "sonnet-4-6": { "input": 3.00, "output": 15.00 },
+    "claude-opus-4-7-20250514": { "input": 5.00, "output": 25.00 },
+    "opus-4-7": { "input": 5.00, "output": 25.00 }
+  },
+  "cache": {
+    "read_multiplier": 0.10,
+    "write_multiplier": 0.25
+  },
+  "plans": {
+    "pro": { "price_monthly": 20, "label": "Pro" },
+    "max_5x": { "price_monthly": 100, "label": "Max 5x" },
+    "max_20x": { "price_monthly": 200, "label": "Max 20x" },
+    "team_standard": { "price_per_seat": 30, "label": "Team Standard" },
+    "team_premium": { "price_per_seat": 60, "label": "Team Premium" }
+  },
+  "units": "USD per million tokens"
+}
