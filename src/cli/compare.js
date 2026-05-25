@@ -1,14 +1,19 @@
+import { writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { homedir } from 'node:os';
 import { getSessionsForDateRange, summarizeSessions } from '../utils/sessions.js';
 import { readJsonlSessions, summarizeJsonl } from '../compare/jsonl-reader.js';
 import { formatComparisonTable } from '../utils/format.js';
 import { computeTurnCost } from '../utils/cost.js';
 import { getModelPricing, getLatestPricing } from '../utils/pricing.js';
+import { generateComparisonCard, generateComparisonHtml } from '../compare/card-generator.js';
 
 export function registerCompare(program) {
   program
     .command('compare')
     .description('Compare accurate data vs JSONL (what ccusage reads)')
     .option('--days <n>', 'Number of days to compare', '1')
+    .option('--share', 'Save a shareable comparison card to ~/Desktop')
     .action((opts) => {
       const days = parseInt(opts.days, 10);
       const end = new Date();
@@ -33,6 +38,17 @@ export function registerCompare(program) {
       jsonl.cost = estimateJsonlCost(jsonl);
 
       console.log(formatComparisonTable(accurate, jsonl));
+
+      if (opts.share) {
+        const svgPath = join(homedir(), 'Desktop', 'wtclaude-comparison.svg');
+        const htmlPath = join(homedir(), 'Desktop', 'wtclaude-comparison.html');
+        writeFileSync(svgPath, generateComparisonCard(accurate, jsonl));
+        writeFileSync(htmlPath, generateComparisonHtml(accurate, jsonl));
+        console.log(`  Comparison card saved to:`);
+        console.log(`    ${svgPath}`);
+        console.log(`    ${htmlPath}`);
+        console.log(`  Open the HTML file in a browser, or share the SVG directly.\n`);
+      }
 
       if (jsonl.input_tokens > 0) {
         const gap = accurate.input_tokens / jsonl.input_tokens;

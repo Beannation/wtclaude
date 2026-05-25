@@ -8,6 +8,7 @@ import { registerCompare } from '../src/cli/compare.js';
 import { registerWhatIf } from '../src/cli/whatif.js';
 import { registerDebrief } from '../src/cli/debrief.js';
 import { registerSetup } from '../src/cli/setup.js';
+import { registerInvite } from '../src/cli/invite.js';
 
 const program = new Command();
 
@@ -23,5 +24,6 @@ registerCompare(program);
 registerWhatIf(program);
 registerDebrief(program);
 registerSetup(program);
+registerInvite(program);
 
 program.parse();

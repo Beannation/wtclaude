@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WTClaude — Your Claude Code tracker is lying to you</title>
+  <meta name="description" content="Every Claude Code usage tracker reads JSONL logs that undercount by 100x. WTClaude is the first to use the accurate data source.">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: system-ui, -apple-system, sans-serif; background: #0a0a0f; color: #e0e0e0; line-height: 1.6; }
+    .container { max-width: 720px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+    .hero { text-align: center; padding: 4rem 0 3rem; }
+    .hero h1 { font-size: 2.2rem; color: #ff6b6b; margin-bottom: 1rem; }
+    .hero p { font-size: 1.15rem; color: #999; max-width: 560px; margin: 0 auto; }
+
+    .proof { background: #111; border: 1px solid #222; border-radius: 12px; padding: 2rem; margin: 2rem 0; }
+    .proof h2 { font-size: 1.1rem; color: #ff6b6b; margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    .stat-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; text-align: center; }
+    .stat { padding: 1rem; background: #0a0a14; border-radius: 8px; }
+    .stat .label { font-size: 0.75rem; color: #666; text-transform: uppercase; margin-bottom: 0.5rem; }
+    .stat .value { font-size: 1.5rem; font-weight: 700; font-family: monospace; }
+    .stat .value.wrong { color: #666; text-decoration: line-through; }
+    .stat .value.right { color: #4ade80; }
+    .stat .value.gap { color: #ff6b6b; }
+
+    .install { background: #0f1a0f; border: 1px solid #1a3a1a; border-radius: 12px; padding: 2rem; margin: 2rem 0; text-align: center; }
+    .install h2 { color: #4ade80; margin-bottom: 1rem; }
+    .install code { display: inline-block; background: #000; color: #4ade80; padding: 0.75rem 1.5rem; border-radius: 8px; font-size: 1.1rem; margin: 0.5rem 0; }
+    .install p { color: #888; margin-top: 1rem; font-size: 0.9rem; }
+
+    .how { margin: 2rem 0; }
+    .how h2 { color: #fff; margin-bottom: 1rem; }
+    .how ol { padding-left: 1.5rem; }
+    .how li { margin-bottom: 0.75rem; color: #ccc; }
+    .how li strong { color: #fff; }
+
+    .why { margin: 2rem 0; }
+    .why h2 { color: #fff; margin-bottom: 1rem; }
+    .why p { color: #999; margin-bottom: 1rem; }
+
+    .footer { text-align: center; padding: 3rem 0 2rem; color: #444; font-size: 0.85rem; }
+    .footer a { color: #4ade80; text-decoration: none; }
+
+    @media (max-width: 500px) {
+      .stat-grid { grid-template-columns: 1fr; }
+      .hero h1 { font-size: 1.6rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="hero">
+      <h1>Your Claude Code tracker is lying to you by 100x</h1>
+      <p>Every usage tool reads JSONL logs where 75% of input token entries are recorded as 0. WTClaude reads the accurate data source instead.</p>
+    </div>
+
+    <div class="proof">
+      <h2>The real numbers</h2>
+      <div class="stat-grid">
+        <div class="stat">
+          <div class="label">JSONL says</div>
+          <div class="value wrong">225K tokens</div>
+        </div>
+        <div class="stat">
+          <div class="label">Actual</div>
+          <div class="value right">10.4M tokens</div>
+        </div>
+        <div class="stat">
+          <div class="label">Gap</div>
+          <div class="value gap">46x</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="install">
+      <h2>Check your real numbers in 60 seconds</h2>
+      <code>npx wtclaude setup</code>
+      <p>Then start a Claude Code session and run <code style="padding: 0.25rem 0.5rem; font-size: 0.9rem;">wtclaude compare</code></p>
+    </div>
+
+    <div class="how">
+      <h2>How it works</h2>
+      <ol>
+        <li><strong>Setup adds a statusline collector</strong> to your Claude Code config</li>
+        <li><strong>The collector captures accurate token counts</strong> from Claude Code's internal state — the same data the /cost command uses</li>
+        <li><strong>Run <code>wtclaude today</code></strong> to see your real usage, cost, and model breakdown</li>
+        <li><strong>Run <code>wtclaude compare</code></strong> to see how wrong your old tracker was</li>
+      </ol>
+    </div>
+
+    <div class="why">
+      <h2>Why are the JSONL logs wrong?</h2>
+      <p>Claude Code writes JSONL entries during streaming, before the API response completes. Input tokens get a placeholder value of 0 or 1. When the real number arrives, nobody goes back to update the log. Output tokens exclude thinking/reasoning tokens, which are 60-70% of Opus output.</p>
+      <p>This was independently verified by Magnus Gille, who found input tokens undercounted by 100-174x across multiple days of heavy use.</p>
+      <p>ccusage (43K weekly npm downloads), tokscale, and every other community tracker reads these broken logs. WTClaude is the first tool to use the accurate statusline data path.</p>
+    </div>
+
+    <div class="footer">
+      <p>MIT License &middot; <a href="https://github.com/wtclaude/wtclaude">GitHub</a></p>
+    </div>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get('ref');
+    if (ref) {
+      document.cookie = `wtclaude_ref=${ref};max-age=2592000;path=/`;
+    }
+  </script>
+</body>
+</html>
