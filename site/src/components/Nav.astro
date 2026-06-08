@@ -1,0 +1,140 @@
+---
+import { SHOW_DASHBOARD_LINK, LINKS } from '../config';
+import Mark from './Mark.astro';
+
+interface Props {
+  /** True when the page opens over a dark hero — nav text goes light until scroll. */
+  heroDark?: boolean;
+}
+const { heroDark = false } = Astro.props;
+
+// Slim, fixed, transparent → backdrop-blur on scroll. Mobile: hamburger.
+const navLinks = [
+  { href: '/docs', label: 'Docs' },
+  { href: '/blog', label: 'Blog' },
+  { href: LINKS.github, label: 'GitHub', external: true, track: 'cta_github' },
+];
+---
+
+<header
+  id="site-nav"
+  class:list={['fixed inset-x-0 top-0 z-50 transition-colors duration-300', { 'on-dark': heroDark }]}
+  data-nav
+  data-hero-dark={heroDark ? 'true' : 'false'}
+>
+  <nav class="mx-auto flex max-w-6xl items-center justify-between px-5 py-3.5">
+    <a href="/" class="flex items-center gap-2 text-ink" aria-label="WTClaude home">
+      <Mark class="h-8 w-8" />
+      <span class="font-mono text-lg font-bold tracking-tight">
+        <span class="text-amber">WT</span><span class="wordmark-ink text-ink">Claude</span>
+      </span>
+    </a>
+
+    <!-- desktop -->
+    <div class="hidden items-center gap-7 md:flex">
+      {
+        navLinks.map((l) => (
+          <a
+            href={l.href}
+            class="text-sm font-medium text-ink/75 transition hover:text-ink"
+            {...(l.external ? { target: '_blank', rel: 'noopener' } : {})}
+            data-track={l.track}
+          >
+            {l.label}
+          </a>
+        ))
+      }
+      {
+        SHOW_DASHBOARD_LINK && (
+          <a href="/dashboard" class="text-sm font-medium text-ink/75 transition hover:text-ink">
+            Dashboard
+          </a>
+        )
+      }
+      <a
+        href="/docs"
+        class="rounded-lg bg-amber px-4 py-2 text-sm font-semibold text-ink shadow-sm transition hover:bg-amber-deep hover:text-white"
+        data-track="cta_get_started"
+      >
+        Get started
+      </a>
+    </div>
+
+    <!-- mobile toggle -->
+    <button
+      type="button"
+      class="inline-flex items-center justify-center rounded-md p-2 text-ink md:hidden"
+      aria-label="Open menu"
+      aria-expanded="false"
+      data-menu-toggle
+    >
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+  </nav>
+
+  <!-- mobile menu -->
+  <div class="hidden border-t border-ink/10 bg-surface/95 backdrop-blur md:hidden" data-menu>
+    <div class="mx-auto flex max-w-6xl flex-col gap-1 px-5 py-3">
+      {
+        navLinks.map((l) => (
+          <a
+            href={l.href}
+            class="rounded-md px-2 py-2.5 text-base font-medium text-ink/80 hover:bg-ink/5"
+            {...(l.external ? { target: '_blank', rel: 'noopener' } : {})}
+            data-track={l.track}
+          >
+            {l.label}
+          </a>
+        ))
+      }
+      <a
+        href="/docs"
+        class="mt-1 rounded-lg bg-amber px-4 py-2.5 text-center text-base font-semibold text-ink"
+        data-track="cta_get_started"
+      >
+        Get started
+      </a>
+    </div>
+  </div>
+</header>
+
+<style is:global>
+  /* Transparent nav over a dark hero: light text until the user scrolls. */
+  [data-nav].on-dark a,
+  [data-nav].on-dark .wordmark-ink,
+  [data-nav].on-dark [data-menu-toggle] {
+    color: var(--color-surface);
+  }
+  [data-nav].on-dark a:hover {
+    color: #fff;
+  }
+</style>
+
+<script>
+  function initNav() {
+    const nav = document.querySelector<HTMLElement>('[data-nav]');
+    const heroDark = nav?.dataset.heroDark === 'true';
+    const onScroll = () => {
+      if (!nav) return;
+      const scrolled = window.scrollY > 12;
+      if (scrolled) {
+        nav.classList.add('bg-surface/80', 'backdrop-blur-md', 'shadow-sm');
+        nav.classList.remove('on-dark');
+      } else {
+        nav.classList.remove('bg-surface/80', 'backdrop-blur-md', 'shadow-sm');
+        nav.classList.toggle('on-dark', heroDark);
+      }
+    };
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+
+    const toggle = document.querySelector<HTMLButtonElement>('[data-menu-toggle]');
+    const menu = document.querySelector<HTMLElement>('[data-menu]');
+    toggle?.addEventListener('click', () => {
+      const open = menu?.classList.toggle('hidden');
+      toggle.setAttribute('aria-expanded', String(open === false));
+    });
+  }
+  initNav();
+  document.addEventListener('astro:page-load', initNav);
+</script>

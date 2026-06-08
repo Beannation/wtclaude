@@ -1,0 +1,138 @@
+---
+import BaseLayout from './BaseLayout.astro';
+import CodeBlock from '../components/CodeBlock.astro';
+
+interface Props {
+  title: string;
+  description: string;
+  pubDate: Date;
+  author: string;
+  readingTime?: string;
+  draftProse?: boolean;
+}
+const { title, description, pubDate, author, readingTime, draftProse } = Astro.props;
+const dateStr = pubDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' });
+---
+
+<BaseLayout title={`${title} — WTClaude`} description={description} ogType="article">
+  <article class="mx-auto max-w-[720px] px-5 py-16">
+    <a href="/blog" class="text-sm font-medium text-amber-deep hover:text-amber">← Blog</a>
+
+    {
+      draftProse && (
+        <p class="mt-6 rounded-lg border border-dashed border-amber/50 bg-amber-light/40 px-4 py-3 text-sm text-amber-deep">
+          <strong>Draft:</strong> body content is an outline awaiting GTM final prose — not for production.
+        </p>
+      )
+    }
+
+    <h1 class="mt-6 font-head text-3xl leading-tight sm:text-4xl">{title}</h1>
+    <p class="mt-4 text-sm text-warm">
+      {dateStr}{readingTime ? ` · ${readingTime}` : ''}{author ? ` · ${author}` : ''}
+    </p>
+
+    <div class="prose-body mt-10">
+      <slot />
+    </div>
+
+    <div class="mt-12 rounded-2xl border border-ink/10 bg-card p-6 text-center shadow-sm">
+      <p class="font-head text-lg">Track your real numbers.</p>
+      <div class="mx-auto mt-4 max-w-sm">
+        <CodeBlock code="npx wtclaude setup" track="readiness_cta" />
+      </div>
+    </div>
+  </article>
+
+  <script>
+    // Scroll-depth events: blog_read_50 / blog_read_100.
+    function initBlogDepth() {
+      if ((window as any).__wtBlogDepth) return;
+      (window as any).__wtBlogDepth = true;
+      const fired = new Set<string>();
+      const onScroll = () => {
+        const doc = document.documentElement;
+        const max = doc.scrollHeight - doc.clientHeight;
+        if (max <= 0) return;
+        const pct = (window.scrollY / max) * 100;
+        const fire = (ev: string) => {
+          if (fired.has(ev)) return;
+          fired.add(ev);
+          try {
+            (window as any).umami?.track(ev);
+          } catch {
+            /* no-op */
+          }
+        };
+        if (pct >= 50) fire('blog_read_50');
+        if (pct >= 95) fire('blog_read_100');
+        if (fired.has('blog_read_100')) window.removeEventListener('scroll', onScroll);
+      };
+      window.addEventListener('scroll', onScroll, { passive: true });
+    }
+    initBlogDepth();
+    document.addEventListener('astro:page-load', initBlogDepth);
+  </script>
+</BaseLayout>
+
+<style is:global>
+  .prose-body {
+    color: rgba(26, 25, 21, 0.82);
+    font-size: 1.0625rem;
+    line-height: 1.8;
+  }
+  .prose-body h2 {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 1.4rem;
+    color: var(--color-ink);
+    margin-top: 2.25rem;
+    margin-bottom: 0.75rem;
+    letter-spacing: -0.01em;
+  }
+  .prose-body p {
+    margin-bottom: 1.15rem;
+  }
+  .prose-body ul {
+    margin: 0 0 1.25rem 1.25rem;
+    list-style: disc;
+  }
+  .prose-body li {
+    margin-bottom: 0.5rem;
+  }
+  .prose-body strong {
+    color: var(--color-ink);
+    font-weight: 600;
+  }
+  .prose-body code {
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+    background: rgba(26, 25, 21, 0.06);
+    padding: 0.1em 0.35em;
+    border-radius: 0.3rem;
+  }
+  .prose-body blockquote {
+    border-left: 3px solid var(--color-amber);
+    background: var(--color-amber-light);
+    margin: 1.5rem 0;
+    padding: 0.85rem 1.15rem;
+    border-radius: 0 0.5rem 0.5rem 0;
+    font-size: 0.95rem;
+    color: var(--color-amber-deep);
+  }
+  .prose-body blockquote p {
+    margin: 0;
+  }
+  .prose-body pre {
+    background: var(--color-codebg);
+    color: var(--color-amber-light);
+    padding: 1rem 1.15rem;
+    border-radius: 0.75rem;
+    overflow-x: auto;
+    margin: 1.25rem 0;
+    font-size: 0.95rem;
+  }
+  .prose-body pre code {
+    background: none;
+    padding: 0;
+  }
+</style>

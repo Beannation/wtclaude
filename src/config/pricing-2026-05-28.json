@@ -1,0 +1,25 @@
+{
+  "version": "2026-05-28",
+  "effective_date": "2026-05-28",
+  "note": "Opus 4.8 launch. Standard rates unchanged from 4.6/4.7. Fast mode is Opus-only and is billed from usage credits (billing_basis = fast_mode_usage_credits), not subscription limits. Per-MTok USD (input/output). ⚠ VERIFY LIVE before June 9 launch (build-spec §11).",
+  "models": {
+    "haiku-4-5": { "input": 1.00, "output": 5.00 },
+    "sonnet-4-6": { "input": 3.00, "output": 15.00 },
+    "opus-4-8": {
+      "input": 5.00,
+      "output": 25.00,
+      "fast_mode": { "input": 10.00, "output": 50.00 },
+      "aliases": ["opus-4-7", "opus-4-6"]
+    }
+  },
+  "cache": {
+    "read_multiplier": 0.10,
+    "write_multiplier": 0.25
+  },
+  "plans": {
+    "pro": { "price_monthly": 20, "label": "Pro" },
+    "max_5x": { "price_monthly": 100, "label": "Max 5x" },
+    "max_20x": { "price_monthly": 200, "label": "Max 20x" }
+  },
+  "units": "USD per million tokens"
+}

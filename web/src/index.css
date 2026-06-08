@@ -1,1 +1,67 @@
 @import "tailwindcss";
+
+/* ───────────────────────────────────────────────────────────────────────────
+   Theme tokens. Dark is the DEFAULT (:root); [data-theme="light"] overrides.
+   New components + pages read these via bg-[var(--card)] etc. so the toggle is
+   a single attribute flip on <html>.
+   ─────────────────────────────────────────────────────────────────────────── */
+:root,
+:root[data-theme="dark"] {
+  --bg: #0a0a0f;
+  --surface: #12121a;
+  --card: #161620;
+  --card-hover: #1c1c28;
+  --border: #262633;
+  --text: #e5e7eb;
+  --text-strong: #ffffff;
+  --muted: #8b8b9e;
+  --faint: #5c5c6e;
+  --accent: #4ade80;       /* billing-grade green */
+  --accent-dim: #4ade8033;
+  --indigo: #818cf8;
+  --amber: #fbbf24;
+  --rose: #fb7185;
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+  --bg: #f7f7fa;
+  --surface: #ffffff;
+  --card: #ffffff;
+  --card-hover: #f1f1f5;
+  --border: #e3e3ea;
+  --text: #1f2430;
+  --text-strong: #0a0a0f;
+  --muted: #5c6170;
+  --faint: #9aa0ad;
+  --accent: #16a34a;
+  --accent-dim: #16a34a1f;
+  --indigo: #6366f1;
+  --amber: #d97706;
+  --rose: #e11d48;
+  color-scheme: light;
+}
+
+html, body, #root { min-height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* Visible keyboard focus everywhere (accessibility pass). */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Screen-reader-only utility. */
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* Respect reduced-motion preferences. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}

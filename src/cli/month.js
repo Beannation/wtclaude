@@ -1,25 +1,14 @@
-import { getSessionsForDateRange, summarizeSessions } from '../utils/sessions.js';
-import { formatUsageSummary } from '../utils/format.js';
+import { addRangeOpts, emitSummary, daysAgo } from './_summary.js';
+import { localDate } from '../utils/time.js';
 
 export function registerMonth(program) {
-  program
-    .command('month')
-    .description('Show last 30 days usage')
-    .action(() => {
-      const end = new Date();
-      const start = new Date(end);
-      start.setDate(start.getDate() - 29);
-
-      const startStr = start.toISOString().slice(0, 10);
-      const endStr = end.toISOString().slice(0, 10);
-      const sessions = getSessionsForDateRange(startStr, endStr);
-
-      if (sessions.length === 0) {
-        console.log('\n  No usage data for the last 30 days.\n');
-        return;
-      }
-
-      const summary = summarizeSessions(sessions);
-      console.log(formatUsageSummary(`Last 30 days (${startStr} to ${endStr})`, summary));
-    });
+  addRangeOpts(
+    program
+      .command('month')
+      .description('Show last 30 days usage (supports --json, --since/--until)')
+  ).action((opts) => {
+    const startStr = daysAgo(29);
+    const endStr = localDate(); // local calendar date (QA-BUG-10)
+    emitSummary(`Last 30 days (${startStr} to ${endStr})`, startStr, endStr, opts);
+  });
 }

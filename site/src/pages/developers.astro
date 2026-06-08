@@ -1,0 +1,229 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Mark from '../components/Mark.astro';
+import June15Banner from '../components/June15Banner.astro';
+import CodeBlock from '../components/CodeBlock.astro';
+import ComparisonCard from '../components/ComparisonCard.astro';
+import HonestyBadge from '../components/HonestyBadge.astro';
+import CaptureForm from '../components/CaptureForm.astro';
+import { SHOW_FAST_MODE, FAST_MODE_BADGE, GUARDIAN_PRICE, LINKS } from '../config';
+
+const title = 'WTClaude for Claude Code — the tracker built on billing-grade data';
+const description =
+  'Most Claude Code trackers read broken logs and undercount tokens up to 100×. WTClaude reads the billing-grade data — and it’s ready for the June 15 Agent-SDK billing split. Free & open-source.';
+---
+
+<BaseLayout title={title} description={description} noNavPad heroDark>
+  <!-- SECTION 1 — HERO -->
+  <section class="relative overflow-hidden bg-ink text-surface">
+    <div
+      class="pointer-events-none absolute inset-0 opacity-70"
+      style="background: radial-gradient(60% 50% at 50% 0%, rgba(232,148,58,0.18) 0%, rgba(26,25,21,0) 70%);"
+    >
+    </div>
+    <div class="relative mx-auto max-w-3xl px-5 pb-16 pt-32 text-center sm:pt-36">
+      <Mark class="mx-auto mb-7 h-14 w-14 text-surface" />
+      <h1 class="font-head text-4xl leading-tight sm:text-5xl">Built on the right data from day one.</h1>
+      <p class="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-surface/80">
+        Most Claude Code trackers read broken session logs and undercount your tokens — by as much
+        as 100×. WTClaude reads the same billing-grade data Anthropic bills you from. So the number
+        you see is the number you pay.
+      </p>
+      <div class="mx-auto mt-9 max-w-md">
+        <CodeBlock code="npx wtclaude setup" />
+        <div class="mt-4">
+          <a href="#problem" class="text-sm font-medium text-surface/70 underline-offset-4 hover:text-surface hover:underline">See the proof ↓</a>
+        </div>
+      </div>
+      <p class="mt-6 font-mono text-sm text-surface/60">Free · MIT · macOS + Linux · ~60 seconds.</p>
+    </div>
+  </section>
+
+  <!-- SECTION 2 — countdown banner -->
+  <June15Banner />
+
+  <!-- SECTION 3 — THE PROBLEM -->
+  <section id="problem" class="bg-surface py-20">
+    <div class="mx-auto grid max-w-6xl items-center gap-12 px-5 md:grid-cols-2">
+      <div>
+        <h2 class="font-head text-3xl">Your usage data is broken.</h2>
+        <p class="mt-5 text-base leading-relaxed text-ink/75">
+          Most Claude Code trackers read JSONL session logs. Those logs record input tokens as 0 or
+          1 in about three-quarters of entries — they’re written mid-stream, before the response
+          finalizes, and never corrected. The result: your tracker shows you $3 when you actually
+          spent $19. A gap wide enough to choose the wrong plan, miss a budget, or burn through
+          agent credits without knowing.
+        </p>
+      </div>
+      <ComparisonCard />
+    </div>
+  </section>
+
+  <!-- SECTION 4 — THE FIX -->
+  <section class="bg-surface pb-20">
+    <div class="mx-auto max-w-6xl px-5">
+      <h2 class="text-center font-head text-3xl">Built different. Built right.</h2>
+      <div class="mt-12 grid gap-6 md:grid-cols-3">
+        <article class="rounded-2xl border border-ink/10 bg-card p-7 shadow-sm">
+          <div class="flex items-center gap-2">
+            <h3 class="font-head text-lg">Billing-grade accuracy</h3>
+            <HonestyBadge kind="billing-grade" />
+          </div>
+          <p class="mt-3 text-sm leading-relaxed text-ink/70">
+            WTClaude reads the statusline data path — the same source behind your bill. Not broken
+            logs, not estimates. Your real numbers.
+          </p>
+        </article>
+        <article class="rounded-2xl border border-ink/10 bg-card p-7 shadow-sm">
+          <h3 class="font-head text-lg">Two budgets, one tracker</h3>
+          <p class="mt-3 text-sm leading-relaxed text-ink/70">
+            June 15 splits your billing into an Interactive pool and an Agent SDK Credit pool.
+            WTClaude is built for both and lights up automatically on the day — no reinstall.
+          </p>
+        </article>
+        <article class="rounded-2xl border border-ink/10 bg-card p-7 shadow-sm">
+          <h3 class="font-head text-lg">See where every token went</h3>
+          <p class="mt-3 text-sm leading-relaxed text-ink/70">
+            Session timelines, daily debriefs, model breakdowns, and a “what-if” plan calculator.
+            <code class="rounded bg-ink/5 px-1 py-0.5 font-mono text-[13px]">wtclaude compare</code>
+            shows your real number next to the broken one — the moment that changes how you think
+            about cost.
+          </p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 5 — THE JUNE-15 ARC -->
+  <section class="bg-ink py-20 text-surface">
+    <div class="mx-auto max-w-5xl px-5">
+      <h2 class="text-center font-head text-3xl">Don’t get surprised on June 15.</h2>
+      <p class="mx-auto mt-5 max-w-2xl text-center text-base leading-relaxed text-surface/80">
+        On June 15, agent and <code class="rounded bg-surface/10 px-1 py-0.5 font-mono text-[13px]">claude -p</code>
+        usage moves to a separate dollar budget at full API rates, resetting monthly. WTClaude shows
+        you where you stand before your credits run out.
+      </p>
+
+      <div class="mt-12 grid gap-6 md:grid-cols-2">
+        <!-- forecast -->
+        <article class="rounded-2xl border border-surface/15 bg-surface/[0.04] p-7" data-forecast-block>
+          <div class="flex items-center gap-2">
+            <h3 class="font-head text-lg">Daily Agent-pool forecast</h3>
+            <HonestyBadge kind="estimate" />
+          </div>
+          <p class="mt-3 text-sm leading-relaxed text-surface/80">
+            A projected daily and monthly agent-pool spend versus your included credits, with a
+            countdown to June 15. Install early — every day you track sharpens the projection.
+          </p>
+          <p class="mt-4 text-xs leading-relaxed text-surface/55">
+            The cost math is billing-grade; the pool split is a heuristic, so this is a forecast —
+            never your exact future bill.
+          </p>
+        </article>
+
+        <!-- readiness -->
+        <article class="rounded-2xl border border-surface/15 bg-surface/[0.04] p-7">
+          <div class="flex items-center gap-2">
+            <h3 class="font-head text-lg">Your June-14 Readiness Report</h3>
+            <HonestyBadge kind="estimate" />
+          </div>
+          <p class="mt-3 text-sm leading-relaxed text-surface/80">
+            One line on June 14: are your included credits enough, yes or no — and the one thing to
+            do about it.
+          </p>
+          <a
+            href="/docs"
+            class="mt-5 inline-flex items-center gap-1.5 rounded-lg bg-amber px-4 py-2 text-sm font-semibold text-ink transition hover:bg-amber-deep hover:text-white"
+            data-track="readiness_cta"
+          >
+            Install now to get yours →
+          </a>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 6 — HONEST BY DESIGN -->
+  <section class="bg-surface py-20">
+    <div class="mx-auto max-w-3xl px-5 text-center">
+      <h2 class="font-head text-3xl">We tell you which numbers are real.</h2>
+      <div class="mt-6 flex flex-wrap items-center justify-center gap-2">
+        <HonestyBadge kind="billing-grade" />
+        <HonestyBadge kind="inferred" />
+        <HonestyBadge kind="estimate" />
+      </div>
+      <p class="mt-6 text-base leading-relaxed text-ink/75">
+        Every number is labeled. <strong class="font-semibold text-ink">Billing-grade</strong> for
+        Claude Code cost. <strong class="font-semibold text-ink">Inferred</strong> where we have to
+        infer{
+          SHOW_FAST_MODE && (
+            <span> (like flagging fast-mode turns — Claude Code doesn’t expose that field, so we infer it from cost-per-token)</span>
+          )
+        }. <strong class="font-semibold text-ink">Estimate</strong> for forward-looking projections.
+        We never dress an estimate up as exact. (Today WTClaude tracks Claude Code; Cowork, Chat,
+        and a unified view are coming next.)
+      </p>
+    </div>
+  </section>
+
+  <!-- SECTION 7 — FREE, AND WHAT'S NEXT -->
+  <section class="bg-surface pb-20">
+    <div class="mx-auto max-w-3xl px-5">
+      <div class="rounded-3xl border border-ink/10 bg-card p-8 text-center shadow-sm sm:p-10">
+        <h2 class="font-head text-3xl">Free and open-source. Forever the core.</h2>
+        <p class="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-ink/75">
+          The tracker is free and MIT-licensed. What’s coming is <strong class="font-semibold text-ink">Guardian</strong>
+          — a paid intelligence layer (personalized recommendations, anomaly detection, spend
+          forecasting, coaching) at <strong class="font-semibold text-ink">{GUARDIAN_PRICE.monthly}, or {GUARDIAN_PRICE.yearly} ({GUARDIAN_PRICE.yearlyEquiv})</strong>.
+          Install the free tracker now and Guardian inherits your full history from day one.
+        </p>
+        <div class="mx-auto mt-7 max-w-md">
+          <CaptureForm tag="guardian" cta="Notify me about Guardian" />
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 8 — FINAL CTA -->
+  <section class="bg-ink py-20 text-surface">
+    <div class="mx-auto max-w-2xl px-5 text-center">
+      <p class="font-head text-3xl">Your tracker’s been guessing. Stop guessing.</p>
+      <div class="mx-auto mt-8 max-w-md">
+        <CodeBlock code="npx wtclaude setup" />
+      </div>
+      <div class="mt-6 flex items-center justify-center gap-4">
+        <a href="/docs" class="rounded-lg bg-amber px-5 py-2.5 text-sm font-semibold text-ink transition hover:bg-amber-deep hover:text-white" data-track="cta_docs">Read the docs →</a>
+        <a href={LINKS.github} target="_blank" rel="noopener" class="rounded-lg border border-surface/30 px-5 py-2.5 text-sm font-semibold text-surface transition hover:bg-surface/10" data-track="cta_github">View on GitHub →</a>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    // lp_view_dev on load; forecast_explainer_view when the forecast block scrolls in.
+    function initDevPage() {
+      try {
+        (window as any).umami?.track('lp_view_dev');
+      } catch {
+        /* no-op */
+      }
+      const block = document.querySelector<HTMLElement>('[data-forecast-block]');
+      if (block && 'IntersectionObserver' in window) {
+        const io = new IntersectionObserver((entries) => {
+          entries.forEach((e) => {
+            if (e.isIntersecting) {
+              try {
+                (window as any).umami?.track('forecast_explainer_view');
+              } catch {
+                /* no-op */
+              }
+              io.disconnect();
+            }
+          });
+        }, { threshold: 0.4 });
+        io.observe(block);
+      }
+    }
+    initDevPage();
+    document.addEventListener('astro:page-load', initDevPage);
+  </script>
+</BaseLayout>

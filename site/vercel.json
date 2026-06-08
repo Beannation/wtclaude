@@ -1,0 +1,12 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [],
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "www.wtclaude.com" }],
+      "destination": "https://wtclaude.com/:path*",
+      "permanent": true
+    }
+  ]
+}

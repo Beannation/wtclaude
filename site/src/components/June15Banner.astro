@@ -1,0 +1,78 @@
+---
+import { DUAL_POOL_ACTIVATION_DATE } from '../config';
+
+/**
+ * Full-width amber, date-gated banner. BOTH variants render at build time; a tiny
+ * client island flips pre→post on the activation date and ticks the live countdown.
+ * No-JS default shows the pre-split variant (correct until June 15).
+ */
+---
+
+<aside
+  class="w-full bg-amber text-ink"
+  data-june15
+  data-activation={DUAL_POOL_ACTIVATION_DATE}
+>
+  <div class="mx-auto max-w-6xl px-5 py-3">
+    <!-- PRE-split -->
+    <a
+      href="/blog/the-june-15-split"
+      class="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center text-sm font-medium leading-snug hover:underline"
+      data-variant="pre"
+      data-track="countdown_banner_click"
+    >
+      <span>⏳ June 15: Anthropic splits Claude billing into two pools. WTClaude is built for both — install now and your Agent-pool forecast sharpens every day.</span>
+      <span class="font-mono font-semibold tabular-nums" data-countdown aria-hidden="true"></span>
+      <span class="font-semibold underline-offset-2">Learn more →</span>
+    </a>
+
+    <!-- POST-split (hidden until activation) -->
+    <a
+      href="/blog/the-june-15-split"
+      class="hidden flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center text-sm font-medium leading-snug hover:underline"
+      data-variant="post"
+      data-track="countdown_banner_click"
+    >
+      <span>The billing split is live — Interactive and Agent SDK Credits. WTClaude tracks both.</span>
+      <span class="font-semibold underline-offset-2">See how →</span>
+    </a>
+  </div>
+</aside>
+
+<script>
+  function initJune15() {
+    const root = document.querySelector<HTMLElement>('[data-june15]');
+    if (!root || root.dataset.init) return;
+    root.dataset.init = '1';
+
+    const activation = new Date(root.dataset.activation || '').getTime();
+    const pre = root.querySelector<HTMLElement>('[data-variant="pre"]');
+    const post = root.querySelector<HTMLElement>('[data-variant="post"]');
+    const countdownEl = root.querySelector<HTMLElement>('[data-countdown]');
+
+    const render = () => {
+      const now = Date.now();
+      const live = now >= activation;
+      pre?.classList.toggle('flex', !live);
+      pre?.classList.toggle('hidden', live);
+      post?.classList.toggle('flex', live);
+      post?.classList.toggle('hidden', !live);
+
+      if (!live && countdownEl) {
+        const ms = activation - now;
+        const d = Math.floor(ms / 86_400_000);
+        const h = Math.floor((ms % 86_400_000) / 3_600_000);
+        const m = Math.floor((ms % 3_600_000) / 60_000);
+        const s = Math.floor((ms % 60_000) / 1000);
+        countdownEl.textContent = `· ${d}d ${h}h ${m}m ${s}s`;
+        countdownEl.removeAttribute('aria-hidden');
+      }
+    };
+
+    render();
+    window.setInterval(render, 1000);
+    // analytics on click handled by the global [data-track] delegator in BaseLayout.
+  }
+  initJune15();
+  document.addEventListener('astro:page-load', initJune15);
+</script>

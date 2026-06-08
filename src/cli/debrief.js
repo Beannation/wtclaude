@@ -1,12 +1,13 @@
 import { getSessionsForDateRange } from '../utils/sessions.js';
 import { computeTurnCost, formatCost, formatTokens } from '../utils/cost.js';
+import { localDate } from '../utils/time.js';
 
 export function registerDebrief(program) {
   program
     .command('debrief')
     .description('End-of-day summary with costliest turn and tip')
     .action(() => {
-      const today = new Date().toISOString().slice(0, 10);
+      const today = localDate(); // local calendar date (QA-BUG-10)
       const sessions = getSessionsForDateRange(today, today);
 
       if (sessions.length === 0) {

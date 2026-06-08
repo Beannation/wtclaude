@@ -7,6 +7,7 @@ import { formatComparisonTable } from '../utils/format.js';
 import { computeTurnCost } from '../utils/cost.js';
 import { getModelPricing, getLatestPricing } from '../utils/pricing.js';
 import { generateComparisonCard, generateComparisonHtml } from '../compare/card-generator.js';
+import { localDate } from '../utils/time.js';
 
 export function registerCompare(program) {
   program
@@ -20,8 +21,8 @@ export function registerCompare(program) {
       const start = new Date(end);
       start.setDate(start.getDate() - (days - 1));
 
-      const startStr = start.toISOString().slice(0, 10);
-      const endStr = end.toISOString().slice(0, 10);
+      const startStr = localDate(start); // local calendar range (QA-BUG-10)
+      const endStr = localDate(end);
 
       const accurateSessions = getSessionsForDateRange(startStr, endStr);
       const jsonlSessions = readJsonlSessions({ start: startStr, end: endStr });

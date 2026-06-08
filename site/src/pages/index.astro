@@ -1,0 +1,104 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Mark from '../components/Mark.astro';
+import June15Banner from '../components/June15Banner.astro';
+import CodeBlock from '../components/CodeBlock.astro';
+
+const title = 'WTClaude — built on the right data from day one';
+const description =
+  'See what Claude is really costing you, built on billing-grade data. Free, open-source Claude Code usage tracker — ready for the June 15 billing split.';
+---
+
+<BaseLayout title={title} description={description} noNavPad heroDark>
+  <!-- HERO -->
+  <section class="relative overflow-hidden bg-ink text-surface">
+    <div
+      class="pointer-events-none absolute inset-0 opacity-70"
+      style="background: radial-gradient(60% 50% at 50% 0%, rgba(232,148,58,0.18) 0%, rgba(26,25,21,0) 70%);"
+    >
+    </div>
+    <div class="relative mx-auto max-w-3xl px-5 pb-16 pt-32 text-center sm:pt-36">
+      <Mark class="mx-auto mb-7 h-14 w-14 text-surface" />
+      <h1 class="font-head text-4xl leading-tight sm:text-5xl">
+        Built on the right data from day one.
+      </h1>
+      <p class="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-surface/80">
+        WTClaude shows you what Claude is really costing you — built on the right data, and honest
+        about the rest. It starts with Claude Code in your terminal, where we read the billing-grade
+        numbers Anthropic bills you from.
+      </p>
+
+      <div class="mx-auto mt-9 max-w-md">
+        <CodeBlock code="npx wtclaude setup" />
+        <div class="mt-4 flex items-center justify-center">
+          <a
+            href="/developers"
+            class="inline-flex items-center gap-1.5 rounded-lg bg-amber px-5 py-2.5 text-sm font-semibold text-ink transition hover:bg-amber-deep hover:text-white"
+          >
+            For developers →
+          </a>
+        </div>
+      </div>
+
+      <p class="mt-6 font-mono text-sm text-surface/60">Free · open-source (MIT) · 60-second setup.</p>
+    </div>
+  </section>
+
+  <June15Banner />
+
+  <!-- THREE PATHS -->
+  <section class="mx-auto max-w-6xl px-5 py-20">
+    <div class="grid gap-6 md:grid-cols-3">
+      <!-- developers (live) -->
+      <article class="flex flex-col rounded-2xl border border-amber/30 bg-card p-7 shadow-sm ring-1 ring-amber/5">
+        <div class="flex items-center justify-between">
+          <h2 class="font-head text-xl">For developers</h2>
+          <span class="rounded-full bg-success/12 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-success">Live</span>
+        </div>
+        <p class="mt-3 flex-1 text-sm leading-relaxed text-ink/70">
+          The accuracy reveal: see your real Claude Code costs and get ready for the June 15
+          billing split.
+        </p>
+        <a href="/developers" class="mt-5 inline-flex items-center gap-1 text-sm font-semibold text-amber-deep hover:text-amber">
+          Open the developer page →
+        </a>
+      </article>
+
+      <!-- complete user (coming soon) -->
+      <article class="flex flex-col rounded-2xl border border-ink/10 bg-card p-7 shadow-sm">
+        <div class="flex items-center justify-between">
+          <h2 class="font-head text-xl">For the Complete Claude User</h2>
+          <span class="rounded-full bg-ink/5 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-warm">Soon</span>
+        </div>
+        <p class="mt-3 flex-1 text-sm leading-relaxed text-ink/70">
+          All your Claude — Chat, Cowork, and Code — in one clear view, with a warning before you
+          hit a limit.
+        </p>
+        <a href="/complete" class="mt-5 inline-flex items-center gap-1 text-sm font-semibold text-amber-deep hover:text-amber">
+          Coming soon — get notified →
+        </a>
+      </article>
+
+      <!-- teams / SMB (coming soon — no pricing) -->
+      <article class="flex flex-col rounded-2xl border border-ink/10 bg-card p-7 shadow-sm">
+        <div class="flex items-center justify-between">
+          <h2 class="font-head text-xl">For teams</h2>
+          <span class="rounded-full bg-ink/5 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-warm">Soon</span>
+        </div>
+        <p class="mt-3 flex-1 text-sm leading-relaxed text-ink/70">
+          Enterprise-grade Claude management for SMB — without the enterprise plan.
+        </p>
+        <a href="/business" class="mt-5 inline-flex items-center gap-1 text-sm font-semibold text-amber-deep hover:text-amber">
+          Coming soon — get notified →
+        </a>
+      </article>
+    </div>
+
+    <!-- honesty strip -->
+    <p class="mx-auto mt-12 max-w-3xl text-center text-sm leading-relaxed text-ink/65">
+      Billing-grade for Code in your terminal; an honest estimate for Code in the desktop app.
+      Honest, clearly-labeled estimates for everything else — we never show an estimate as if it
+      were exact.
+    </p>
+  </section>
+</BaseLayout>

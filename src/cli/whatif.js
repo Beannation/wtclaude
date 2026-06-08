@@ -1,13 +1,14 @@
 import { getSessionsForDateRange, summarizeSessions } from '../utils/sessions.js';
 import { getLatestPricing, getModelPricing } from '../utils/pricing.js';
 import { computeTurnCost, formatCost } from '../utils/cost.js';
+import { localDate } from '../utils/time.js';
 
 export function registerWhatIf(program) {
   program
     .command('whatif')
     .description('Estimate costs under different plans or models')
-    .option('--plan <plan>', 'Compare plan costs: pro, max5, max20')
-    .option('--model <model>', 'What if you used a different model: haiku, sonnet, opus')
+    .option('--plan [plan]', 'Compare plan costs: pro, max5, max20')
+    .option('--model [model]', 'What if you used a different model: haiku, sonnet, opus')
     .option('--days <n>', 'Number of days to look back', '1')
     .action((opts) => {
       const days = parseInt(opts.days, 10);
@@ -15,8 +16,8 @@ export function registerWhatIf(program) {
       const start = new Date(end);
       start.setDate(start.getDate() - (days - 1));
 
-      const startStr = start.toISOString().slice(0, 10);
-      const endStr = end.toISOString().slice(0, 10);
+      const startStr = localDate(start); // local calendar range (QA-BUG-10)
+      const endStr = localDate(end);
       const sessions = getSessionsForDateRange(startStr, endStr);
 
       if (sessions.length === 0) {

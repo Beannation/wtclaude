@@ -1,21 +1,22 @@
-import { getSessionsForDateRange, summarizeSessions } from '../utils/sessions.js';
-import { formatUsageSummary } from '../utils/format.js';
+import { addRangeOpts, emitSummary } from './_summary.js';
+import { localDate } from '../utils/time.js';
+import { isDualPoolActive } from '../utils/config.js';
 
 export function registerToday(program) {
-  program
-    .command('today')
-    .description('Show today\'s usage summary')
-    .action(() => {
-      const today = new Date().toISOString().slice(0, 10);
-      const sessions = getSessionsForDateRange(today, today);
-
-      if (sessions.length === 0) {
-        console.log('\n  No usage data for today yet.');
-        console.log('  Start a Claude Code session with wtclaude-collector configured.\n');
-        return;
-      }
-
-      const summary = summarizeSessions(sessions);
-      console.log(formatUsageSummary(`Today (${today})`, summary));
-    });
+  addRangeOpts(
+    program
+      .command('today')
+      .description('Show today\'s usage summary (supports --json, --since/--until)')
+  ).action((opts) => {
+    const today = localDate(); // LOCAL calendar day, not UTC (QA-BUG-10)
+    const o = opts || {};
+    // QA-BUG-04: post-June-15 (the dual-pool flip), `today` splits the total into
+    // the interactive (subscription) and Agent-SDK (credits) pools so a dev gets
+    // the per-pool read without opening the dashboard. Pre-flip it's a no-op and
+    // `today` is byte-for-byte unchanged. usage_pool is already captured per turn,
+    // so this is a display change, not a data change. Gated on isDualPoolActive()
+    // (honors dual_pool_override), so it stays dormant until the flip.
+    if (isDualPoolActive(today)) o.byPool = true;
+    emitSummary(`Today (${today})`, today, today, o);
+  });
 }

@@ -1,0 +1,51 @@
+---
+import { SHOW_DASHBOARD_LINK, LINKS } from '../config';
+import Mark from './Mark.astro';
+---
+
+<footer class="border-t border-ink/10 bg-surface">
+  <div class="mx-auto max-w-6xl px-5 py-12">
+    <div class="flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
+      <div class="max-w-sm text-ink">
+        <div class="flex items-center gap-2">
+          <Mark class="h-7 w-7" />
+          <span class="font-mono text-base font-bold tracking-tight">
+            <span class="text-amber">WT</span><span class="text-ink">Claude</span>
+          </span>
+        </div>
+        <p class="mt-3 font-mono text-sm text-ink/70">Built on the right data from day one.</p>
+      </div>
+
+      <div class="grid grid-cols-2 gap-x-12 gap-y-2 text-sm sm:grid-cols-3">
+        <nav class="flex flex-col gap-2" aria-label="Who it's for">
+          <p class="font-mono text-xs uppercase tracking-wide text-warm">Who it's for</p>
+          <a href="/developers" class="text-ink/70 hover:text-ink">Developers</a>
+          <a href="/complete" class="text-ink/70 hover:text-ink">Complete Claude User</a>
+          <a href="/business" class="text-ink/70 hover:text-ink">Business</a>
+        </nav>
+        <nav class="flex flex-col gap-2" aria-label="Resources">
+          <p class="font-mono text-xs uppercase tracking-wide text-warm">Resources</p>
+          <a href="/docs" class="text-ink/70 hover:text-ink">Docs</a>
+          <a href="/blog" class="text-ink/70 hover:text-ink">Blog</a>
+          <a href={LINKS.github} target="_blank" rel="noopener" class="text-ink/70 hover:text-ink" data-track="cta_github">GitHub</a>
+          {SHOW_DASHBOARD_LINK && <a href="/dashboard" class="text-ink/70 hover:text-ink">Dashboard</a>}
+        </nav>
+      </div>
+    </div>
+
+    <div class="mt-10 flex flex-col gap-4 border-t border-ink/10 pt-6 text-xs text-ink/55 md:flex-row md:items-center md:justify-between">
+      <p class="max-w-2xl leading-relaxed">
+        WTClaude is an independent, open-source project. Not affiliated with, endorsed by, or
+        sponsored by Anthropic, PBC. Claude is a trademark of Anthropic, PBC.
+      </p>
+      <a
+        href="https://opensource.org/licenses/MIT"
+        target="_blank"
+        rel="noopener"
+        class="inline-flex w-fit items-center gap-1.5 rounded-md border border-ink/15 px-2.5 py-1 font-mono text-ink/65 hover:text-ink"
+      >
+        MIT License
+      </a>
+    </div>
+  </div>
+</footer>

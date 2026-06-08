@@ -1,0 +1,222 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import CodeBlock from '../components/CodeBlock.astro';
+import HonestyBadge from '../components/HonestyBadge.astro';
+import { SHOW_FAST_MODE, FAST_MODE_BADGE, SHOW_TASKS_FEATURE, GUARDIAN_PRICE } from '../config';
+
+const title = 'WTClaude docs — install & quick start';
+const description =
+  'Install WTClaude in 60 seconds and start tracking your real Claude Code usage. Quick start, CLI reference, and FAQ.';
+
+// CLI reference — the shipped command set (descriptions from the CLI source / build-spec v1.6).
+const commands = [
+  { name: 'setup', desc: 'configure tracking — wires the statusline and creates your local data dir.' },
+  {
+    name: 'today / week / month',
+    desc: 'real cost, tokens, and model breakdown for the period. Flags: `--json`, `--since/--until`.',
+    badge: 'billing-grade' as const,
+  },
+  {
+    name: 'compare',
+    desc: 'billing-grade vs broken-log number + the gap. `compare --share` exports a shareable image card to your Desktop + clipboard.',
+  },
+  {
+    name: 'session [id]',
+    desc: 'list every session (newest first), or per-turn detail for one session.',
+    badge: 'billing-grade' as const,
+  },
+  {
+    name: 'blocks',
+    desc: 'the rolling 5-hour-block view — buckets every turn into the windows your subscription limit resets on, so you can pace against it.',
+    badge: 'billing-grade' as const,
+  },
+  {
+    name: 'statusline',
+    desc: 'render the short status string on demand — mirrors what the collector prints back into Claude Code’s status line.',
+  },
+  {
+    name: 'watch',
+    desc: 'a live terminal monitor: today’s cost, current 5h-block burn, and the shared plan-limit gauge with a basic, **non-predictive** time-to-limit estimate.',
+  },
+  {
+    name: 'limit',
+    desc:
+      '**your overall plan limit** status (% used + reset countdown). Note: this reads Anthropic’s shared rate-limit bucket, which spans Claude Code, Cowork, and Chat — so it’s your overall plan limit, not a Code-only or per-surface number.',
+    badge: 'billing-grade' as const,
+  },
+  { name: 'whatif', desc: 'plan- and model-comparison math. Flags: `--plan`, `--model`, `--pool`, `--speed`.' },
+  {
+    name: 'forecast',
+    desc: 'projected Agent-pool spend vs included credits + a June-15 countdown.',
+    badge: 'estimate' as const,
+  },
+  { name: 'readiness', desc: 'your June-14 credit-coverage check.', badge: 'estimate' as const },
+  {
+    name: 'credits',
+    desc: 'Agent-SDK credit balance and burn. Before June 15: your allocation + a countdown. After: live burn rate.',
+    badge: 'estimate' as const,
+  },
+  {
+    name: 'devices',
+    desc: 'cross-device combined totals + a per-device breakdown. With sync off it degrades to a local-only view of this machine, plus a hint to enable sync.',
+  },
+  { name: 'quality', desc: 'your one-shot success rate — edits the model got right without a retry.' },
+];
+
+const faqs = [
+  {
+    q: 'Is it accurate?',
+    a: 'For Claude Code, yes — billing-grade. We read the statusline path, the same source behind your bill. Forward-looking projections (the forecast/readiness) are clearly-labeled estimates.',
+  },
+  {
+    q: 'Does it track Cowork or Chat?',
+    a: 'Not yet. Today WTClaude tracks Claude Code. A unified view across Cowork and Chat is coming (as honest estimates, clearly labeled).',
+  },
+  {
+    q: 'Does it work with the Claude desktop app?',
+    a: 'Tracking requires the Claude Code CLI in your terminal — the statusline WTClaude reads only fires there. The desktop app and Cowork don’t emit it, so install via the terminal. (Desktop/Cowork coverage is on the roadmap.)',
+  },
+  {
+    q: 'Will it slow me down?',
+    a: 'No. The collector runs in the background, fire-and-forget. You won’t notice it.',
+  },
+  {
+    q: 'Is my data private?',
+    a: 'Everything runs locally by default. Cloud sync is opt-in, with a preview before anything leaves your machine.',
+  },
+  {
+    q: 'Is it free?',
+    a: `Yes, and open-source (MIT). A paid Guardian intelligence layer is coming at ${GUARDIAN_PRICE.monthly} · ${GUARDIAN_PRICE.yearly}; the tracker stays free.`,
+  },
+  {
+    q: 'Who’s behind it?',
+    a: 'An independent project. Not affiliated with Anthropic.',
+  },
+];
+---
+
+<BaseLayout title={title} description={description}>
+  <div class="mx-auto max-w-3xl px-5 py-16">
+    <!-- QUICK START -->
+    <section>
+      <h1 class="font-head text-4xl">Get started</h1>
+      <ol class="mt-8 space-y-6">
+        <li>
+          <div class="flex items-baseline gap-3">
+            <span class="font-head text-amber">1</span>
+            <code class="font-mono text-sm font-semibold">npx wtclaude setup</code>
+          </div>
+          <p class="mt-2 pl-7 text-sm leading-relaxed text-ink/70">
+            wires up the statusline so WTClaude reads billing-grade data; reads the credential Claude
+            already wrote, so there’s no login.
+          </p>
+          <div class="mt-3 pl-7">
+            <CodeBlock code="npx wtclaude setup" />
+          </div>
+        </li>
+        <li>
+          <div class="flex items-baseline gap-3">
+            <span class="font-head text-amber">2</span>
+            <code class="font-mono text-sm font-semibold">wtclaude today</code>
+          </div>
+          <p class="mt-2 pl-7 text-sm leading-relaxed text-ink/70">your real cost so far today.</p>
+        </li>
+        <li>
+          <div class="flex items-baseline gap-3">
+            <span class="font-head text-amber">3</span>
+            <code class="font-mono text-sm font-semibold">wtclaude compare</code>
+          </div>
+          <p class="mt-2 pl-7 text-sm leading-relaxed text-ink/70">
+            the reveal: your billing-grade number next to the broken-log number.
+          </p>
+        </li>
+      </ol>
+      <p class="mt-6 text-sm text-ink/60">
+        Requirements: macOS or Linux, Node, and the <strong class="text-ink/80">Claude Code CLI in your terminal</strong>. Free, MIT-licensed.
+      </p>
+      <p class="mt-3 rounded-lg border border-ink/10 bg-amber-light/30 px-4 py-3 text-sm leading-relaxed text-ink/70">
+        WTClaude reads the statusline, which only the terminal CLI emits — the Claude desktop app and
+        Cowork don’t run it. (Desktop/Cowork tracking comes later, as clearly-labeled estimates.)
+      </p>
+    </section>
+
+    <!-- CLI REFERENCE -->
+    <section class="mt-16">
+      <h2 class="font-head text-2xl">CLI reference</h2>
+      <p class="mt-2 text-sm text-warm">The launch commands. We show only what ships.</p>
+      <dl class="mt-6 divide-y divide-ink/10 rounded-2xl border border-ink/10 bg-card">
+        {
+          commands.map((cmd) => (
+            <div class="px-5 py-4">
+              <dt class="flex flex-wrap items-center gap-2">
+                <code class="font-mono text-sm font-semibold text-ink">{cmd.name}</code>
+                {cmd.badge && <HonestyBadge kind={cmd.badge} />}
+              </dt>
+              <dd class="mt-1.5 text-sm leading-relaxed text-ink/70" set:html={cmd.desc
+                .replace(/`([^`]+)`/g, '<code class="rounded bg-ink/5 px-1 py-0.5 font-mono text-[13px]">$1</code>')
+                .replace(/\*\*([^*]+)\*\*/g, '<strong class="font-semibold text-ink">$1</strong>')} />
+            </div>
+          ))
+        }
+
+        {
+          SHOW_FAST_MODE && (
+            <div class="px-5 py-4">
+              <dt class="flex flex-wrap items-center gap-2">
+                <code class="font-mono text-sm font-semibold text-ink">debrief</code>
+                {FAST_MODE_BADGE === 'inferred' && <HonestyBadge kind="inferred" />}
+              </dt>
+              <dd class="mt-1.5 text-sm leading-relaxed text-ink/70">
+                your daily summary; includes a <code class="rounded bg-ink/5 px-1 py-0.5 font-mono text-[13px]">Fast-mode: ~$X</code> line when you’ve used fast mode.
+              </dd>
+            </div>
+          )
+        }
+
+        <div class="px-5 py-4">
+          <dt class="flex flex-wrap items-center gap-2">
+            <code class="font-mono text-sm font-semibold text-ink">tasks</code>
+            {
+              SHOW_TASKS_FEATURE ? null : (
+                <span class="rounded-full bg-ink/5 px-2 py-[2px] text-[11px] font-medium uppercase text-warm">coming soon</span>
+              )
+            }
+          </dt>
+          <dd class="mt-1.5 text-sm leading-relaxed text-ink/70">
+            {
+              SHOW_TASKS_FEATURE
+                ? 'token/cost breakdown by task category.'
+                : 'token/cost breakdown by task category — coming soon (the live payload doesn’t expose tool names yet, so categories aren’t populated).'
+            }
+          </dd>
+        </div>
+      </dl>
+
+      <p class="mt-4 text-sm leading-relaxed text-ink/60">
+        <strong class="font-medium text-ink/75">Global flags:</strong>
+        <code class="rounded bg-ink/5 px-1 py-0.5 font-mono text-[13px]">--json</code> and
+        <code class="rounded bg-ink/5 px-1 py-0.5 font-mono text-[13px]">--csv</code>/<code class="rounded bg-ink/5 px-1 py-0.5 font-mono text-[13px]">--clipboard</code>
+        on the summary commands, and <code class="rounded bg-ink/5 px-1 py-0.5 font-mono text-[13px]">--currency=&lt;ISO&gt;</code>
+        for display-only conversion (USD stays the billing-grade source).
+      </p>
+    </section>
+
+    <!-- FAQ -->
+    <section class="mt-16">
+      <h2 class="font-head text-2xl">FAQ</h2>
+      <div class="mt-6 space-y-3">
+        {
+          faqs.map((f) => (
+            <details class="group rounded-xl border border-ink/10 bg-card px-5 py-4">
+              <summary class="flex cursor-pointer items-center justify-between font-medium text-ink marker:content-['']">
+                {f.q}
+                <span class="ml-4 text-warm transition group-open:rotate-45">+</span>
+              </summary>
+              <p class="mt-3 text-sm leading-relaxed text-ink/70">{f.a}</p>
+            </details>
+          ))
+        }
+      </div>
+    </section>
+  </div>
+</BaseLayout>

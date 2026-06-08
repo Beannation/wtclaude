@@ -1,0 +1,68 @@
+---
+/**
+ * Styled terminal code block with a copy-to-clipboard button (vanilla island).
+ * Copying fires `install_cmd_copied` when `track="install_cmd_copied"`.
+ */
+interface Props {
+  code: string;
+  /** Analytics event to fire on copy (default: install_cmd_copied). */
+  track?: string;
+  /** Visual: 'dark' (terminal) or 'inline' (smaller). */
+  variant?: 'dark' | 'inline';
+  class?: string;
+}
+const { code, track = 'install_cmd_copied', variant = 'dark', class: cls = '' } = Astro.props;
+
+const base =
+  variant === 'dark'
+    ? 'bg-codebg text-amber-light'
+    : 'bg-ink/5 text-ink';
+---
+
+<div
+  class={`group relative flex items-center justify-between gap-3 rounded-xl px-4 py-3 font-mono text-sm sm:text-base ${base} ${cls}`}
+  data-codeblock
+>
+  <code class="select-all overflow-x-auto whitespace-nowrap" data-code>{code}</code>
+  <button
+    type="button"
+    class="shrink-0 rounded-md border border-current/20 bg-current/10 px-2.5 py-1 text-xs font-medium opacity-80 transition hover:opacity-100 focus-visible:outline-2 focus-visible:outline-amber"
+    data-copy
+    data-value={code}
+    data-track={track}
+    aria-label={`Copy: ${code}`}
+  >
+    Copy
+  </button>
+</div>
+
+<script>
+  // Vanilla copy island — no framework. Idempotent across Astro view transitions.
+  function bindCopyButtons() {
+    document.querySelectorAll<HTMLButtonElement>('[data-copy]').forEach((btn) => {
+      if (btn.dataset.bound) return;
+      btn.dataset.bound = '1';
+      btn.addEventListener('click', async () => {
+        const value = btn.dataset.value ?? '';
+        try {
+          await navigator.clipboard.writeText(value);
+        } catch {
+          /* clipboard may be blocked; still give feedback */
+        }
+        const original = btn.textContent;
+        btn.textContent = 'Copied ✓';
+        window.setTimeout(() => (btn.textContent = original), 1600);
+        const ev = btn.dataset.track;
+        if (ev) {
+          try {
+            (window as any).umami?.track(ev);
+          } catch {
+            /* no-op */
+          }
+        }
+      });
+    });
+  }
+  bindCopyButtons();
+  document.addEventListener('astro:page-load', bindCopyButtons);
+</script>

@@ -1,0 +1,79 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Mark from '../components/Mark.astro';
+import CaptureForm from '../components/CaptureForm.astro';
+import DraftNote from '../components/DraftNote.astro';
+
+const title = 'WTClaude for Business — Claude management for SMB (coming soon)';
+const description =
+  'Enterprise-grade Claude management for SMB. You were handed Claude to manage, with no manual — WTClaude is the manual. Coming soon.';
+---
+
+<BaseLayout title={title} description={description} noNavPad heroDark>
+  <!-- HERO (lead message — Strategy brief A3, verbatim) -->
+  <section class="relative overflow-hidden bg-ink text-surface">
+    <div
+      class="pointer-events-none absolute inset-0 opacity-70"
+      style="background: radial-gradient(60% 50% at 50% 0%, rgba(232,148,58,0.18) 0%, rgba(26,25,21,0) 70%);"
+    >
+    </div>
+    <div class="relative mx-auto max-w-3xl px-5 pb-16 pt-32 text-center sm:pt-36">
+      <Mark class="mx-auto mb-7 h-14 w-14 text-surface" />
+      <span class="inline-block rounded-full bg-surface/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-surface/70">Coming soon · for teams</span>
+      <h1 class="mt-5 font-head text-4xl leading-tight sm:text-5xl">
+        Enterprise-grade Claude management for SMB — coming soon.
+      </h1>
+      <p class="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-surface/80">
+        You were handed Claude to manage, with no manual. WTClaude is the manual.
+      </p>
+    </div>
+  </section>
+
+  <section class="mx-auto max-w-3xl px-5 py-16">
+    <DraftNote brief="Strategy brief A3 (SMB Management)" class="mb-12" />
+
+    <!-- Lead substance: education + change-guidance (primary); management/seat-mix (secondary) -->
+    <div class="grid gap-6 sm:grid-cols-2">
+      <article class="rounded-2xl border border-ink/10 bg-card p-7 shadow-sm">
+        <h2 class="font-head text-lg">Education + change-guidance</h2>
+        <p class="mt-2 text-sm leading-relaxed text-ink/70">
+          Every Anthropic change, explained for your team — so you’re never managing Claude blind.
+        </p>
+      </article>
+      <article class="rounded-2xl border border-ink/10 bg-card p-7 shadow-sm">
+        <h2 class="font-head text-lg">Management + seat-mix</h2>
+        <p class="mt-2 text-sm leading-relaxed text-ink/70">
+          Right-size plans and seats across your team.
+        </p>
+      </article>
+    </div>
+
+    <p class="mt-8 text-center text-sm leading-relaxed text-ink/60">
+      Uncontested for Claude-specialized, education-led, SMB-packaged management.
+    </p>
+
+    <!-- CTA: email-signup capture (no pricing — embargo) -->
+    <div class="mx-auto mt-10 max-w-md rounded-2xl border border-ink/10 bg-card p-7 text-center shadow-sm">
+      <p class="font-head text-lg">Get notified at launch</p>
+      <div class="mt-4">
+        <CaptureForm tag="smb" event="guardian_waitlist" cta="Notify me" />
+      </div>
+    </div>
+
+    <p class="mt-8 text-center text-sm">
+      <a href="/business/finance" class="font-semibold text-amber-deep hover:text-amber">For finance teams →</a>
+    </p>
+  </section>
+
+  <script>
+    function initBusinessPage() {
+      try {
+        (window as any).umami?.track('lp_view_smb_tease');
+      } catch {
+        /* no-op */
+      }
+    }
+    initBusinessPage();
+    document.addEventListener('astro:page-load', initBusinessPage);
+  </script>
+</BaseLayout>

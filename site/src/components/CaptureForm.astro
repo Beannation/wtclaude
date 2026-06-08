@@ -1,0 +1,159 @@
+---
+import { CAPTURE_ENDPOINT, CAPTURE_METHOD } from '../config';
+
+/**
+ * Reusable email-capture form — the launch conversion path.
+ * Client validation + loading/success/error states + a single pluggable endpoint
+ * (config.CAPTURE_ENDPOINT). With no endpoint set it confirms locally (nothing stored)
+ * and logs the submission for QA; with one set it POSTs `{ email, tag, source }`.
+ *
+ * NOTE: SMB pricing is embargoed — never render a price near an SMB capture.
+ */
+interface Props {
+  /** analytics tag + payload tag, e.g. 'complete' | 'smb' | 'smb_finance' | 'guardian' */
+  tag: string;
+  /** Umami event to fire on submit (default: guardian_waitlist). */
+  event?: string;
+  placeholder?: string;
+  cta?: string;
+  class?: string;
+}
+const {
+  tag,
+  event = 'guardian_waitlist',
+  placeholder = 'you@example.com',
+  cta = 'Notify me',
+  class: cls = '',
+} = Astro.props;
+const id = `capture-${tag}`;
+---
+
+<form
+  class={`flex flex-col gap-2 sm:flex-row ${cls}`}
+  data-capture
+  data-tag={tag}
+  data-event={event}
+  data-endpoint={CAPTURE_ENDPOINT}
+  data-method={CAPTURE_METHOD}
+  novalidate
+>
+  <div class="min-w-0 flex-1">
+    <label class="sr-only" for={id}>Email address</label>
+    <input
+      id={id}
+      name="email"
+      type="email"
+      required
+      placeholder={placeholder}
+      autocomplete="email"
+      class="w-full rounded-lg border border-ink/15 bg-card px-3.5 py-2.5 text-sm text-ink placeholder:text-warm focus-visible:outline-2 focus-visible:outline-amber aria-[invalid=true]:border-alert"
+    />
+  </div>
+
+  {/* Honeypot — off-screen, hidden from real users + a11y; bots fill it and the backend bites. */}
+  <div aria-hidden="true" style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden">
+    <label for={`${id}-hp`}>Leave this field empty</label>
+    <input id={`${id}-hp`} name="website" type="text" tabindex="-1" autocomplete="off" data-honeypot />
+  </div>
+  <button
+    type="submit"
+    class="shrink-0 rounded-lg bg-ink px-4 py-2.5 text-sm font-semibold text-surface transition hover:bg-ink/85 disabled:opacity-60"
+    data-submit
+  >
+    {cta}
+  </button>
+  <p class="basis-full text-sm" role="status" aria-live="polite" data-status></p>
+</form>
+
+<script>
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  function initCaptures() {
+    document.querySelectorAll<HTMLFormElement>('[data-capture]').forEach((form) => {
+      if (form.dataset.bound) return;
+      form.dataset.bound = '1';
+
+      const input = form.querySelector<HTMLInputElement>('input[name="email"]');
+      const honeypot = form.querySelector<HTMLInputElement>('[data-honeypot]');
+      const btn = form.querySelector<HTMLButtonElement>('[data-submit]');
+      const status = form.querySelector<HTMLElement>('[data-status]');
+      const setStatus = (msg: string, tone: 'error' | 'ok' | '') => {
+        if (!status) return;
+        status.textContent = msg;
+        status.className =
+          'basis-full text-sm ' +
+          (tone === 'error' ? 'text-alert' : tone === 'ok' ? 'text-success' : '');
+      };
+
+      input?.addEventListener('input', () => {
+        input.removeAttribute('aria-invalid');
+        setStatus('', '');
+      });
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = (input?.value || '').trim();
+        if (!email || !EMAIL_RE.test(email)) {
+          input?.setAttribute('aria-invalid', 'true');
+          setStatus('Please enter a valid email address.', 'error');
+          input?.focus();
+          return;
+        }
+
+        const tag = form.dataset.tag;
+        const event = form.dataset.event || 'guardian_waitlist';
+        const endpoint = form.dataset.endpoint || '';
+        const method = form.dataset.method || 'POST';
+        const source = window.location.pathname;
+        const website = honeypot?.value || ''; // honeypot — empty for humans
+
+        const payload = { email, tag, source, website };
+
+        // Fire analytics regardless of backend wiring.
+        try {
+          (window as any).umami?.track(event, { tag });
+        } catch {
+          /* analytics must never block the submit */
+        }
+
+        const succeed = () => {
+          form.innerHTML =
+            '<p class="basis-full rounded-lg bg-success/10 px-3.5 py-2.5 text-sm font-medium text-success">Thanks — we’ll let you know.</p>';
+        };
+
+        if (!endpoint) {
+          // No backend wired yet — confirm locally so the UX is real, log for QA.
+          // eslint-disable-next-line no-console
+          console.info('[capture] (no endpoint set) would submit:', payload);
+          succeed();
+          return;
+        }
+
+        // Endpoint wired — POST and handle success/error.
+        if (btn) {
+          btn.disabled = true;
+          btn.dataset.label = btn.textContent || '';
+          btn.textContent = 'Sending…';
+        }
+        setStatus('', '');
+        try {
+          const res = await fetch(endpoint, {
+            method,
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            body: JSON.stringify(payload),
+          });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          succeed();
+        } catch (err) {
+          if (btn) {
+            btn.disabled = false;
+            btn.textContent = btn.dataset.label || 'Notify me';
+          }
+          setStatus('Something went wrong — please try again.', 'error');
+        }
+      });
+    });
+  }
+  initCaptures();
+  document.addEventListener('astro:page-load', initCaptures);
+</script>

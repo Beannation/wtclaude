@@ -1,0 +1,24 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Mark from '../components/Mark.astro';
+---
+
+<BaseLayout title="Page not found — WTClaude" description="That page doesn’t exist." noNavPad heroDark>
+  <section class="relative flex min-h-[70vh] items-center overflow-hidden bg-ink text-surface">
+    <div
+      class="pointer-events-none absolute inset-0 opacity-70"
+      style="background: radial-gradient(60% 50% at 50% 0%, rgba(232,148,58,0.18) 0%, rgba(26,25,21,0) 70%);"
+    >
+    </div>
+    <div class="relative mx-auto max-w-xl px-5 py-24 text-center">
+      <Mark class="mx-auto mb-7 h-14 w-14 text-surface" />
+      <p class="font-mono text-5xl font-bold text-amber">404</p>
+      <h1 class="mt-4 font-head text-3xl">Page not found.</h1>
+      <p class="mx-auto mt-4 max-w-md text-surface/75">That page doesn’t exist — but your real numbers do.</p>
+      <div class="mt-8 flex flex-wrap items-center justify-center gap-4">
+        <a href="/" class="rounded-lg bg-amber px-5 py-2.5 text-sm font-semibold text-ink transition hover:bg-amber-deep hover:text-white">Home</a>
+        <a href="/docs" class="rounded-lg border border-surface/30 px-5 py-2.5 text-sm font-semibold text-surface transition hover:bg-surface/10">Read the docs →</a>
+      </div>
+    </div>
+  </section>
+</BaseLayout>

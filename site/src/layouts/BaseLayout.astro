@@ -1,0 +1,92 @@
+---
+import '@fontsource-variable/inter';
+import '@fontsource-variable/jetbrains-mono';
+import '../styles/global.css';
+import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
+
+interface Props {
+  title: string;
+  description: string;
+  /** Open Graph image path (defaults to the site OG card). */
+  ogImage?: string;
+  ogType?: 'website' | 'article';
+  /** Skip the fixed-nav top padding (e.g. pages with a full-bleed dark hero handle it themselves). */
+  noNavPad?: boolean;
+  /** Page opens over a dark hero — nav text goes light until scroll. */
+  heroDark?: boolean;
+}
+const {
+  title,
+  description,
+  ogImage = '/assets/og-default.svg',
+  ogType = 'website',
+  noNavPad = false,
+  heroDark = false,
+} = Astro.props;
+
+const canonical = new URL(Astro.url.pathname, Astro.site).href;
+const ogUrl = new URL(ogImage, Astro.site).href;
+
+// Umami (self-hosted) — only emits when both env vars are set at build time.
+const umamiSrc = import.meta.env.PUBLIC_UMAMI_SRC;
+const umamiId = import.meta.env.PUBLIC_UMAMI_WEBSITE_ID;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="mask-icon" href="/assets/wtclaude-mark.svg" color="#E8943A" />
+    <link rel="apple-touch-icon" href="/assets/wtclaude-app-icon-light.svg" />
+    <meta name="theme-color" content="#1A1915" />
+    <link rel="canonical" href={canonical} />
+
+    <title>{title}</title>
+    <meta name="description" content={description} />
+
+    <!-- Open Graph -->
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content={ogType} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={ogUrl} />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    {
+      umamiSrc && umamiId && (
+        <script is:inline defer src={umamiSrc} data-website-id={umamiId} />
+      )
+    }
+  </head>
+  <body class="min-h-screen bg-surface antialiased">
+    <Nav heroDark={heroDark} />
+    <main class={noNavPad ? '' : 'pt-14'}>
+      <slot />
+    </main>
+    <Footer />
+
+    <script>
+      // Global [data-track] click delegator. Fires the named Umami event for any
+      // element carrying data-track, EXCEPT [data-copy] buttons (they fire their own).
+      function bindGlobalTracking() {
+        if ((window as any).__wtTrackBound) return;
+        (window as any).__wtTrackBound = true;
+        document.addEventListener('click', (e) => {
+          const el = (e.target as HTMLElement)?.closest('[data-track]');
+          if (!el || el.hasAttribute('data-copy')) return;
+          const ev = (el as HTMLElement).dataset.track;
+          if (!ev) return;
+          try {
+            (window as any).umami?.track(ev);
+          } catch {
+            /* no-op */
+          }
+        });
+      }
+      bindGlobalTracking();
+    </script>
+  </body>
+</html>

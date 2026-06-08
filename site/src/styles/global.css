@@ -1,0 +1,53 @@
+@import 'tailwindcss';
+
+/* ---- WTClaude brand tokens (kickoff palette + GTM stage-3 extensions) ---- */
+@theme {
+  --color-amber: #e8943a;
+  --color-amber-deep: #8b5e2b;
+  --color-amber-light: #fff3d6;
+  --color-alert: #d94f3d;
+  --color-ink: #1a1915;
+  --color-surface: #faf8f2;
+  --color-card: #ffffff;
+  --color-warm: #9e9b90;
+  --color-codebg: #2a2520;
+  --color-success: #5a9e6f;
+
+  --font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace;
+  --font-sans: 'Inter Variable', 'Inter', system-ui, sans-serif;
+}
+
+/* ---- base ---- */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  * {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* Anchor offset so #section targets clear the fixed nav. */
+:target {
+  scroll-margin-top: 6rem;
+}
+
+/* Utility: the warm headline font. */
+.font-head {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}

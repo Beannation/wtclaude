@@ -1,4 +1,4 @@
-import { getConfig, saveConfig, getSupabaseConfig, syncToCloud } from '../sync/index.js';
+import { getConfig, saveConfig, getSupabaseConfig, syncToCloud, pruneLegacySecrets } from '../sync/index.js';
 import { checkBadges } from '../badges/check.js';
 
 export function registerSync(program) {
@@ -50,10 +50,11 @@ async function configureSynce() {
   console.log('  Add your Supabase credentials to ~/.wtclaude/config.json:\n');
   console.log('  {');
   console.log('    "supabase_url": "https://YOUR-PROJECT.supabase.co",');
-  console.log('    "supabase_anon_key": "YOUR-ANON-KEY",');
+  console.log('    "supabase_publishable_key": "sb_publishable_...",');
   console.log('    "sync_enabled": true');
   console.log('  }\n');
-  console.log('  Find these in your Supabase dashboard under Settings > API.\n');
+  console.log('  Use the browser-safe PUBLISHABLE key (sb_publishable_…) from');
+  console.log('  Supabase dashboard > Settings > API. Never paste a secret key.\n');
 
   if (config.supabase_url) {
     console.log(`  Current URL: ${config.supabase_url}`);
@@ -78,9 +79,13 @@ function showStatus() {
 }
 
 async function runSync() {
-  const { url, anonKey } = getSupabaseConfig();
+  // QA-BUG-08: scrub any disabled legacy service/secret key from config on sync.
+  const stripped = pruneLegacySecrets();
+  if (stripped.length) console.log(`  Removed a disabled legacy secret key from config (${stripped.join(', ')}).`);
 
-  if (!url || !anonKey) {
+  const { url, publishableKey } = getSupabaseConfig();
+
+  if (!url || !publishableKey) {
     console.log('\n  Supabase not configured yet.');
     console.log('  Run: wtclaude sync --configure\n');
     return;

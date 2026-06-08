@@ -1,0 +1,19 @@
+---
+/**
+ * Visible draft/placeholder marker. Used wherever the page is built to a Strategy
+ * BRIEF (structure + locked lines) but the finished marketing prose is GTM's to write.
+ * Code-only rule: we never author the prose — we flag it here for GTM.
+ */
+interface Props {
+  brief: string; // e.g. "Strategy brief A2 (Complete Claude User)"
+  class?: string;
+}
+const { brief, class: cls = '' } = Astro.props;
+---
+
+<p
+  class={`mx-auto max-w-3xl rounded-lg border border-dashed border-amber/50 bg-amber-light/40 px-4 py-3 text-sm text-amber-deep ${cls}`}
+>
+  <strong>Draft — copy gap.</strong> Structure + locked lines built from {brief}; the finished
+  marketing prose is GTM's to write/approve before this page goes to production.
+</p>

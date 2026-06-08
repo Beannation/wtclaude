@@ -2,7 +2,9 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { mkdirSync } from 'node:fs';
 
-const WTCLAUDE_DIR = join(homedir(), '.wtclaude');
+// Honor a WTCLAUDE_DIR override (regression/replay against a fixture dir without
+// touching the real ~/.wtclaude). Defaults to the standard home location.
+const WTCLAUDE_DIR = process.env.WTCLAUDE_DIR || join(homedir(), '.wtclaude');
 const SESSIONS_DIR = join(WTCLAUDE_DIR, 'sessions');
 const DAILY_DIR = join(WTCLAUDE_DIR, 'daily');
 const COMPARISONS_DIR = join(WTCLAUDE_DIR, 'comparisons');

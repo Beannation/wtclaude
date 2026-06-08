@@ -1,0 +1,83 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Mark from '../../components/Mark.astro';
+import HonestyBadge from '../../components/HonestyBadge.astro';
+import CaptureForm from '../../components/CaptureForm.astro';
+import DraftNote from '../../components/DraftNote.astro';
+
+const title = 'WTClaude for Finance — allocate every Claude dollar (coming soon)';
+const description =
+  'Allocate every Claude dollar — know the bill before the invoice. Cross-surface cost-center allocation and pre-invoice accrual for finance teams. Coming soon.';
+---
+
+<BaseLayout title={title} description={description} noNavPad heroDark>
+  <!-- HERO (lead message — Strategy brief A4, verbatim) -->
+  <section class="relative overflow-hidden bg-ink text-surface">
+    <div
+      class="pointer-events-none absolute inset-0 opacity-70"
+      style="background: radial-gradient(60% 50% at 50% 0%, rgba(232,148,58,0.18) 0%, rgba(26,25,21,0) 70%);"
+    >
+    </div>
+    <div class="relative mx-auto max-w-3xl px-5 pb-16 pt-32 text-center sm:pt-36">
+      <Mark class="mx-auto mb-7 h-14 w-14 text-surface" />
+      <span class="inline-block rounded-full bg-surface/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-surface/70">Coming soon · for finance teams</span>
+      <h1 class="mt-5 font-head text-4xl leading-tight sm:text-5xl">
+        Allocate every Claude dollar — know the bill before the invoice.
+      </h1>
+    </div>
+  </section>
+
+  <section class="mx-auto max-w-3xl px-5 py-16">
+    <DraftNote brief="Strategy brief A4 (SMB Finance)" class="mb-12" />
+
+    <!-- Co-heroes: cost-center allocation + pre-invoice accrual -->
+    <div class="grid gap-6 sm:grid-cols-2">
+      <article class="rounded-2xl border border-ink/10 bg-card p-7 shadow-sm">
+        <h2 class="font-head text-lg">Cross-surface cost-center allocation</h2>
+        <p class="mt-2 text-sm leading-relaxed text-ink/70">
+          Attribute Claude spend to the right team, project, or cost center.
+        </p>
+      </article>
+      <article class="rounded-2xl border border-ink/10 bg-card p-7 shadow-sm">
+        <div class="flex flex-wrap items-center gap-1.5">
+          <h2 class="font-head text-lg">Pre-invoice accrual</h2>
+          <HonestyBadge kind="estimate" />
+        </div>
+        <p class="mt-2 text-sm leading-relaxed text-ink/70">
+          Know the bill before the invoice arrives, to close the books.
+        </p>
+      </article>
+    </div>
+
+    <!-- Honesty guardrails (do-NOT-claim, brief A4 + labeling spec) -->
+    <p class="mx-auto mt-10 max-w-3xl text-center text-sm leading-relaxed text-ink/65">
+      The accrual is a clearly-labeled estimate of the bill — not the guaranteed invoice. This is
+      cost allocation, not employee monitoring. Allocation and accrual are billing-grade on Code;
+      Cowork is billing-grade only with OTel enabled, otherwise a labeled estimate.
+    </p>
+
+    <!-- CTA: email-signup capture (no pricing — embargo) -->
+    <div class="mx-auto mt-12 max-w-md rounded-2xl border border-ink/10 bg-card p-7 text-center shadow-sm">
+      <p class="font-head text-lg">Get notified at launch</p>
+      <div class="mt-4">
+        <CaptureForm tag="smb_finance" event="guardian_waitlist" cta="Notify me" />
+      </div>
+    </div>
+
+    <p class="mt-8 text-center text-sm">
+      <a href="/business" class="font-semibold text-amber-deep hover:text-amber">← Back to WTClaude for Business</a>
+    </p>
+  </section>
+
+  <script>
+    function initFinancePage() {
+      try {
+        (window as any).umami?.track('lp_view_smb_tease', { page: 'finance' });
+      } catch {
+        /* no-op */
+      }
+    }
+    initFinancePage();
+    document.addEventListener('astro:page-load', initFinancePage);
+  </script>
+</BaseLayout>

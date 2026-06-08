@@ -1,0 +1,70 @@
+---
+import HonestyBadge from './HonestyBadge.astro';
+
+/**
+ * THE centerpiece — your tracker ($3.42/day) vs Reality ($18.70/day · 5.5× gap).
+ * Reality side is badged billing-grade. Polished enough to screenshot/share.
+ */
+interface Props {
+  class?: string;
+}
+const { class: cls = '' } = Astro.props;
+---
+
+<div class={`overflow-hidden rounded-2xl border border-ink/10 bg-card shadow-[0_8px_30px_rgba(26,25,21,0.08)] ${cls}`}>
+  <div class="grid grid-cols-2 divide-x divide-ink/10">
+    <!-- tracker -->
+    <div class="p-6 sm:p-8">
+      <p class="text-xs font-medium uppercase tracking-wider text-warm">Your tracker</p>
+      <p class="mt-3 font-mono text-3xl font-bold text-warm line-through decoration-warm/50 sm:text-4xl">
+        $3.42<span class="text-base font-medium no-underline">/day</span>
+      </p>
+      <p class="mt-2 text-sm text-ink/50">read from broken session logs</p>
+    </div>
+
+    <!-- reality -->
+    <div class="bg-amber-light/40 p-6 sm:p-8">
+      <div class="flex items-center gap-2">
+        <p class="text-xs font-medium uppercase tracking-wider text-amber-deep">Reality</p>
+        <HonestyBadge kind="billing-grade" />
+      </div>
+      <p class="mt-3 font-mono text-3xl font-bold text-ink sm:text-4xl" data-reality-number data-target="18.70">
+        $18.70<span class="text-base font-medium">/day</span>
+      </p>
+      <p class="mt-2 text-sm font-semibold text-alert">5.5× gap</p>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Subtle count-up on scroll-into-view for the reality number.
+  function initCountUp() {
+    const el = document.querySelector<HTMLElement>('[data-reality-number]');
+    if (!el || el.dataset.done) return;
+    const target = parseFloat(el.dataset.target || '0');
+    if (!target || !('IntersectionObserver' in window)) return;
+    const suffix = el.querySelector('span')?.outerHTML ?? '';
+
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        if (!e.isIntersecting || el.dataset.done) return;
+        el.dataset.done = '1';
+        const start = 3.42;
+        const t0 = performance.now();
+        const dur = 900;
+        const tick = (t: number) => {
+          const p = Math.min((t - t0) / dur, 1);
+          const eased = 1 - Math.pow(1 - p, 3);
+          const val = (start + (target - start) * eased).toFixed(2);
+          el.innerHTML = `$${val}${suffix}`;
+          if (p < 1) requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+        io.disconnect();
+      });
+    }, { threshold: 0.5 });
+    io.observe(el);
+  }
+  initCountUp();
+  document.addEventListener('astro:page-load', initCountUp);
+</script>

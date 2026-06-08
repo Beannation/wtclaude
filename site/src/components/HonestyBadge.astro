@@ -1,0 +1,37 @@
+---
+/**
+ * Honesty badge — a REAL component, rendered next to every number. Not decoration.
+ *   billing-grade → amber (Code cost, the source behind your bill)
+ *   inferred      → gray (e.g. fast-mode label, inferred from cost-per-token)
+ *   estimate      → gray, dashed (forward-looking forecast / readiness / FX)
+ *   forecast      → alias of estimate (dashed)
+ */
+interface Props {
+  kind: 'billing-grade' | 'inferred' | 'estimate' | 'forecast';
+  class?: string;
+}
+const { kind, class: cls = '' } = Astro.props;
+
+const label = kind === 'forecast' ? 'estimate' : kind;
+
+const styles: Record<string, string> = {
+  'billing-grade':
+    'bg-amber-light text-amber-deep border border-amber/40',
+  inferred: 'bg-warm/15 text-warm border border-warm/40',
+  estimate: 'bg-warm/10 text-warm border border-dashed border-warm/60',
+  forecast: 'bg-warm/10 text-warm border border-dashed border-warm/60',
+};
+---
+
+<span
+  class={`inline-flex items-center gap-1 rounded-full px-2 py-[2px] text-[11px] font-mono font-medium uppercase tracking-wide align-middle ${styles[kind]} ${cls}`}
+  title={
+    kind === 'billing-grade'
+      ? 'Billing-grade: read from the same data source behind your bill.'
+      : kind === 'inferred'
+        ? 'Inferred: derived where the field isn’t exposed (e.g. fast-mode).'
+        : 'Estimate: a forward-looking projection — never your exact bill.'
+  }
+>
+  {label}
+</span>

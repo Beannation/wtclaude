@@ -1,0 +1,30 @@
+{
+  "version": "2026-06-15",
+  "effective_date": "2026-06-15",
+  "note": "Post billing-split. Inherits the 2026-05-28 models/rates and adds the Agent-SDK dollar credit pools + the dual_pool_activation_date that drives progressive disclosure. Agent-SDK credits are billed at full API rates, expire monthly, NO rollover. ⚠ VERIFY LIVE rates + credit allocations before launch (build-spec §11).",
+  "models": {
+    "haiku-4-5": { "input": 1.00, "output": 5.00 },
+    "sonnet-4-6": { "input": 3.00, "output": 15.00 },
+    "opus-4-8": {
+      "input": 5.00,
+      "output": 25.00,
+      "fast_mode": { "input": 10.00, "output": 50.00 },
+      "aliases": ["opus-4-7", "opus-4-6"]
+    }
+  },
+  "cache": {
+    "read_multiplier": 0.10,
+    "write_multiplier": 0.25
+  },
+  "plans": {
+    "pro": { "price_monthly": 20, "label": "Pro", "agent_sdk_credits_monthly": 20 },
+    "max_5x": { "price_monthly": 100, "label": "Max 5x", "agent_sdk_credits_monthly": 100 },
+    "max_20x": { "price_monthly": 200, "label": "Max 20x", "agent_sdk_credits_monthly": 200 }
+  },
+  "pools": {
+    "interactive": { "label": "Interactive (subscription limits)", "billing_basis": "subscription_limits" },
+    "agent_sdk": { "label": "Agent SDK credits (API rates, no rollover)", "billing_basis": "agent_sdk_credits" }
+  },
+  "dual_pool_activation_date": "2026-06-15",
+  "units": "USD per million tokens"
+}

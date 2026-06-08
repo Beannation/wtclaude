@@ -1,0 +1,37 @@
+# Supabase project config.
+#
+# Linked project: dddinnggyyabbmrsrhnq (WTClaude).
+#
+# IMPORTANT (QA-fix June 8): every edge function authenticates with the browser-
+# safe PUBLISHABLE key (sb_publishable_…) + an `x-anonymous-id` header — NOT a
+# Supabase Auth JWT. The function gateway must therefore NOT verify a JWT, or it
+# rejects the publishable key with 401 UNAUTHORIZED_INVALID_JWT_FORMAT. There was
+# no config.toml before, so `supabase functions deploy <fn>` silently re-enabled
+# the default verify_jwt=true and broke `wtclaude sync`. Pin verify_jwt=false here
+# so redeploys stay correct (identity is resolved server-side from x-anonymous-id;
+# all privileged writes use the service-role key held as a function secret).
+project_id = "wtclaude"
+
+[functions.sync-data]
+verify_jwt = false
+
+[functions.get-summary]
+verify_jwt = false
+
+[functions.get-dashboard]
+verify_jwt = false
+
+[functions.get-session]
+verify_jwt = false
+
+[functions.get-leaderboard]
+verify_jwt = false
+
+[functions.report-daily]
+verify_jwt = false
+
+[functions.report-monthly]
+verify_jwt = false
+
+[functions.email-signup]
+verify_jwt = false
