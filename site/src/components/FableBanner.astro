@@ -1,0 +1,69 @@
+---
+import { SHOW_FABLE_BANNER, FABLE_BANNER } from '../config';
+
+/**
+ * Fable-5 launch ticker (PM-GTM-038). Flag-gated: SHOW_FABLE_BANNER=false pulls it in one
+ * line, and the string itself lives in config.ts (swap to the post-cliff variant June 23).
+ * Dismissible — the choice persists in localStorage. Secondary to the hero: a ticker,
+ * not a headline. The copy is GTM-authored verbatim; only `backtick` spans become mono.
+ */
+const html = FABLE_BANNER.replace(
+  /`([^`]+)`/g,
+  '<code class="rounded bg-ink/8 px-1 py-[1px] font-mono text-[0.92em]">$1</code>',
+);
+---
+
+{
+  SHOW_FABLE_BANNER && (
+    <aside data-fable-banner class="w-full border-b border-amber/30 bg-amber-light text-ink">
+      <div class="mx-auto flex max-w-6xl items-center justify-center gap-3 px-5 py-2.5">
+        <p class="text-center text-sm font-medium leading-snug">
+          <span set:html={html} />
+          <a
+            href="/blog/claude-fable-5-pricing-explained"
+            class="ml-1.5 whitespace-nowrap font-semibold underline underline-offset-2 hover:text-amber-deep"
+            data-track="fable_banner_click"
+          >
+            Learn more →
+          </a>
+        </p>
+        <button
+          type="button"
+          data-fable-dismiss
+          aria-label="Dismiss"
+          class="shrink-0 rounded p-1 leading-none text-ink/50 transition hover:bg-ink/5 hover:text-ink"
+        >
+          ✕
+        </button>
+      </div>
+    </aside>
+  )
+}
+
+<script>
+  function initFableBanner() {
+    const el = document.querySelector<HTMLElement>('[data-fable-banner]');
+    if (!el || el.dataset.init) return;
+    el.dataset.init = '1';
+
+    const KEY = 'wt_fable_banner_dismissed';
+    try {
+      if (localStorage.getItem(KEY) === '1') {
+        el.remove();
+        return;
+      }
+    } catch {
+      /* no-op */
+    }
+    el.querySelector('[data-fable-dismiss]')?.addEventListener('click', () => {
+      el.remove();
+      try {
+        localStorage.setItem(KEY, '1');
+      } catch {
+        /* no-op */
+      }
+    });
+  }
+  initFableBanner();
+  document.addEventListener('astro:page-load', initFableBanner);
+</script>

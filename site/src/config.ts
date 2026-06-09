@@ -53,6 +53,16 @@ export const SHOW_TASKS_FEATURE = false;
 export const SHOW_DRAFT_NOTES = false;
 
 /**
+ * Fable-5 launch ticker (PM-GTM-038). SHOW_FABLE_BANNER=false pulls the home banner in
+ * one flip. FABLE_BANNER is the pre-cliff string (now → June 22), verbatim from GTM.
+ * On/after June 23 swap in the post-cliff variant (one-line edit):
+ *   'Now tracking Claude Fable 5 — billing-grade cost in your terminal. See what it’s costing you: `wtclaude fable`.'
+ */
+export const SHOW_FABLE_BANNER = true;
+export const FABLE_BANNER =
+  'Now tracking Claude Fable 5 — billing-grade cost in your terminal. Free through June 22; see the June-23 cliff coming with `wtclaude fable`.';
+
+/**
  * Guardian pricing — locked + publishable (GTM-030 / PM-GTM-034). SMB pricing
  * remains embargoed (no numbers). `full` is the single canonical price string —
  * use it everywhere a price is shown so every surface reads identically.

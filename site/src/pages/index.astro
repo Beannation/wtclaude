@@ -2,6 +2,7 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Mark from '../components/Mark.astro';
 import June15Banner from '../components/June15Banner.astro';
+import FableBanner from '../components/FableBanner.astro';
 import CodeBlock from '../components/CodeBlock.astro';
 import HookBand from '../components/HookBand.astro';
 import RelatedReading from '../components/RelatedReading.astro';
@@ -57,8 +58,15 @@ const jsonLd = softwareApplication(new URL(Astro.url.pathname, Astro.site).href)
       </div>
 
       <p class="mt-6 font-mono text-sm text-surface/60">Free · open-source (MIT) · 60-second setup.</p>
+
+      <p class="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-amber-light/90">
+        New: tracks Claude Fable 5 — billing-grade in your terminal, with a June-23 cliff forecast
+        (<code class="rounded bg-surface/10 px-1 py-0.5 font-mono text-[13px]">wtclaude fable</code>).
+      </p>
     </div>
   </section>
+
+  <FableBanner />
 
   <June15Banner />
 

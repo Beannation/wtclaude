@@ -81,3 +81,5 @@ No. It's an independent, free, open-source (MIT) project. Being independent is p
 ---
 
 *WTClaude is a free, open-source, billing-grade cost tracker for Claude Code. See your real number: `npx wtclaude setup`, then `wtclaude compare`. [How it compares to other trackers →](/compare)*
+
+*Further reading: [Claude Fable 5 Pricing Explained: The Free Window, Usage Credits, and the June 23 Cliff →](/blog/claude-fable-5-pricing-explained)*
