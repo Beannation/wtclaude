@@ -10,7 +10,10 @@
   },
   "files": [
     "bin/",
-    "src/"
+    "src/",
+    "!src/**/*.test.js",
+    "README.md",
+    "LICENSE"
   ],
   "keywords": [
     "claude",

@@ -1,3 +1,14 @@
 node_modules/
 .DS_Store
 *.log
+.env
+.env.*
+dist/
+supabase/.temp/
+*.tgz
+
+# Internal build-context docs — kept on disk for the build channels, excluded from the public repo
+CLAUDE.md
+kickoff-prompt.md
+setup-instructions.md
+research-context/

@@ -1,4 +1,4 @@
-import { writeFileSync } from 'node:fs';
+import { writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { getSessionsForDateRange, summarizeSessions } from '../utils/sessions.js';
@@ -8,6 +8,7 @@ import { computeTurnCost } from '../utils/cost.js';
 import { getModelPricing, getLatestPricing } from '../utils/pricing.js';
 import { generateComparisonCard, generateComparisonHtml } from '../compare/card-generator.js';
 import { localDate } from '../utils/time.js';
+import { COMPARISONS_DIR } from '../utils/paths.js';
 
 export function registerCompare(program) {
   program
@@ -41,14 +42,25 @@ export function registerCompare(program) {
       console.log(formatComparisonTable(accurate, jsonl));
 
       if (opts.share) {
-        const svgPath = join(homedir(), 'Desktop', 'wtclaude-comparison.svg');
-        const htmlPath = join(homedir(), 'Desktop', 'wtclaude-comparison.html');
-        writeFileSync(svgPath, generateComparisonCard(accurate, jsonl));
-        writeFileSync(htmlPath, generateComparisonHtml(accurate, jsonl));
-        console.log(`  Comparison card saved to:`);
-        console.log(`    ${svgPath}`);
-        console.log(`    ${htmlPath}`);
-        console.log(`  Open the HTML file in a browser, or share the SVG directly.\n`);
+        // QA-BUG-R2-01: never let a blocked ~/Desktop write (macOS TCC, headless/CI,
+        // read-only target) throw a raw stack trace. Try the Desktop, then fall back
+        // to ~/.wtclaude/comparisons/. The table above always prints regardless.
+        const saved = saveShareCard(
+          generateComparisonCard(accurate, jsonl),
+          generateComparisonHtml(accurate, jsonl),
+        );
+        if (saved.ok) {
+          console.log(`  Comparison card saved to:`);
+          console.log(`    ${saved.svgPath}`);
+          console.log(`    ${saved.htmlPath}`);
+          if (saved.fallback) {
+            console.log(`  (Couldn't write to your Desktop — ${saved.reason}. Saved to ~/.wtclaude/comparisons/ instead.)`);
+          }
+          console.log(`  Open the HTML file in a browser, or share the SVG directly.\n`);
+        } else {
+          console.log(`  Couldn't save the comparison card — ${saved.reason}.`);
+          console.log(`  The comparison is shown above; re-run --share once a writable location is available.\n`);
+        }
       }
 
       if (jsonl.input_tokens > 0) {
@@ -60,6 +72,47 @@ export function registerCompare(program) {
         }
       }
     });
+}
+
+// Write the share card to the first writable target: ~/Desktop, then
+// ~/.wtclaude/comparisons/ as a guaranteed-writable fallback. Never throws —
+// returns { ok, svgPath, htmlPath, fallback, reason } so the caller can degrade
+// gracefully (QA-BUG-R2-01 / KTD-17). A blocked Desktop is the common case on
+// macOS (TCC denies a non-Apple `node` binary) and in headless/CI runs.
+function saveShareCard(svg, html) {
+  const targets = [
+    { dir: join(homedir(), 'Desktop'), fallback: false },
+    { dir: COMPARISONS_DIR, fallback: true },
+  ];
+  let reason = 'write failed';
+  for (const t of targets) {
+    try {
+      mkdirSync(t.dir, { recursive: true });
+      const svgPath = join(t.dir, 'wtclaude-comparison.svg');
+      const htmlPath = join(t.dir, 'wtclaude-comparison.html');
+      writeFileSync(svgPath, svg);
+      writeFileSync(htmlPath, html);
+      return { ok: true, svgPath, htmlPath, fallback: t.fallback, reason };
+    } catch (err) {
+      reason = friendlyFsReason(err);
+      // try the next target
+    }
+  }
+  return { ok: false, reason };
+}
+
+function friendlyFsReason(err) {
+  switch (err && err.code) {
+    case 'EPERM':
+    case 'EACCES':
+      return 'permission denied (grant your terminal Desktop access in System Settings, or the folder is protected)';
+    case 'EROFS':
+      return 'the location is read-only';
+    case 'ENOSPC':
+      return 'no space left on the device';
+    default:
+      return (err && (err.code || err.message)) || 'write failed';
+  }
 }
 
 function estimateJsonlCost(jsonl) {
