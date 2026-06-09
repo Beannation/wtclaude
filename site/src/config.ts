@@ -75,6 +75,6 @@ export const CAPTURE_METHOD: 'POST' = 'POST';
 
 /** Canonical links. */
 export const LINKS = {
-  github: 'https://github.com/wtclaude/wtclaude',
+  github: 'https://github.com/Beannation/wtclaude',
   install: 'npx wtclaude setup',
 };

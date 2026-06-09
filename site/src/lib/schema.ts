@@ -23,7 +23,7 @@ export const ORGANIZATION = {
   name: 'WTClaude',
   url: SITE_URL,
   logo: abs('/assets/wtclaude-app-icon-light.svg'),
-  sameAs: ['https://github.com/wtclaude/wtclaude'],
+  sameAs: ['https://github.com/Beannation/wtclaude'],
 };
 
 /**
