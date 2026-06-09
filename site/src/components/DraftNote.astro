@@ -4,6 +4,7 @@
  * BRIEF (structure + locked lines) but the finished marketing prose is GTM's to write.
  * Code-only rule: we never author the prose — we flag it here for GTM.
  */
+import { SHOW_DRAFT_NOTES } from '../config';
 interface Props {
   brief: string; // e.g. "Strategy brief A2 (Complete Claude User)"
   class?: string;
@@ -11,9 +12,11 @@ interface Props {
 const { brief, class: cls = '' } = Astro.props;
 ---
 
+{SHOW_DRAFT_NOTES && (
 <p
   class={`mx-auto max-w-3xl rounded-lg border border-dashed border-amber/50 bg-amber-light/40 px-4 py-3 text-sm text-amber-deep ${cls}`}
 >
   <strong>Draft — copy gap.</strong> Structure + locked lines built from {brief}; the finished
   marketing prose is GTM's to write/approve before this page goes to production.
 </p>
+)}

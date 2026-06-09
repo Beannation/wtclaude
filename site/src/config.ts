@@ -46,6 +46,13 @@ export const FAST_MODE_BADGE: 'inferred' | null = 'inferred';
 export const SHOW_TASKS_FEATURE = false;
 
 /**
+ * Internal "Draft — copy gap" markers (`DraftNote.astro`) on the persona pages
+ * (/complete, /business, /business/finance). These are dev-only flags for GTM —
+ * keep FALSE in production so they never render publicly. Flip true locally to see them.
+ */
+export const SHOW_DRAFT_NOTES = false;
+
+/**
  * Guardian pricing — locked + publishable (GTM-030 / PM-GTM-034). SMB pricing
  * remains embargoed (no numbers). `full` is the single canonical price string —
  * use it everywhere a price is shown so every surface reads identically.

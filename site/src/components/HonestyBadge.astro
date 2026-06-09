@@ -24,7 +24,7 @@ const styles: Record<string, string> = {
 ---
 
 <span
-  class={`inline-flex items-center gap-1 rounded-full px-2 py-[2px] text-[11px] font-mono font-medium uppercase tracking-wide align-middle ${styles[kind]} ${cls}`}
+  class={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-[2px] text-[11px] font-mono font-medium uppercase tracking-wide align-middle ${styles[kind]} ${cls}`}
   title={
     kind === 'billing-grade'
       ? 'Billing-grade: read from the same data source behind your bill.'
