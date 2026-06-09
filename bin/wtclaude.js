@@ -25,6 +25,7 @@ import { registerDevices } from '../src/cli/devices.js';
 import { registerReport } from '../src/cli/report.js';
 import { registerCredits } from '../src/cli/credits.js';
 import { registerForecast } from '../src/cli/forecast.js';
+import { registerFable } from '../src/cli/fable.js';
 import { registerReadiness } from '../src/cli/readiness.js';
 import { registerLeaderboard } from '../src/cli/leaderboard.js';
 import { registerUninstall } from '../src/cli/uninstall.js';
@@ -35,7 +36,7 @@ const program = new Command();
 program
   .name('wtclaude')
   .description('WTClaude — billing-grade cost tracking for Claude Code. Reads the statusline (the source behind your bill), not the session logs.')
-  .version('0.1.1');
+  .version('0.1.2');
 
 registerToday(program);
 registerWeek(program);
@@ -61,6 +62,7 @@ registerDevices(program);
 registerReport(program);
 registerCredits(program);
 registerForecast(program);
+registerFable(program);
 registerReadiness(program);
 registerLeaderboard(program);
 registerUninstall(program);

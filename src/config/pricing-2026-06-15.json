@@ -1,7 +1,7 @@
 {
   "version": "2026-06-15",
   "effective_date": "2026-06-15",
-  "note": "Post billing-split. Inherits the 2026-05-28 models/rates and adds the Agent-SDK dollar credit pools + the dual_pool_activation_date that drives progressive disclosure. Agent-SDK credits are billed at full API rates, expire monthly, NO rollover. ⚠ VERIFY LIVE rates + credit allocations before launch (build-spec §11).",
+  "note": "Post billing-split. Inherits the 2026-05-28 models/rates and adds the Agent-SDK dollar credit pools + the dual_pool_activation_date that drives progressive disclosure. Agent-SDK credits are billed at full API rates, expire monthly, NO rollover. June 9: added fable-5 at the announced launch rates (2x Opus 4.8; included on subscription plans June 9-22, billed from usage credits starting fable_cliff_date) — fable-5 must NEVER fall back to Opus pricing. ⚠ VERIFY LIVE rates + credit allocations before launch (build-spec §11).",
   "models": {
     "haiku-4-5": { "input": 1.00, "output": 5.00 },
     "sonnet-4-6": { "input": 3.00, "output": 15.00 },
@@ -10,7 +10,8 @@
       "output": 25.00,
       "fast_mode": { "input": 10.00, "output": 50.00 },
       "aliases": ["opus-4-7", "opus-4-6"]
-    }
+    },
+    "fable-5": { "input": 10.00, "output": 50.00 }
   },
   "cache": {
     "read_multiplier": 0.10,
@@ -26,5 +27,6 @@
     "agent_sdk": { "label": "Agent SDK credits (API rates, no rollover)", "billing_basis": "agent_sdk_credits" }
   },
   "dual_pool_activation_date": "2026-06-15",
+  "fable_cliff_date": "2026-06-23",
   "units": "USD per million tokens"
 }

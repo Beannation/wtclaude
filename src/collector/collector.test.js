@@ -96,3 +96,55 @@ test('collector dedupes an unchanged status update (no phantom turn)', () => {
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+// FABLE-001 PART 2 — billing-basis on the June-23 "Fable cliff". Interactive
+// Fable bills usage credits from the cliff date, NOT subscription limits. The
+// test pins the cliff via the config override (same knob used if Anthropic
+// moves the date) so it stays deterministic.
+
+function fablePayload(sessionId, { cost, input, output, cwd }) {
+  const p = payload(sessionId, { cost, input, output, cwd });
+  p.model = { id: 'claude-fable-5[1m]' }; // literal id from the June-9 live capture
+  return p;
+}
+
+test('collector labels interactive Fable usage_credits once the cliff has passed', () => {
+  const dir = setup('s');
+  try {
+    writeFileSync(join(dir, 'config.json'),
+      JSON.stringify({ edit_hash_salt: 's', fable_cliff_date: '2020-01-01' }));
+    runCollector(dir, fablePayload('fable-post', { cost: 0.05, input: 1000, output: 100, cwd: '/Users/x/p' }));
+    const rec = JSON.parse(readFileSync(join(dir, 'sessions', 'fable-post.ndjson'), 'utf8').trim());
+    assert.equal(rec.model, 'claude-fable-5[1m]');
+    assert.equal(rec.usage_pool, 'interactive');
+    assert.equal(rec.billing_basis, 'usage_credits');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('collector keeps subscription_limits for Fable during the included window', () => {
+  const dir = setup('s');
+  try {
+    writeFileSync(join(dir, 'config.json'),
+      JSON.stringify({ edit_hash_salt: 's', fable_cliff_date: '2099-01-01' }));
+    runCollector(dir, fablePayload('fable-pre', { cost: 0.05, input: 1000, output: 100, cwd: '/Users/x/p' }));
+    const rec = JSON.parse(readFileSync(join(dir, 'sessions', 'fable-pre.ndjson'), 'utf8').trim());
+    assert.equal(rec.billing_basis, 'subscription_limits');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('collector never labels non-Fable models usage_credits, even past the cliff', () => {
+  const dir = setup('s');
+  try {
+    writeFileSync(join(dir, 'config.json'),
+      JSON.stringify({ edit_hash_salt: 's', fable_cliff_date: '2020-01-01' }));
+    runCollector(dir, payload('opus-post', { cost: 0.05, input: 1000, output: 100, cwd: '/Users/x/p' }));
+    const rec = JSON.parse(readFileSync(join(dir, 'sessions', 'opus-post.ndjson'), 'utf8').trim());
+    assert.equal(rec.billing_basis, 'subscription_limits');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

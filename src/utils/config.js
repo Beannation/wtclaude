@@ -35,6 +35,17 @@ export function isDualPoolActive(todayStr = new Date().toISOString().slice(0, 10
   return todayStr >= getDualPoolActivationDate();
 }
 
+// The date interactive Fable 5 use starts drawing usage credits (the announced
+// June-23 "Fable cliff" — removed from subscription inclusion on June 22 EOD).
+// Config override first (Anthropic may extend the window / restore inclusion),
+// then the active pricing sheet, then the announced date.
+export function getFableCliffDate() {
+  const c = loadConfig();
+  if (c.fable_cliff_date) return c.fable_cliff_date;
+  const p = getLatestPricing();
+  return p.fable_cliff_date || '2026-06-23';
+}
+
 // Plan key (pro | max_5x | max_20x) if the user set one at setup; else null.
 export function getPlanKey() {
   const c = loadConfig();

@@ -31,7 +31,7 @@ import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { ensureDataDirs, sessionPath, CONFIG_FILE, WTCLAUDE_DIR } from '../utils/paths.js';
 import { expectedCost } from '../utils/cost.js';
-import { getModelEntry } from '../utils/pricing.js';
+import { getModelEntry, getLatestPricing, normalizeModel } from '../utils/pricing.js';
 import { join } from 'node:path';
 
 // ── helpers ─────────────────────────────────────────────────────────────────
@@ -147,9 +147,18 @@ function detectUsagePool(config) {
   return 'interactive';
 }
 
-function detectBillingBasis(usagePool, speedTier) {
+function detectBillingBasis(usagePool, speedTier, modelId, config, todayStr = new Date().toISOString().slice(0, 10)) {
   if (speedTier === 'fast') return 'fast_mode_usage_credits';
   if (usagePool === 'agent_sdk') return 'agent_sdk_credits';
+  // Interactive Fable 5 is removed from subscription inclusion on the June-23
+  // "Fable cliff" — from then it bills the usage-credits wallet from token #1,
+  // NOT subscription limits. Config `fable_cliff_date` overrides the pricing
+  // sheet's date (Anthropic may extend the window or restore inclusion).
+  const modelKey = normalizeModel(modelId);
+  if (modelKey && modelKey.startsWith('fable')) {
+    const cliff = (config && config.fable_cliff_date) || getLatestPricing().fable_cliff_date;
+    if (cliff && todayStr >= cliff) return 'usage_credits';
+  }
   return 'subscription_limits';
 }
 
@@ -290,7 +299,7 @@ function collect() {
     cache_read_tokens: deltaCacheRead, cache_write_tokens: deltaCacheWrite,
   };
   const { tier: speedTier, source: speedTierSource } = resolveSpeedTier(f.fastMode, f.modelId, tokenDeltas, deltaCost);
-  const billingBasis = detectBillingBasis(usagePool, speedTier);
+  const billingBasis = detectBillingBasis(usagePool, speedTier, f.modelId, config);
 
   // ── BUILD-023: per-turn deltas for the cumulative v2 counters ──
   // Math.max guards /compact resets, session resume, and counter non-monotonicity
