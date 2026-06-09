@@ -80,11 +80,11 @@ export function formatUsageSummary(label, summary, cur = null) {
 
 export function formatComparisonTable(accurate, jsonl) {
   const lines = [];
-  lines.push('\n  Accurate (WTClaude) vs JSONL (what ccusage reads)');
-  lines.push('  ================================================');
+  lines.push('\n  Your real cost vs a session-log estimate');
+  lines.push('  ========================================');
   lines.push('');
-  lines.push(`  ${'Metric'.padEnd(20)} ${'Accurate'.padEnd(15)} ${'JSONL'.padEnd(15)} Gap`);
-  lines.push(`  ${'------'.padEnd(20)} ${'--------'.padEnd(15)} ${'-----'.padEnd(15)} ---`);
+  lines.push(`  ${'Metric'.padEnd(16)} ${'Billing-grade (statusline)'.padEnd(28)} ${'Session-log estimate'.padEnd(24)} Gap`);
+  lines.push(`  ${'------'.padEnd(16)} ${'-'.repeat(26).padEnd(28)} ${'-'.repeat(20).padEnd(24)} ---`);
 
   const rows = [
     ['Input tokens', accurate.input_tokens, jsonl.input_tokens],
@@ -98,7 +98,7 @@ export function formatComparisonTable(accurate, jsonl) {
     const gap = jsl > 0 ? `${(acc / jsl).toFixed(1)}x` : 'N/A';
     const accStr = typeof acc === 'number' && label.includes('cost') ? formatCost(acc) : formatTokens(acc);
     const jslStr = typeof jsl === 'number' && label.includes('cost') ? formatCost(jsl) : formatTokens(jsl);
-    lines.push(`  ${label.padEnd(20)} ${accStr.padEnd(15)} ${jslStr.padEnd(15)} ${gap}`);
+    lines.push(`  ${label.padEnd(16)} ${accStr.padEnd(28)} ${jslStr.padEnd(24)} ${gap}`);
   }
 
   lines.push('');

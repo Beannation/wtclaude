@@ -34,8 +34,8 @@ const program = new Command();
 
 program
   .name('wtclaude')
-  .description('The first accurate Claude Code usage tracker')
-  .version('0.1.0');
+  .description('WTClaude — billing-grade cost tracking for Claude Code. Reads the statusline (the source behind your bill), not the session logs.')
+  .version('0.1.1');
 
 registerToday(program);
 registerWeek(program);

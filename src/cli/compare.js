@@ -13,7 +13,7 @@ import { COMPARISONS_DIR } from '../utils/paths.js';
 export function registerCompare(program) {
   program
     .command('compare')
-    .description('Compare accurate data vs JSONL (what ccusage reads)')
+    .description('Compare your billing-grade cost vs a session-log estimate')
     .option('--days <n>', 'Number of days to compare', '1')
     .option('--share', 'Save a shareable comparison card to ~/Desktop')
     .action((opts) => {
@@ -66,9 +66,10 @@ export function registerCompare(program) {
       if (jsonl.input_tokens > 0) {
         const gap = accurate.input_tokens / jsonl.input_tokens;
         if (gap > 5) {
-          console.log(`  Your JSONL logs undercount input tokens by ${gap.toFixed(0)}x.`);
-          console.log('  Every tool that reads JSONL (ccusage, tokscale, etc.) shows you these wrong numbers.');
-          console.log('  WTClaude reads the accurate statusline data instead.\n');
+          console.log(`  Your session-log estimate undercounts input tokens by ${gap.toFixed(0)}x.`);
+          console.log('  Session-log trackers reconstruct cost from the JSONL, which can drift from your bill.');
+          console.log('  The billing-grade figure is read from the statusline — the source behind your bill.');
+          console.log('  Your gap is whatever yours is.\n');
         }
       }
     });

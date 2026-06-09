@@ -16,16 +16,16 @@
   <text x="96" y="300" font-family="'JetBrains Mono', monospace" font-size="62" font-weight="700" fill="#FAF8F2">Built on the right data</text>
   <text x="96" y="372" font-family="'JetBrains Mono', monospace" font-size="62" font-weight="700" fill="#FAF8F2">from day one.</text>
 
-  <!-- mini comparison card -->
+  <!-- mini comparison card — honest "see your own gap" framing (PM-PUB-004 · GTM canonical F) -->
   <g transform="translate(96,440)">
-    <rect width="480" height="120" rx="16" fill="#26241f" stroke="#3a362e"/>
-    <text x="32" y="44" font-family="Inter, sans-serif" font-size="18" fill="#9E9B90">Your tracker</text>
-    <text x="32" y="90" font-family="'JetBrains Mono', monospace" font-size="34" font-weight="700" fill="#9E9B90" text-decoration="line-through">$3.42/day</text>
-    <line x1="240" y1="20" x2="240" y2="100" stroke="#3a362e"/>
-    <text x="268" y="44" font-family="Inter, sans-serif" font-size="18" fill="#E8943A">Reality · billing-grade</text>
-    <text x="268" y="90" font-family="'JetBrains Mono', monospace" font-size="34" font-weight="700" fill="#FAF8F2">$18.70/day</text>
+    <rect width="600" height="120" rx="16" fill="#26241f" stroke="#3a362e"/>
+    <text x="32" y="44" font-family="Inter, sans-serif" font-size="17" fill="#9E9B90">Session-log estimate</text>
+    <text x="32" y="88" font-family="'JetBrains Mono', monospace" font-size="28" font-weight="700" fill="#9E9B90">estimate</text>
+    <line x1="300" y1="20" x2="300" y2="100" stroke="#3a362e"/>
+    <text x="328" y="44" font-family="Inter, sans-serif" font-size="17" fill="#E8943A">Billing-grade · your bill's source</text>
+    <text x="328" y="88" font-family="'JetBrains Mono', monospace" font-size="28" font-weight="700" fill="#FAF8F2">your real cost</text>
   </g>
 
-  <text x="624" y="500" font-family="Inter, sans-serif" font-size="22" fill="#9E9B90">5.5× gap</text>
+  <text x="730" y="510" font-family="Inter, sans-serif" font-size="22" fill="#9E9B90">See your own gap</text>
   <text x="96" y="600" font-family="'JetBrains Mono', monospace" font-size="20" fill="#9E9B90">wtclaude.com · Free · Open Source</text>
 </svg>

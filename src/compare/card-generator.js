@@ -16,12 +16,12 @@ export function generateComparisonCard(accurate, jsonl) {
   <rect width="600" height="440" rx="16" fill="url(#bg)"/>
 
   <!-- Header -->
-  <text x="300" y="45" text-anchor="middle" font-family="system-ui, sans-serif" font-size="14" font-weight="600" fill="#ff6b6b">YOUR CLAUDE CODE TRACKER IS LYING</text>
-  <text x="300" y="75" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#888">Accurate statusline data vs JSONL logs (what ccusage reads)</text>
+  <text x="300" y="48" text-anchor="middle" font-family="system-ui, sans-serif" font-size="20" font-weight="700" fill="#fafafa">WTClaude</text>
+  <text x="300" y="74" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" fill="#888">Billing-grade cost for Claude Code</text>
 
   <!-- Column headers -->
-  <text x="240" y="110" text-anchor="end" font-family="system-ui, sans-serif" font-size="12" font-weight="600" fill="#4ade80">Actual</text>
-  <text x="380" y="110" text-anchor="end" font-family="system-ui, sans-serif" font-size="12" font-weight="600" fill="#888">JSONL</text>
+  <text x="240" y="110" text-anchor="end" font-family="system-ui, sans-serif" font-size="10" font-weight="600" fill="#4ade80">Billing-grade</text>
+  <text x="380" y="110" text-anchor="end" font-family="system-ui, sans-serif" font-size="10" font-weight="600" fill="#888">Session-log estimate</text>
   <text x="520" y="110" text-anchor="end" font-family="system-ui, sans-serif" font-size="12" font-weight="700" fill="#ff6b6b">Gap</text>
 
   <!-- Divider -->
@@ -56,11 +56,10 @@ export function generateComparisonCard(accurate, jsonl) {
 
   <!-- Big callout -->
   <rect x="40" y="320" width="520" height="50" rx="8" fill="#1e1e3a"/>
-  <text x="300" y="351" text-anchor="middle" font-family="system-ui, sans-serif" font-size="15" font-weight="600" fill="#ff6b6b">ccusage shows ${formatCost(jsonl.cost)}/day — reality is ${formatCost(accurate.cost)}/day</text>
+  <text x="300" y="351" text-anchor="middle" font-family="system-ui, sans-serif" font-size="15" font-weight="600" fill="#ff6b6b">Billing-grade ${formatCost(accurate.cost)}/day · Session-log estimate ${formatCost(jsonl.cost)}/day</text>
 
   <!-- Footer -->
-  <text x="300" y="410" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" font-weight="600" fill="#4ade80">WTClaude</text>
-  <text x="300" y="430" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#666">The first accurate Claude Code usage tracker — npm install -g wtclaude</text>
+  <text x="300" y="420" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#888">Read from the statusline — the source behind your bill.</text>
 </svg>`;
 }
 

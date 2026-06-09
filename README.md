@@ -1,26 +1,27 @@
 # WTClaude
 
-The first accurate Claude Code usage tracker.
+Billing-grade cost tracking for Claude Code.
 
-Every existing tracker (ccusage, tokscale, etc.) reads Claude Code's JSONL logs — which undercount input tokens by **100x** and output tokens by **10-17x**. WTClaude reads from the accurate statusline data path instead, matching Anthropic's billing dashboard to the exact token.
+> **WTClaude is an independent, open-source project. It is not affiliated with, endorsed by, or sponsored by Anthropic.** "Claude" is a trademark of Anthropic, PBC.
 
-## The Problem
+Most Claude Code trackers read the local session logs (the JSONL files), which don't carry billing-grade cost — so their totals can drift from your bill. **WTClaude reads the statusline instead — the same source behind your bill** — so your `today` / `week` / `month` cost is **billing-grade in the terminal**.
 
-Claude Code writes JSONL session logs during streaming, before the API response finalizes. The `input_tokens` field is recorded as 0 or 1 in 75% of entries — and nobody updates it afterward. Output tokens exclude thinking/reasoning tokens (60-70% of Opus output).
+## See your own gap
 
-**Real numbers** (from [independent research](https://gille.ai/en/blog/claude-code-jsonl-logs-undercount-tokens/)):
+```bash
+npx wtclaude setup
+wtclaude compare
+```
 
-| Metric | JSONL Says | Actual | Gap |
-|--------|-----------|--------|-----|
-| Input tokens | 41,444 | 7,199,162 | **174x** |
-| Output tokens | 183,829 | 3,208,365 | **17x** |
-| Daily total | 225K tokens | 10.4M tokens | **46x** |
+`wtclaude compare` shows your real, billing-grade number next to the number a log-based tracker would show you, and the gap between them. How big that gap is depends entirely on how you use Claude Code — so the point is to see *yours*.
 
-ccusage told users they spent $3.42/day. Reality: $18.70/day.
+## Why the logs drift
 
-## The Fix
+Claude Code writes its JSONL session logs during streaming, before the API response finalizes, so token counts in the logs can be incomplete or placeholder values that never get corrected. Independent research has documented cases where this significantly undercounts real usage ([gille.ai](https://gille.ai/en/blog/claude-code-jsonl-logs-undercount-tokens/)), and there are open reports of the underlying behavior (`anthropics/claude-code#28197`, `ryoppippi/ccusage#866`). Because those logs were never the billing source, any tool reconstructing cost from them is estimating.
 
-WTClaude uses Claude Code's statusline command — a JSON payload piped on every status update containing **cumulative totals from finalized API responses**. This is the same data the `/cost` command uses. It matches billing exactly.
+WTClaude reads the **statusline** — the same cumulative, finalized data behind the `/cost` command and your bill — so in the terminal it's billing-grade.
+
+> **Scope, precisely:** billing-grade applies to Claude Code **in the terminal**, where the statusline is available. For the desktop app, Cowork, or Chat, that source isn't exposed locally, so WTClaude labels those as honest estimates — never billing-grade.
 
 ## Install
 
@@ -85,4 +86,4 @@ Anthropic's own tools (`/cost`, `/usage`) use the accurate internal state, not J
 
 ## License
 
-MIT
+MIT © Peter Bean. WTClaude is an independent, open-source project and is not affiliated with, endorsed by, or sponsored by Anthropic.
