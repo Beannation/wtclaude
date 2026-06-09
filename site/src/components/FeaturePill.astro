@@ -1,0 +1,35 @@
+---
+/**
+ * Feature-status pill for the /features showcase (§6 badge convention).
+ *   available → small amber check pill ("Available")
+ *   soon      → muted gray pill ("Coming soon")
+ *
+ * USER-FACING RULE: never a phase name (no "Phase 1/0.5/2") — only these two states.
+ * Cloud-on items don't pass a third state: the page resolves them to 'available' or
+ * 'soon' from the single CLOUD_LIVE flag (§5) before rendering.
+ */
+interface Props {
+  status: 'available' | 'soon';
+  class?: string;
+}
+const { status, class: cls = '' } = Astro.props;
+---
+
+{
+  status === 'available' ? (
+    <span
+      class={`inline-flex items-center gap-1 rounded-full bg-amber/15 px-2.5 py-[3px] text-[11px] font-semibold uppercase tracking-wide text-amber-deep ${cls}`}
+    >
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <polyline points="20 6 9 17 4 12" />
+      </svg>
+      Available
+    </span>
+  ) : (
+    <span
+      class={`inline-flex items-center rounded-full bg-ink/5 px-2.5 py-[3px] text-[11px] font-semibold uppercase tracking-wide text-warm ${cls}`}
+    >
+      Coming soon
+    </span>
+  )
+}

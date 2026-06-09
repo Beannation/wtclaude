@@ -3,6 +3,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import Mark from '../components/Mark.astro';
 import CaptureForm from '../components/CaptureForm.astro';
 import DraftNote from '../components/DraftNote.astro';
+import HookBand from '../components/HookBand.astro';
 
 const title = 'WTClaude for Business — Claude management for SMB (coming soon)';
 const description =
@@ -64,6 +65,8 @@ const description =
       <a href="/business/finance" class="font-semibold text-amber-deep hover:text-amber">For finance teams →</a>
     </p>
   </section>
+
+  <HookBand />
 
   <script>
     function initBusinessPage() {

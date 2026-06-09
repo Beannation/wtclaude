@@ -3,13 +3,20 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import Mark from '../components/Mark.astro';
 import June15Banner from '../components/June15Banner.astro';
 import CodeBlock from '../components/CodeBlock.astro';
+import HookBand from '../components/HookBand.astro';
+import RelatedReading from '../components/RelatedReading.astro';
+import { CLOUD_LIVE } from '../config';
+import { softwareApplication } from '../lib/schema';
 
-const title = 'WTClaude — built on the right data from day one';
+// §4B meta (verbatim; the `npx wtclaude setup` markdown backticks dropped — markup, not a meta string).
+const title = 'WTClaude — billing-grade cost tracking for Claude Code';
 const description =
-  'See what Claude is really costing you, built on billing-grade data. Free, open-source Claude Code usage tracker — ready for the June 15 billing split.';
+  'See your real Claude Code cost, billing-grade in your terminal — not the estimate your session logs show. Free, open source. npx wtclaude setup.';
+
+const jsonLd = softwareApplication(new URL(Astro.url.pathname, Astro.site).href);
 ---
 
-<BaseLayout title={title} description={description} noNavPad heroDark>
+<BaseLayout title={title} description={description} noNavPad heroDark jsonLd={jsonLd}>
   <!-- HERO -->
   <section class="relative overflow-hidden bg-ink text-surface">
     <div
@@ -27,6 +34,15 @@ const description =
         about the rest. It starts with Claude Code in your terminal, where we read the billing-grade
         numbers Anthropic bills you from.
       </p>
+
+      {
+        CLOUD_LIVE && (
+          <p class="mx-auto mt-4 max-w-xl text-base leading-relaxed text-amber-light/90">
+            Now with a web dashboard and opt-in multi-device sync — your real Claude Code
+            numbers, everywhere you work.
+          </p>
+        )
+      }
 
       <div class="mx-auto mt-9 max-w-md">
         <CodeBlock code="npx wtclaude setup" />
@@ -101,4 +117,13 @@ const description =
       were exact.
     </p>
   </section>
+
+  <RelatedReading
+    eyebrow="The accuracy story"
+    label="Why Your Claude Code Cost Tracker Disagrees With Your Bill"
+    href="/blog/is-claude-code-cost-accurate"
+    track="cta_cornerstone"
+  />
+
+  <HookBand />
 </BaseLayout>

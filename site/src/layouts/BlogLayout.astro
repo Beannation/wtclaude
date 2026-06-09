@@ -1,6 +1,7 @@
 ---
 import BaseLayout from './BaseLayout.astro';
 import CodeBlock from '../components/CodeBlock.astro';
+import HookBand from '../components/HookBand.astro';
 
 interface Props {
   title: string;
@@ -9,12 +10,13 @@ interface Props {
   author: string;
   readingTime?: string;
   draftProse?: boolean;
+  jsonLd?: object | object[];
 }
-const { title, description, pubDate, author, readingTime, draftProse } = Astro.props;
+const { title, description, pubDate, author, readingTime, draftProse, jsonLd } = Astro.props;
 const dateStr = pubDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' });
 ---
 
-<BaseLayout title={`${title} — WTClaude`} description={description} ogType="article">
+<BaseLayout title={`${title} — WTClaude`} description={description} ogType="article" jsonLd={jsonLd}>
   <article class="mx-auto max-w-[720px] px-5 py-16">
     <a href="/blog" class="text-sm font-medium text-amber-deep hover:text-amber">← Blog</a>
 
@@ -42,6 +44,8 @@ const dateStr = pubDate.toLocaleDateString('en-US', { year: 'numeric', month: 'l
       </div>
     </div>
   </article>
+
+  <HookBand />
 
   <script>
     // Scroll-depth events: blog_read_50 / blog_read_100.

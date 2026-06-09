@@ -50,9 +50,20 @@ function dashboardLinkGuard() {
 // Static SSG → Vercel. Marketing site only (Home, /developers, /complete, /business, blog, docs).
 // The /dashboard route is NOT part of this build — it is proxied via vercel.json (infra channel)
 // to the separate Phase-0 dashboard app, and is gated OFF until SEC Phase C deploys.
+// Sitemap lastmod — stamped at build time (accurate: it's when the deployed site was last built).
+const BUILD_LASTMOD = new Date();
+
 export default defineConfig({
   site: 'https://wtclaude.com',
-  integrations: [sitemap(), dashboardLinkGuard()],
+  integrations: [
+    sitemap({
+      serialize(item) {
+        item.lastmod = BUILD_LASTMOD.toISOString();
+        return item;
+      },
+    }),
+    dashboardLinkGuard(),
+  ],
   vite: {
     plugins: [tailwindcss()],
   },

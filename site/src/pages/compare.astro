@@ -1,0 +1,251 @@
+---
+/**
+ * /compare — the fair, named head-to-head (SEO master-plan §5 + compare-page-copy.md).
+ * Copy is GTM-final and applied VERBATIM — do not edit strings here. Tone: even-handed,
+ * factual, fair-not-attack. Cloud capabilities gate on the SAME CLOUD_LIVE flag (no 2nd flag).
+ *
+ * Note (flagged to GTM/PMO): the master-plan §5 / PM-prompt give the H1 as
+ * "WTClaude vs ccusage and other Claude Code cost trackers"; this dedicated copy spec
+ * gives H1 = "Claude Code cost trackers, compared — honestly" (that phrasing is the <title>).
+ * Built from the dedicated copy spec verbatim — discrepancy raised for GTM to reconcile.
+ */
+import BaseLayout from '../layouts/BaseLayout.astro';
+import CodeBlock from '../components/CodeBlock.astro';
+import HonestyBadge from '../components/HonestyBadge.astro';
+import HookBand from '../components/HookBand.astro';
+import { CLOUD_LIVE } from '../config';
+import { faqPage, breadcrumbs } from '../lib/schema';
+
+const title = 'WTClaude vs ccusage & other Claude Code cost trackers (2026)';
+const description =
+  "An honest, side-by-side comparison of the main ways to track Claude Code spend — ccusage, Claude-Code-Usage-Monitor, ccflare, the built-in /cost, and WTClaude. We'll tell you when another tool is the better pick.";
+
+const cols = ['WTClaude', 'ccusage', 'Claude-Code-Usage-Monitor', 'ccflare', 'Built-in /cost'];
+
+// Plain rows (verbatim). The cloud-gated WTClaude cells live in the table markup below.
+const rows = [
+  { label: 'Cost data source', cells: ['Statusline (billing-source)', 'Session logs (JSONL)', 'Session logs (JSONL)', 'Session logs (JSONL)', 'Client-side estimate'] },
+  { label: 'Real-time burn / predictions', cells: ['Live monitor', '—', 'Yes (its specialty)', 'Charts/filters', 'Session view'] },
+  { label: 'June 15 dual-pool ready', cells: ['Built for it', 'varies', 'varies', 'varies', 'Anthropic-native'] },
+  { label: 'Open source', cells: ['Yes (MIT)', 'Yes', 'Yes', 'Yes', 'No (built-in)'] },
+  { label: 'Price', cells: ['Free', 'Free', 'Free', 'Free', 'Included'] },
+  { label: 'Runtime', cells: ['Node', 'Node', 'Python', 'Node', 'Built-in'] },
+];
+
+// FAQ (verbatim). Links rendered on-page; flattened to text for the FAQPage schema.
+const faqs = [
+  {
+    q: "What's the best alternative to ccusage?",
+    a: 'It depends what you want. For a real-time terminal monitor, Claude-Code-Usage-Monitor; for a browser dashboard, ccflare; for billing-grade accuracy from the statusline (rather than a log-based estimate) plus multi-machine totals and June-15 readiness, WTClaude. All of these are free and open source.',
+  },
+  {
+    q: 'Are these trackers accurate?',
+    a: 'Most reconstruct cost from local session logs — a solid estimate, but an estimate. WTClaude reads the statusline (the source behind your bill), which is billing-grade for Claude Code in the terminal.',
+    linkText: "Here's why the two can disagree.",
+    linkHref: '/blog/is-claude-code-cost-accurate',
+  },
+  {
+    q: 'Is WTClaude affiliated with Anthropic?',
+    a: 'No — independent, free, open source (MIT).',
+  },
+  {
+    q: 'Which is ready for the June 15 billing split?',
+    a: 'WTClaude tracks the two credit pools (Interactive and Agent-SDK) and lights them up automatically.',
+    linkText: 'More on the split.',
+    linkHref: '/blog/the-june-15-split',
+  },
+];
+
+const jsonLd = [
+  breadcrumbs([
+    { name: 'Home', path: '/' },
+    { name: 'Compare', path: '/compare' },
+  ]),
+  faqPage(faqs.map((f) => ({ q: f.q, a: f.linkText ? `${f.a} ${f.linkText}` : f.a }))),
+];
+
+const td = 'border-t border-ink/10 px-4 py-3 text-sm align-top';
+---
+
+<BaseLayout title={title} description={description} jsonLd={jsonLd}>
+  <article class="mx-auto max-w-5xl px-5 py-16">
+    <nav aria-label="Breadcrumb" class="text-sm text-warm">
+      <a href="/" class="hover:text-amber-deep">Home</a> <span class="px-1">/</span>
+      <span class="text-ink/70">Compare</span>
+    </nav>
+
+    <!-- H1 -->
+    <h1 class="mt-4 font-head text-3xl leading-tight sm:text-4xl">
+      Claude Code cost trackers, compared — honestly
+    </h1>
+
+    <!-- Intro -->
+    <p class="mt-6 max-w-3xl text-base leading-relaxed text-ink/80">
+      There are several good ways to track what you're spending on Claude Code, and the right one
+      depends on what you care about. Below is an even-handed look at the main options — including
+      ours. Where another tool is the better fit, we say so. The one thing we'd flag up front: most
+      trackers reconstruct cost from local session logs (an estimate), while WTClaude reads the
+      statusline — the source behind your bill — so its terminal numbers are billing-grade. That
+      difference matters for some people and barely matters for others; the table shows where it does.
+    </p>
+    <p class="mt-4 text-sm italic text-warm">
+      Last updated: June 2026. Spot something out of date? It's an open-source project — tell us.
+    </p>
+
+    <!-- The table -->
+    <div class="mt-10 overflow-x-auto rounded-2xl border border-ink/10 bg-card shadow-sm">
+      <table class="w-full min-w-[760px] border-collapse text-left">
+        <thead>
+          <tr class="bg-ink/[0.03]">
+            <th scope="col" class="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-warm"></th>
+            {
+              cols.map((c, i) => (
+                <th
+                  scope="col"
+                  class:list={[
+                    'px-4 py-3 font-mono text-sm font-semibold',
+                    i === 0 ? 'text-amber-deep' : 'text-ink',
+                  ]}
+                >
+                  {c}
+                </th>
+              ))
+            }
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Cost basis — rendered with the real honesty badges -->
+          <tr>
+            <th scope="row" class={`${td} font-semibold text-ink`}>Cost basis</th>
+            <td class={td}>
+              <span class="inline-flex flex-wrap items-center gap-1.5">
+                <HonestyBadge kind="billing-grade" />
+                <span class="text-ink/55">(terminal Code)</span>
+              </span>
+            </td>
+            <td class={td}><HonestyBadge kind="estimate" /></td>
+            <td class={td}><HonestyBadge kind="estimate" /></td>
+            <td class={td}><HonestyBadge kind="estimate" /></td>
+            <td class={td}><HonestyBadge kind="estimate" /></td>
+          </tr>
+
+          <!-- Interface — WTClaude cell is CLOUD_LIVE-gated -->
+          <tr>
+            <th scope="row" class={`${td} font-semibold text-ink`}>Interface</th>
+            <td class={`${td} text-ink/80`}>
+              {CLOUD_LIVE ? 'Terminal + web dashboard' : 'Terminal (web dashboard coming soon)'}
+            </td>
+            <td class={`${td} text-ink/70`}>Terminal</td>
+            <td class={`${td} text-ink/70`}>Terminal (real-time)</td>
+            <td class={`${td} text-ink/70`}>Browser</td>
+            <td class={`${td} text-ink/70`}>In-CLI command</td>
+          </tr>
+
+          {/* Generic rows up to the multi-machine row */}
+          {
+            rows.slice(0, 3).map((r) => (
+              <tr>
+                <th scope="row" class={`${td} font-semibold text-ink`}>{r.label}</th>
+                {r.cells.map((cell, i) => (
+                  <td class:list={[td, i === 0 ? 'text-ink/80' : 'text-ink/70']}>{cell}</td>
+                ))}
+              </tr>
+            ))
+          }
+
+          <!-- Total across multiple machines — WTClaude cell is CLOUD_LIVE-gated -->
+          <tr>
+            <th scope="row" class={`${td} font-semibold text-ink`}>Total across multiple machines</th>
+            <td class={`${td} text-ink/80`}>{CLOUD_LIVE ? 'Yes' : 'Coming soon'}</td>
+            <td class={`${td} text-ink/70`}>Local</td>
+            <td class={`${td} text-ink/70`}>Local</td>
+            <td class={`${td} text-ink/70`}>Local</td>
+            <td class={`${td} text-ink/70`}>Local</td>
+          </tr>
+
+          {
+            rows.slice(3).map((r) => (
+              <tr>
+                <th scope="row" class={`${td} font-semibold text-ink`}>{r.label}</th>
+                {r.cells.map((cell, i) => (
+                  <td class:list={[td, i === 0 ? 'text-ink/80' : 'text-ink/70']}>{cell}</td>
+                ))}
+              </tr>
+            ))
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <!-- When to use which -->
+    <section class="mt-14">
+      <h2 class="font-head text-2xl">When to use which (the honest guide)</h2>
+      <ul class="mt-6 space-y-4 text-base leading-relaxed text-ink/80">
+        <li>
+          <strong class="font-semibold text-ink">Want a real-time, in-terminal burn-rate monitor with predictions?</strong>
+          Claude-Code-Usage-Monitor is purpose-built for that and does it well.
+        </li>
+        <li>
+          <strong class="font-semibold text-ink">Want a rich browser view built from the same JSONL approach?</strong>
+          ccflare is a nice option.
+        </li>
+        <li>
+          <strong class="font-semibold text-ink">Want the fast, ubiquitous CLI for log-based reports by day/session/project?</strong>
+          ccusage is the one most people know, and it's good at what it does.
+        </li>
+        <li>
+          <strong class="font-semibold text-ink">Just want a quick gut-check inside a session?</strong>
+          The built-in <code class="rounded bg-ink/5 px-1 py-0.5 font-mono text-[13px]">/cost</code> is right there — just remember it's an estimate.
+        </li>
+        <li>
+          <strong class="font-semibold text-ink">Want billing-grade accuracy (not a reconstruction), June-15 dual-pool readiness, and one total across every machine?</strong>
+          That's where WTClaude is different — it reads the statusline instead of the logs. Try it:
+          <code class="rounded bg-ink/5 px-1 py-0.5 font-mono text-[13px]">npx wtclaude setup</code>, then
+          <code class="rounded bg-ink/5 px-1 py-0.5 font-mono text-[13px]">wtclaude compare</code> to see your own gap.
+        </li>
+      </ul>
+    </section>
+
+    <!-- FAQ -->
+    <section class="mt-14">
+      <h2 class="font-head text-2xl">FAQ</h2>
+      <div class="mt-6 space-y-3">
+        {
+          faqs.map((f) => (
+            <details class="group rounded-xl border border-ink/10 bg-card px-5 py-4">
+              <summary class="flex cursor-pointer items-center justify-between font-medium text-ink marker:content-['']">
+                {f.q}
+                <span class="ml-4 text-warm transition group-open:rotate-45">+</span>
+              </summary>
+              <p class="mt-3 text-sm leading-relaxed text-ink/70">
+                {f.a}
+                {f.linkText && (
+                  <>
+                    {' '}
+                    <a href={f.linkHref} class="font-medium text-amber-deep underline-offset-2 hover:underline">
+                      {f.linkText}
+                    </a>
+                  </>
+                )}
+              </p>
+            </details>
+          ))
+        }
+      </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="mt-14 rounded-2xl border border-ink/10 bg-card p-7 text-center shadow-sm">
+      <p class="font-head text-lg">
+        See where your real number lands:
+        <code class="rounded bg-ink/5 px-1 py-0.5 font-mono text-[15px]">npx wtclaude setup</code> →
+        <code class="rounded bg-ink/5 px-1 py-0.5 font-mono text-[15px]">wtclaude compare</code>.
+      </p>
+      <div class="mx-auto mt-5 max-w-sm">
+        <CodeBlock code="npx wtclaude setup" />
+      </div>
+    </section>
+  </article>
+
+  <HookBand />
+</BaseLayout>

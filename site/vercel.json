@@ -7,6 +7,21 @@
       "has": [{ "type": "host", "value": "www.wtclaude.com" }],
       "destination": "https://wtclaude.com/:path*",
       "permanent": true
+    },
+    {
+      "source": "/blog/why-your-claude-code-cost-tracker-disagrees-with-your-bill",
+      "destination": "https://wtclaude.com/blog/is-claude-code-cost-accurate",
+      "permanent": true
+    },
+    {
+      "source": "/dashboard",
+      "destination": "https://dashboard.wtclaude.com",
+      "permanent": false
+    },
+    {
+      "source": "/dashboard/:path*",
+      "destination": "https://dashboard.wtclaude.com/:path*",
+      "permanent": false
     }
   ]
 }

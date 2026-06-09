@@ -1,0 +1,29 @@
+---
+/**
+ * Internal-linking band (SEO master-plan §4D) — a descriptive-anchor pointer to a
+ * cornerstone/sibling page. Anchor text = the target page's own (GTM-authored) title,
+ * not "click here". Concentrates ranking signal into the pillar.
+ *
+ * `label` (the anchor text) is reproduced GTM copy — do not author new phrasing here.
+ */
+interface Props {
+  eyebrow?: string;
+  label: string;
+  href: string;
+  track?: string;
+}
+const { eyebrow = 'Further reading', label, href, track } = Astro.props;
+---
+
+<section class="border-t border-ink/10 bg-surface">
+  <div class="mx-auto max-w-3xl px-5 py-10 text-center">
+    <p class="font-mono text-xs uppercase tracking-wide text-warm">{eyebrow}</p>
+    <a
+      href={href}
+      class="mt-2 inline-block font-head text-lg text-ink underline decoration-amber/50 decoration-2 underline-offset-4 transition hover:text-amber-deep"
+      data-track={track}
+    >
+      {label} →
+    </a>
+  </div>
+</section>

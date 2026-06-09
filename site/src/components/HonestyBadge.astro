@@ -29,7 +29,7 @@ const styles: Record<string, string> = {
     kind === 'billing-grade'
       ? 'Billing-grade: read from the same data source behind your bill.'
       : kind === 'inferred'
-        ? 'Inferred: derived where the field isn’t exposed (e.g. fast-mode).'
+        ? 'Inferred — calculated from indirect signals rather than read straight from the billing source, so it’s our best inference of this value, clearly labeled (not billing-grade).'
         : 'Estimate: a forward-looking projection — never your exact bill.'
   }
 >

@@ -2,7 +2,8 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import CodeBlock from '../components/CodeBlock.astro';
 import HonestyBadge from '../components/HonestyBadge.astro';
-import { SHOW_FAST_MODE, FAST_MODE_BADGE, SHOW_TASKS_FEATURE, GUARDIAN_PRICE } from '../config';
+import { SHOW_FAST_MODE, FAST_MODE_BADGE, SHOW_TASKS_FEATURE, GUARDIAN_PRICE, CLOUD_LIVE } from '../config';
+import { faqPage, breadcrumbs } from '../lib/schema';
 
 const title = 'WTClaude docs — install & quick start';
 const description =
@@ -13,7 +14,7 @@ const commands = [
   { name: 'setup', desc: 'configure tracking — wires the statusline and creates your local data dir.' },
   {
     name: 'today / week / month',
-    desc: 'real cost, tokens, and model breakdown for the period. Flags: `--json`, `--since/--until`.',
+    desc: 'real cost, tokens, and model breakdown for the period — and after June 15 the summary splits the total into your **Interactive** (subscription) and **Agent-SDK** (credit) pools automatically. Flags: `--json`, `--since/--until`, `--group-by <project|branch|cost_center|task>`.',
     badge: 'billing-grade' as const,
   },
   {
@@ -86,16 +87,25 @@ const faqs = [
   },
   {
     q: 'Is it free?',
-    a: `Yes, and open-source (MIT). A paid Guardian intelligence layer is coming at ${GUARDIAN_PRICE.monthly} · ${GUARDIAN_PRICE.yearly}; the tracker stays free.`,
+    a: `Yes, and open-source (MIT). A paid Guardian intelligence layer is coming at ${GUARDIAN_PRICE.full}; the tracker stays free.`,
   },
   {
     q: 'Who’s behind it?',
     a: 'An independent project. Not affiliated with Anthropic.',
   },
 ];
+
+// FAQPage (drives People-Also-Ask) + BreadcrumbList (§4A).
+const jsonLd = [
+  faqPage(faqs),
+  breadcrumbs([
+    { name: 'Home', path: '/' },
+    { name: 'Docs', path: '/docs' },
+  ]),
+];
 ---
 
-<BaseLayout title={title} description={description}>
+<BaseLayout title={title} description={description} jsonLd={jsonLd}>
   <div class="mx-auto max-w-3xl px-5 py-16">
     <!-- QUICK START -->
     <section>
@@ -157,6 +167,35 @@ const faqs = [
                 .replace(/\*\*([^*]+)\*\*/g, '<strong class="font-semibold text-ink">$1</strong>')} />
             </div>
           ))
+        }
+
+        {
+          CLOUD_LIVE && (
+            <Fragment>
+              <div class="px-5 py-4">
+                <dt class="flex flex-wrap items-center gap-2">
+                  <code class="font-mono text-sm font-semibold text-ink">sync</code>
+                </dt>
+                <dd class="mt-1.5 text-sm leading-relaxed text-ink/70">
+                  opt-in cloud backup + multi-device totals.{' '}
+                  <code class="rounded bg-ink/5 px-1 py-0.5 font-mono text-[13px]">--enable</code> /{' '}
+                  <code class="rounded bg-ink/5 px-1 py-0.5 font-mono text-[13px]">--disable</code> /{' '}
+                  <code class="rounded bg-ink/5 px-1 py-0.5 font-mono text-[13px]">--status</code> /{' '}
+                  <code class="rounded bg-ink/5 px-1 py-0.5 font-mono text-[13px]">--configure</code>.
+                  Local-first — nothing leaves your machine until you enable it, and you preview
+                  exactly what syncs first.
+                </dd>
+              </div>
+              <div class="px-5 py-4">
+                <dt class="flex flex-wrap items-center gap-2">
+                  <code class="font-mono text-sm font-semibold text-ink">dashboard</code>
+                </dt>
+                <dd class="mt-1.5 text-sm leading-relaxed text-ink/70">
+                  open the web dashboard in your browser — everything the CLI tracks, in one view.
+                </dd>
+              </div>
+            </Fragment>
+          )
         }
 
         {

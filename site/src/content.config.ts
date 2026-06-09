@@ -11,6 +11,11 @@ const blog = defineCollection({
     readingTime: z.string().optional(),
     /** Set true while the body is an outline/skeleton awaiting GTM final prose. */
     draftProse: z.boolean().default(false),
+    /**
+     * Optional FAQ pairs (verbatim from the post body) → FAQPage JSON-LD for rich results.
+     * Mirror the post's own FAQ section; do not author new Q&As here.
+     */
+    faq: z.array(z.object({ q: z.string(), a: z.string() })).optional(),
   }),
 });
 

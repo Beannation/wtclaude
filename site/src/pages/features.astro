@@ -1,0 +1,292 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Mark from '../components/Mark.astro';
+import CodeBlock from '../components/CodeBlock.astro';
+import HonestyBadge from '../components/HonestyBadge.astro';
+import FeaturePill from '../components/FeaturePill.astro';
+import { CLOUD_LIVE, GUARDIAN_PRICE } from '../config';
+
+// SEO — §6 verbatim.
+const title = 'WTClaude features — the most complete Claude Code tracker';
+const description =
+  'Billing-grade accuracy, your whole usage picture, backup across machines, dual-pool readiness for June 15, and a dashboard to see it all. Free & open-source.';
+
+/**
+ * §6 feature groups, verbatim copy. Status:
+ *   'available' / 'soon'  → fixed states.
+ *   'cloud'               → cloud-on item: render Available when CLOUD_LIVE (D-13 green),
+ *                           else Coming soon. SAME flag as §5 — no second flag.
+ * badge → optional HonestyBadge kind (billing-grade = terminal Code only; estimate = forecast/readiness).
+ */
+type FeatureStatus = 'available' | 'soon' | 'cloud';
+interface Feature {
+  name: string;
+  status: FeatureStatus;
+  badge?: 'billing-grade' | 'estimate';
+  body: string;
+}
+interface Group {
+  title: string;
+  subtitle?: string;
+  features: Feature[];
+}
+
+const groups: Group[] = [
+  {
+    title: 'Accuracy you can trust',
+    features: [
+      {
+        name: 'Billing-grade cost',
+        status: 'available',
+        badge: 'billing-grade',
+        body: 'Reads the statusline, the same source behind your bill — not the broken session logs other trackers use. (Billing-grade for Claude Code run in your terminal.)',
+      },
+      {
+        name: 'The comparison reveal',
+        status: 'available',
+        body: '`wtclaude compare` puts your real number next to the broken-log number, with the gap multiple. The moment that changes how you see your costs.',
+      },
+      {
+        name: 'Honest labels on every number',
+        status: 'available',
+        body: 'Each figure is tagged billing-grade, inferred, or estimate. We never show an estimate as if it were exact.',
+      },
+    ],
+  },
+  {
+    title: 'See where it all goes',
+    features: [
+      {
+        name: 'Real cost: today / week / month',
+        status: 'available',
+        badge: 'billing-grade',
+        body: 'Tokens, cost, and model breakdown over any window.',
+      },
+      {
+        name: 'Session timeline',
+        status: 'available',
+        body: 'A visual timeline of your sessions — see exactly which turns burned the most.',
+      },
+      {
+        name: 'Daily debrief',
+        status: 'available',
+        body: "A plain-language summary of your day's usage.",
+      },
+      {
+        name: '“What-if” plan calculator',
+        status: 'available',
+        body: 'Compare plans against your real usage before you switch.',
+      },
+      {
+        name: 'Cost by task',
+        status: 'soon',
+        body: 'Where your tokens go, broken down by what you were doing.',
+      },
+      {
+        name: 'One-shot success rate',
+        status: 'soon',
+        body: 'How often your edits land first try, no rework loop.',
+      },
+      {
+        name: 'Multi-currency display',
+        status: 'soon',
+        body: 'See costs in your currency (the billing-grade figure stays in USD).',
+      },
+    ],
+  },
+  {
+    title: 'Ready for the June 15 billing split',
+    features: [
+      {
+        name: 'Dual-pool tracking',
+        status: 'available',
+        body: 'Interactive and Agent SDK Credits, tracked separately. Lights up automatically on June 15 — no reinstall.',
+      },
+      {
+        name: 'Daily Agent-pool forecast',
+        status: 'available',
+        badge: 'estimate',
+        body: 'Projected agent-pool spend vs your included credits, with a countdown. (Billing-grade math, heuristic pool split — a forecast, not your exact bill.)',
+      },
+      {
+        name: 'June-14 Readiness Report',
+        status: 'available',
+        badge: 'estimate',
+        body: 'One line: are your credits enough, yes or no, and the one thing to do about it.',
+      },
+      {
+        name: 'Overall plan limit gauge',
+        status: 'available',
+        body: 'How close you are to your overall plan limit, with reset countdowns. (This is your shared plan-limit bucket, read live.)',
+      },
+    ],
+  },
+  {
+    title: 'Backup & multi-machine',
+    subtitle: 'the robustness story',
+    features: [
+      {
+        name: 'Local-first — your data stays yours',
+        status: 'available',
+        body: 'Everything runs on your machine by default. Nothing leaves it unless you turn sync on.',
+      },
+      {
+        name: 'Opt-in cloud backup',
+        status: 'cloud',
+        body: 'Back up your usage history to the cloud so you never lose it — opt-in, with a preview of exactly what syncs before it does.',
+      },
+      {
+        name: 'Multi-machine totals',
+        status: 'cloud',
+        body: 'Laptop, desktop, work machine — one true total across all of them. The number no single-machine tracker can give you.',
+      },
+      {
+        name: 'Multiple accounts & profiles',
+        status: 'soon',
+        body: 'Track more than one Claude account or profile, side by side.',
+      },
+      {
+        name: 'Privacy-first by design',
+        status: 'available',
+        body: 'Opt-in everything, preview before sync, and a clear view of what’s shared.',
+      },
+    ],
+  },
+  {
+    title: 'The dashboard',
+    features: [
+      {
+        name: 'Web dashboard',
+        status: 'cloud',
+        body: 'Everything the CLI tracks, in a dashboard you can look at: overview, session timeline, the compare view, the what-if calculator, your limit gauge, and the June-15 forecast tile.',
+      },
+    ],
+  },
+  {
+    title: 'Open & honest',
+    features: [
+      {
+        name: 'Free & open-source (MIT)',
+        status: 'available',
+        body: 'The tracker is free forever. The moat is the data and the paid layers, not the tracker code.',
+      },
+      {
+        name: 'Independent',
+        status: 'available',
+        body: 'Not affiliated with Anthropic. On your side — we recommend what’s right for you.',
+      },
+    ],
+  },
+  {
+    title: 'What’s next',
+    features: [
+      {
+        name: 'Your whole Claude life in one view',
+        status: 'soon',
+        body: "Chat, Cowork, and Code together — with honest, clearly-labeled estimates where billing-grade isn't possible.",
+      },
+      {
+        name: 'Guardian — the intelligence layer',
+        status: 'soon',
+        body: `Personalized recommendations, anomaly detection, spend forecasting, and coaching. ${GUARDIAN_PRICE.full}.`,
+      },
+    ],
+  },
+];
+
+// Resolve cloud-on items to a concrete pill state from the single CLOUD_LIVE flag.
+const resolve = (s: FeatureStatus): 'available' | 'soon' =>
+  s === 'cloud' ? (CLOUD_LIVE ? 'available' : 'soon') : s;
+
+// Render the body, turning `backtick` spans into inline <code>. Copy itself is unchanged.
+const renderBody = (text: string) =>
+  text.replace(
+    /`([^`]+)`/g,
+    '<code class="rounded bg-ink/6 px-1 py-[1px] font-mono text-[0.92em] text-ink/80">$1</code>',
+  );
+---
+
+<BaseLayout title={title} description={description} noNavPad heroDark>
+  <!-- HERO -->
+  <section class="relative overflow-hidden bg-ink text-surface">
+    <div
+      class="pointer-events-none absolute inset-0 opacity-70"
+      style="background: radial-gradient(60% 50% at 50% 0%, rgba(232,148,58,0.18) 0%, rgba(26,25,21,0) 70%);"
+    >
+    </div>
+    <div class="relative mx-auto max-w-3xl px-5 pb-16 pt-32 text-center sm:pt-36">
+      <Mark class="mx-auto mb-7 h-14 w-14 text-surface" />
+      <h1 class="font-head text-4xl leading-tight sm:text-5xl">
+        The most complete Claude Code tracker.
+      </h1>
+      <p class="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-surface/80">
+        One tool for everything: billing-grade accuracy, your full usage picture, backup and sync
+        across machines, a dashboard to see it all, and a tracker that’s ready for the June 15
+        billing split. Free and open-source.
+      </p>
+
+      <div class="mx-auto mt-9 max-w-md">
+        <CodeBlock code="npx wtclaude setup" />
+        <div class="mt-4 flex items-center justify-center">
+          <a
+            href="/docs"
+            class="inline-flex items-center gap-1.5 rounded-lg border border-surface/30 px-5 py-2.5 text-sm font-semibold text-surface transition hover:bg-surface/10"
+            data-track="cta_docs"
+          >
+            Read the docs →
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURE GROUPS -->
+  <section class="mx-auto max-w-4xl px-5 py-16 sm:py-20">
+    <div class="space-y-14">
+      {
+        groups.map((group) => (
+          <div>
+            <h2 class="font-head text-2xl sm:text-3xl">{group.title}</h2>
+            {group.subtitle && (
+              <p class="mt-1 text-sm italic text-warm">{group.subtitle}</p>
+            )}
+            <div class="mt-6 divide-y divide-ink/8 rounded-2xl border border-ink/10 bg-card shadow-sm">
+              {group.features.map((f) => (
+                <div class="flex flex-col gap-1.5 px-5 py-4 sm:px-6">
+                  <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                    <h3 class="font-head text-base text-ink">{f.name}</h3>
+                    <FeaturePill status={resolve(f.status)} />
+                    {f.badge && <HonestyBadge kind={f.badge} />}
+                  </div>
+                  <p class="text-sm leading-relaxed text-ink/70" set:html={renderBody(f.body)} />
+                </div>
+              ))}
+            </div>
+          </div>
+        ))
+      }
+    </div>
+
+    <!-- CLOSING CTA -->
+    <div class="mt-16 rounded-2xl bg-ink px-6 py-12 text-center text-surface">
+      <p class="font-head text-2xl sm:text-3xl">
+        The most complete picture of your Claude Code usage. Free.
+      </p>
+      <div class="mx-auto mt-7 max-w-md">
+        <CodeBlock code="npx wtclaude setup" />
+      </div>
+    </div>
+  </section>
+
+  <script>
+    function initFeaturesPage() {
+      try {
+        (window as any).umami?.track('lp_view_features');
+      } catch {
+        /* no-op */
+      }
+    }
+    initFeaturesPage();
+    document.addEventListener('astro:page-load', initFeaturesPage);
+  </script>
+</BaseLayout>
