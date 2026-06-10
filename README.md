@@ -68,7 +68,7 @@ wtclaude debrief
 3. Per-turn records are appended to `~/.wtclaude/sessions/{session_id}.ndjson`
 4. CLI commands read these local files to show usage summaries
 
-No cloud, no accounts, no data leaving your machine. Everything runs locally.
+**Local-first by default:** out of the box there's no cloud and no account — your usage data stays on your machine. Cloud sync and the web dashboard are entirely **opt-in**; until you turn them on, nothing leaves your machine.
 
 ## Why Not Just Fix JSONL?
 
