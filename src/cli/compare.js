@@ -8,6 +8,7 @@ import { computeTurnCost } from '../utils/cost.js';
 import { getModelPricing, getLatestPricing } from '../utils/pricing.js';
 import { generateComparisonCard, generateComparisonHtml } from '../compare/card-generator.js';
 import { localDate } from '../utils/time.js';
+import { setupComplete, coldStartMessage } from '../utils/firstrun.js';
 import { COMPARISONS_DIR } from '../utils/paths.js';
 
 export function registerCompare(program) {
@@ -29,8 +30,19 @@ export function registerCompare(program) {
       const jsonlSessions = readJsonlSessions({ start: startStr, end: endStr });
 
       if (accurateSessions.length === 0) {
-        console.log('\n  No accurate data yet. Use Claude Code with wtclaude-collector configured.');
-        console.log('  Run: wtclaude setup\n');
+        // BUGFIX (PM-BUILD-bugfix-001): `compare` defaults to --days 1, i.e. the
+        // *today* window. A set-up user with data on prior days but none today
+        // would otherwise be told "Run: wtclaude setup" — wrong and alarming, and
+        // it reads like the product is broken. Only tell genuinely-unconfigured
+        // users to run setup; a configured-but-empty-window user gets the same
+        // honest "you're set up and capturing" cold-start copy that
+        // today/week/month already share (no fabricated numbers, no new copy).
+        if (!setupComplete()) {
+          console.log('\n  No accurate data yet. Use Claude Code with wtclaude-collector configured.');
+          console.log('  Run: wtclaude setup\n');
+        } else {
+          console.log(coldStartMessage(`${startStr} to ${endStr}`));
+        }
         return;
       }
 
