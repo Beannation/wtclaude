@@ -1,5 +1,8 @@
 #!/usr/bin/env node
 
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
 import { Command } from 'commander';
 import { registerToday } from '../src/cli/today.js';
 import { registerWeek } from '../src/cli/week.js';
@@ -33,10 +36,18 @@ import { registerExport } from '../src/cli/export.js';
 
 const program = new Command();
 
+// Read the version from package.json so `--version` can never drift from the
+// published version again (it was hardcoded and silently left at 0.1.2 while the
+// package shipped 0.1.3 — a launch-day support footgun: users verify the fix by
+// running --version).
+const pkg = JSON.parse(
+  readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'package.json'), 'utf8'),
+);
+
 program
   .name('wtclaude')
   .description('WTClaude — billing-grade cost tracking for Claude Code. Reads the statusline (the source behind your bill), not the session logs.')
-  .version('0.1.2');
+  .version(pkg.version);
 
 registerToday(program);
 registerWeek(program);
