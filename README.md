@@ -6,6 +6,8 @@ Billing-grade cost tracking for Claude Code.
 
 Most Claude Code trackers read the local session logs (the JSONL files), which don't carry billing-grade cost — so their totals can drift from your bill. **WTClaude reads the statusline instead — the same source behind your bill** — so your `today` / `week` / `month` cost is **billing-grade in the terminal**.
 
+![wtclaude compare — your real, billing-grade cost next to a session-log estimate, and the gap](docs/compare.gif)
+
 ## See your own gap
 
 ```bash
