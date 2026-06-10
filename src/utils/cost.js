@@ -30,9 +30,12 @@ export function computeTurnCost(turn) {
 }
 
 export function formatCost(usd) {
-  if (usd < 0.01) return `$${usd.toFixed(4)}`;
-  if (usd < 1) return `$${usd.toFixed(3)}`;
-  return `$${usd.toFixed(2)}`;
+  // Sign before the $ (QA-0610-07): a negative diff is "-$10.69", not "$-10.6931".
+  const sign = usd < 0 ? '-' : '';
+  const v = Math.abs(usd);
+  if (v < 0.01) return `${sign}$${v.toFixed(4)}`;
+  if (v < 1) return `${sign}$${v.toFixed(3)}`;
+  return `${sign}$${v.toFixed(2)}`;
 }
 
 export function formatTokens(count) {

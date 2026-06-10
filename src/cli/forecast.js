@@ -81,8 +81,7 @@ export function registerForecast(program) {
         lines.push('  Set your plan at `wtclaude setup` to compare against included credits.');
       }
       lines.push('');
-      lines.push('  Estimate only — simple linear run-rate, usage_pool is heuristic. The');
-      lines.push('  predictive/plan-fit engine is Phase 1.');
+      lines.push('  Estimate only — simple linear run-rate; usage_pool is heuristic.');
       lines.push('');
       output(lines.join('\n'), o);
     });

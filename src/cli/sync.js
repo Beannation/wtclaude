@@ -1,5 +1,7 @@
+import { createInterface } from 'node:readline/promises';
 import { getConfig, saveConfig, getSupabaseConfig, syncToCloud, pruneLegacySecrets } from '../sync/index.js';
 import { checkBadges } from '../badges/check.js';
+import { listSessions, readSession } from '../utils/sessions.js';
 
 export function registerSync(program) {
   program
@@ -9,6 +11,7 @@ export function registerSync(program) {
     .option('--status', 'Show sync status')
     .option('--enable', 'Enable cloud sync')
     .option('--disable', 'Disable cloud sync')
+    .option('-y, --yes', 'Skip the opt-in confirmation prompt (non-interactive)')
     .action(async (opts) => {
       if (opts.configure) {
         await configureSynce();
@@ -22,6 +25,17 @@ export function registerSync(program) {
 
       if (opts.enable) {
         const config = getConfig();
+        if (config.sync_enabled) {
+          console.log('\n  Cloud sync is already enabled. Run `wtclaude sync` to push data.\n');
+          return;
+        }
+        // QA-0610-04: show exactly what sync will send and require opt-in before
+        // anything leaves the machine.
+        const ok = await confirmSyncOptIn(config, opts);
+        if (!ok) {
+          console.log('\n  Cloud sync NOT enabled — nothing was sent.\n');
+          return;
+        }
         config.sync_enabled = true;
         saveConfig(config);
         console.log('\n  Cloud sync enabled. Run `wtclaude sync` to push data.\n');
@@ -115,5 +129,44 @@ async function runSync() {
     }
   } catch (err) {
     console.error(`  Sync failed: ${err.message}\n`);
+  }
+}
+
+// QA-0610-04: privacy preview + opt-in before the first cloud send. Mirrors the
+// `leaderboard`/`share` preview-then-opt-in pattern and reuses its vetted privacy
+// line; nothing is uploaded until the user confirms (or passes --yes). Returns
+// true to proceed, false to abort.
+async function confirmSyncOptIn(config, opts = {}) {
+  const ids = listSessions();
+  let turns = 0;
+  for (const id of ids) turns += readSession(id).length;
+  const anon = config.anonymous_id || '(generated on first sync)';
+
+  console.log('\n  Cloud sync — privacy preview');
+  console.log('  ============================\n');
+  console.log('  Enabling sync uploads your usage records to your own anonymous');
+  console.log(`  cloud row (id: ${anon}). It would send:`);
+  console.log(`    • ${ids.length} session${ids.length === 1 ? '' : 's'} (${turns} per-turn record${turns === 1 ? '' : 's'})`);
+  console.log('    • counts/flags + salted hashes only — no prompts, code, file');
+  console.log('      names, or project paths, ever.');
+  console.log('  Disable any time with `wtclaude sync --disable`.\n');
+
+  if (opts.yes) {
+    console.log('  Confirmed via --yes.');
+    return true;
+  }
+  if (!process.stdin.isTTY) {
+    console.log('  Non-interactive shell — re-run with `--yes` to confirm the opt-in.');
+    return false;
+  }
+
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  try {
+    const answer = (await rl.question('  Enable cloud sync and allow uploads? [y/N]: ')).trim().toLowerCase();
+    return answer === 'y' || answer === 'yes';
+  } catch {
+    return false; // never let a prompt error silently enable sync
+  } finally {
+    rl.close();
   }
 }

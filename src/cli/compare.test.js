@@ -74,6 +74,49 @@ test('compare --days 7: surfaces the prior-day data the default window missed', 
   }
 });
 
+// REGRESSION (QA-0610-01): the hero comparison must render a NON-ZERO session-log
+// estimate + a gap from real-shaped JSONL (usage nested under message.usage, with
+// duplicate streaming partials). Before the fix this column was $0 / N/A. Fixtures
+// both sides via HOME: ~/.claude/projects (JSONL) + ~/.wtclaude (billing-grade).
+test('compare: renders a non-zero, deduped session-log estimate + gap from nested message.usage', () => {
+  const home = mkdtempSync(join(tmpdir(), 'wtc-home-'));
+  const ts = new Date(); ts.setHours(12, 0, 0, 0); // local noon → today's local window
+  const tsIso = ts.toISOString();
+
+  // Billing-grade (accurate) side: one big-input turn today.
+  const wt = join(home, '.wtclaude');
+  mkdirSync(join(wt, 'sessions'), { recursive: true });
+  writeFileSync(join(wt, 'config.json'),
+    JSON.stringify({ edit_hash_salt: 'deadbeefdeadbeefdeadbeefdeadbeef', anonymous_id: 'a1' }));
+  writeFileSync(join(wt, 'sessions', 's.ndjson'), JSON.stringify({
+    ts: tsIso, model: 'opus-4-8', speed_tier: 'standard',
+    input_tokens: 500000, output_tokens: 50000, cache_read_tokens: 10000, cache_write_tokens: 10000,
+    cost_usd: 20, session_id: 's',
+  }) + '\n');
+
+  // Session-log (JSONL) side: m1 written twice (streaming dup) + m2 → deduped input 2000.
+  const proj = join(home, '.claude', 'projects', 'p');
+  mkdirSync(proj, { recursive: true });
+  const entry = (n) => JSON.stringify({
+    type: 'assistant', timestamp: tsIso, requestId: 'r' + n,
+    message: { id: 'm' + n, role: 'assistant',
+      usage: { input_tokens: 1000, output_tokens: 200, cache_read_input_tokens: 500, cache_creation_input_tokens: 0 } },
+  });
+  writeFileSync(join(proj, 'sess.jsonl'), [entry(1), entry(1), entry(2)].join('\n') + '\n');
+
+  const res = spawnSync(process.execPath, [BIN, 'compare'], {
+    env: { ...process.env, HOME: home, WTCLAUDE_DIR: wt }, encoding: 'utf8',
+  });
+  const out = res.stdout + res.stderr;
+  try {
+    assert.doesNotMatch(out, /\$0\.0000/, 'session-log estimate must NOT render as $0');
+    assert.match(out, /\d+(\.\d+)?x/, 'a numeric gap (Nx) must render');
+    assert.match(out, /\b2K\b/, 'deduped session-log input is 2K (m1 once + m2), not 3K');
+  } finally {
+    rmSync(home, { recursive: true, force: true });
+  }
+});
+
 // A genuinely-unconfigured install (no salt) SHOULD still be told to run setup —
 // the fix must not swallow the real first-run guidance.
 test('compare: an unconfigured install is still told to run setup', () => {

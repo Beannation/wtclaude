@@ -1,6 +1,6 @@
 import { getSessionsForDateRange, summarizeSessions } from '../utils/sessions.js';
 import { getLatestPricing, getModelPricing } from '../utils/pricing.js';
-import { computeTurnCost, formatCost } from '../utils/cost.js';
+import { expectedCost, formatCost } from '../utils/cost.js';
 import { localDate } from '../utils/time.js';
 
 export function registerWhatIf(program) {
@@ -41,7 +41,7 @@ function showPlanComparison(sessions, days) {
   const dailyCost = summary.cost / days;
   const monthlyCost = dailyCost * 30;
 
-  console.log(`\n  What-If: Plan Comparison (${days} day${days > 1 ? 's' : ''} of data)`);
+  console.log(`\n  What-If: Plan Comparison (${days} day${days > 1 ? 's' : ''} of data)  (estimate)`);
   console.log('  ==========================================');
   console.log(`  Your estimated API cost: ${formatCost(monthlyCost)}/month`);
   console.log('');
@@ -55,30 +55,43 @@ function showPlanComparison(sessions, days) {
   console.log('');
 }
 
+// Newest pricing-config key for a model family (e.g. 'opus' -> 'opus-4-8'), so
+// the counterfactual never hardcodes a stale version (QA-0610-06).
+function currentModelKey(family, fallback) {
+  const keys = Object.keys(getLatestPricing().models).filter(k => k.startsWith(family));
+  return keys.sort().pop() || fallback || family;
+}
+
 function showModelComparison(sessions, targetModel, days) {
   const allTurns = sessions.flatMap(s => s.turns);
-  const actualCost = allTurns.reduce((sum, t) => sum + computeTurnCost(t), 0);
 
-  const modelMap = { haiku: 'haiku-4-5', sonnet: 'sonnet-4-6', opus: 'opus-4-7' };
-  const resolved = modelMap[targetModel] || targetModel;
-  const targetPricing = getModelPricing(resolved);
-  const cachePricing = getLatestPricing().cache;
-
-  let hypotheticalCost = 0;
-  for (const t of allTurns) {
-    hypotheticalCost += (t.input_tokens / 1_000_000) * targetPricing.input;
-    hypotheticalCost += (t.output_tokens / 1_000_000) * targetPricing.output;
-    hypotheticalCost += (t.cache_read_tokens / 1_000_000) * targetPricing.input * cachePricing.read_multiplier;
-    hypotheticalCost += (t.cache_write_tokens / 1_000_000) * targetPricing.input * cachePricing.write_multiplier;
+  const families = { haiku: 'haiku', sonnet: 'sonnet', opus: 'opus', fable: 'fable' };
+  const fam = families[String(targetModel).toLowerCase()];
+  const resolved = fam ? currentModelKey(fam, targetModel) : targetModel;
+  if (!getModelPricing(resolved)) {
+    console.log(`\n  Unknown model "${targetModel}". Try: haiku, sonnet, opus.\n`);
+    return;
   }
 
-  const diff = hypotheticalCost - actualCost;
-  const pct = actualCost > 0 ? ((diff / actualCost) * 100).toFixed(0) : 0;
+  // QA-0610-03: estimate BOTH sides with the same token x rate method on the
+  // same turns. Comparing a token x rate hypothetical against the billing-grade
+  // anchor made a model you ALREADY use look dramatically cheaper than your bill
+  // (the very undercount the tool exists to expose). The baseline is now your
+  // turns priced at the models you actually ran, so a no-op switch nets ~$0.
+  let baseline = 0, hypothetical = 0;
+  for (const t of allTurns) {
+    baseline += expectedCost(t.model, 'standard', t);
+    hypothetical += expectedCost(resolved, 'standard', t);
+  }
 
-  console.log(`\n  What-If: All ${resolved} (${days} day${days > 1 ? 's' : ''})`);
+  const diff = hypothetical - baseline;
+  const pct = baseline > 0 ? ((diff / baseline) * 100).toFixed(0) : 0;
+
+  console.log(`\n  What-If: all ${resolved} (${days} day${days > 1 ? 's' : ''})  (estimate)`);
   console.log('  ==========================================');
-  console.log(`  Actual cost:       ${formatCost(actualCost)}`);
-  console.log(`  If all ${resolved}: ${formatCost(hypotheticalCost)}`);
-  console.log(`  Difference:        ${diff > 0 ? '+' : ''}${formatCost(diff)} (${pct}%)`);
+  console.log('  Estimated on the same tokens (token x rate, not billing-grade):');
+  console.log(`    Current models:  ${formatCost(baseline)}`);
+  console.log(`    If all ${resolved}: ${formatCost(hypothetical)}`);
+  console.log(`    Difference:      ${diff > 0 ? '+' : ''}${formatCost(diff)} (${pct}%)`);
   console.log('');
 }

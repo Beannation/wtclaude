@@ -68,9 +68,33 @@ function readJsonlFile(filePath, dateFilter) {
 export function summarizeJsonl(sessions) {
   let input = 0, output = 0, cacheRead = 0, cacheWrite = 0;
 
+  // QA-0610-01: de-duplicate the streaming partials Claude Code writes for one
+  // API response (the same message id + request id appears many times as the
+  // response streams). Real session-log trackers key on `message.id:requestId`
+  // and count each response once; without this one turn's tokens are summed
+  // 2-3x (real data: 983 raw usage-entries today vs 402 unique responses), which
+  // both inflated the estimate and masked the input-token undercount.
+  const seen = new Set();
+
   for (const session of sessions) {
     for (const entry of session.entries) {
-      const usage = entry.usage || {};
+      // Real Claude Code JSONL nests usage under `message.usage` (input_tokens,
+      // output_tokens, cache_read_input_tokens, cache_creation_input_tokens).
+      // Read that first; fall back to a flat top-level `usage` for any
+      // flat-shaped fixtures. Without this every sum was 0, so the session-log
+      // estimate rendered as $0 / N/A — the hero comparison.
+      const msg = entry.message && typeof entry.message === 'object' ? entry.message : null;
+      const usage = (msg && msg.usage) || entry.usage;
+      if (!usage) continue;
+
+      // Dedup when we have an identity to key on; flat fixtures without ids are
+      // counted as-is (each entry is its own response).
+      if (msg?.id != null || entry.requestId != null) {
+        const key = `${msg?.id}:${entry.requestId}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+      }
+
       input += usage.input_tokens || 0;
       output += usage.output_tokens || 0;
       cacheRead += usage.cache_read_input_tokens || usage.cache_read || 0;

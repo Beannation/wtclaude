@@ -249,10 +249,18 @@ export function renderGroupedTurns(rangeLabel, turns, dim, cur, opts = {}, range
   // (e.g. task_category on current payloads — see collector classifyTask).
   if (cov.withVal === 0) {
     lines.push('');
-    lines.push(`  No turns carry a ${dim} value yet — this field is captured from`);
-    lines.push(`  day one but is null on the current Claude Code payloads, so the`);
-    lines.push(`  breakdown is empty. It will populate automatically once the`);
-    lines.push(`  payload exposes it (no backfill needed).`);
+    if (dim === 'cost_center') {
+      // cost_center is config-driven (cost_center_map), not payload-driven —
+      // so point the user at configuring the map, not at "the payload" (QA-0610-08).
+      lines.push('  No turns are tagged with a cost_center yet. Tag projects/branches');
+      lines.push('  by adding a `cost_center_map` to ~/.wtclaude/config.json — new turns');
+      lines.push('  are attributed automatically (no backfill needed).');
+    } else {
+      lines.push(`  No turns carry a ${dim} value yet — this field is captured from`);
+      lines.push(`  day one but is null on the current Claude Code payloads, so the`);
+      lines.push(`  breakdown is empty. It will populate automatically once the`);
+      lines.push(`  payload exposes it (no backfill needed).`);
+    }
     lines.push('');
     lines.push(`  Range total: ${formatMoney(sumCost(groups), cur)} · ${turns.length} turns`);
     const n = currencyNote(cur); if (n) lines.push(n);

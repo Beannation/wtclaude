@@ -7,7 +7,7 @@ export function registerDashboard(program) {
     .description('Open the web dashboard in your browser')
     .action(() => {
       const anonymousId = getOrCreateAnonymousId();
-      const baseUrl = 'https://wtclaude.vercel.app'; // Update when deployed
+      const baseUrl = 'https://dashboard.wtclaude.com'; // canonical dashboard host (QA-0610-02)
 
       const url = `${baseUrl}/settings?link=${anonymousId}`;
 

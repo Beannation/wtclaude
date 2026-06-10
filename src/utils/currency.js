@@ -39,14 +39,17 @@ export function resolveCurrency(opts = {}) {
 // display-only nature obvious.
 export function formatMoney(usd, cur) {
   const c = cur || { code: 'USD', rate: 1, symbol: '$', isUsd: true };
+  // Sign before the symbol (QA-0610-07): "-$10.69" / "≈ -€9.83", never "$-10.69".
+  const sign = usd < 0 ? '-' : '';
+  const abs = Math.abs(usd);
   if (c.isUsd) {
-    if (usd < 0.01) return `$${usd.toFixed(4)}`;
-    if (usd < 1) return `$${usd.toFixed(3)}`;
-    return `$${usd.toFixed(2)}`;
+    if (abs < 0.01) return `${sign}$${abs.toFixed(4)}`;
+    if (abs < 1) return `${sign}$${abs.toFixed(3)}`;
+    return `${sign}$${abs.toFixed(2)}`;
   }
-  const v = usd * c.rate;
+  const v = abs * c.rate;
   const digits = v < 1 ? 3 : 2;
-  return `≈ ${c.symbol}${v.toFixed(digits)}`;
+  return `≈ ${sign}${c.symbol}${v.toFixed(digits)}`;
 }
 
 // A one-line honesty caveat for non-USD output. Empty string for USD.

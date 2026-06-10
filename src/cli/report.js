@@ -85,7 +85,7 @@ export function registerReport(program) {
         lines.push('  ~/.wtclaude/config.json so untagged turns get attributed.');
       }
       const note = currencyNote(cur); if (note) lines.push(note);
-      lines.push('  (Individual view — team-wide rollup is Phase 2 SMB.)');
+      lines.push('  (Individual view — team-wide rollup coming soon.)');
       lines.push('');
       output(lines.join('\n'), o);
     });
