@@ -1,6 +1,6 @@
 import { getSessionsForDateRange } from '../utils/sessions.js';
 import { fableDailyRunRate } from '../utils/fablepool.js';
-import { getFableCliffDate, daysUntil } from '../utils/config.js';
+import { getFableCliffDate, daysUntil, FABLE_SUSPENDED, FABLE_SUSPENDED_NOTICE } from '../utils/config.js';
 import { formatCost, formatTokens } from '../utils/cost.js';
 import { output, daysAgo } from './_summary.js';
 import { localDate } from '../utils/time.js';
@@ -27,6 +27,32 @@ export function registerFable(program) {
     .option('--days <n>', 'Look-back window for the run-rate', '7')
     .action((opts) => {
       const o = opts || {};
+
+      // FABLE MASTER GATE (June 14, 2026): Fable 5 was suspended June 12 under a US
+      // export-control directive. While suspended, print a notice instead of a live
+      // forecast — all the forecast logic below stays intact. Flip FABLE_SUSPENDED back
+      // to false (utils/config.js) + patch-republish to restore the real output.
+      if (FABLE_SUSPENDED) {
+        if (o.json) {
+          output(JSON.stringify({
+            schema_version: SCHEMA_VERSION,
+            suspended: true,
+            estimate: false,
+            reason: 'us-export-control-directive-2026-06-12',
+            message: FABLE_SUSPENDED_NOTICE,
+          }, null, 2), o);
+          return;
+        }
+        output([
+          '\n  Fable 5 cost forecast — paused',
+          '  ' + '='.repeat(58),
+          '',
+          '  ' + FABLE_SUSPENDED_NOTICE,
+          '',
+        ].join('\n'), o);
+        return;
+      }
+
       const lookback = Math.max(1, parseInt(o.days, 10) || 7);
       const start = daysAgo(lookback - 1);
       const today = localDate(); // local calendar date (QA-BUG-10)

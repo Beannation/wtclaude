@@ -35,6 +35,17 @@ export function isDualPoolActive(todayStr = new Date().toISOString().slice(0, 10
   return todayStr >= getDualPoolActivationDate();
 }
 
+// FABLE MASTER GATE (PM, June 14, 2026). Claude Fable 5 (and Mythos 5) was suspended
+// worldwide on June 12, 2026 under a US export-control directive. While FABLE_SUSPENDED
+// is true, `wtclaude fable` prints a suspension notice instead of a live forecast — the
+// command, the fable-5 rate entry, and ALL the forecast logic stay intact; only the
+// output is gated. Restore path: flip FABLE_SUSPENDED = false and patch-republish.
+export const FABLE_SUSPENDED = true;
+
+// One-line user-facing notice shown while FABLE_SUSPENDED is true. GTM may refine.
+export const FABLE_SUSPENDED_NOTICE =
+  'Claude Fable 5 is temporarily suspended (US export-control directive, June 12, 2026); the cliff forecast is paused and will resume if Fable returns.';
+
 // The date interactive Fable 5 use starts drawing usage credits (the announced
 // June-23 "Fable cliff" — removed from subscription inclusion on June 22 EOD).
 // Config override first (Anthropic may extend the window / restore inclusion),
