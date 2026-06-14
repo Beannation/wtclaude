@@ -5,7 +5,8 @@ import { CAPTURE_ENDPOINT, CAPTURE_METHOD } from '../config';
  * Reusable email-capture form — the launch conversion path.
  * Client validation + loading/success/error states + a single pluggable endpoint
  * (config.CAPTURE_ENDPOINT). With no endpoint set it confirms locally (nothing stored)
- * and logs the submission for QA; with one set it POSTs `{ email, tag, source }`.
+ * and logs the submission for QA; with one set it POSTs `{ email, tag, source, consent }`
+ * (consent = the unticked-by-default marketing opt-in, PM-WEB-014).
  *
  * NOTE: SMB pricing is embargoed — never render a price near an SMB capture.
  */
@@ -62,6 +63,18 @@ const id = `capture-${tag}`;
   >
     {cta}
   </button>
+
+  {/* PM-WEB-014: explicit, unticked-by-default marketing consent (Strategy chose opt-in (b)).
+      Optional — the email still captures if left unticked; consent just rides along as false. */}
+  <label class="flex basis-full items-start gap-2 text-xs leading-snug text-warm">
+    <input
+      type="checkbox"
+      name="consent"
+      data-consent
+      class="mt-0.5 h-3.5 w-3.5 shrink-0 rounded border-ink/30 accent-amber focus-visible:outline-2 focus-visible:outline-amber"
+    />
+    <span>Email me about Guardian and WTClaude updates.</span>
+  </label>
   <p class="basis-full text-sm" role="status" aria-live="polite" data-status></p>
 </form>
 
@@ -106,8 +119,12 @@ const id = `capture-${tag}`;
         const method = form.dataset.method || 'POST';
         const source = window.location.pathname;
         const website = honeypot?.value || ''; // honeypot — empty for humans
+        // PM-WEB-014: marketing consent rides along as a boolean. Unticked → false (still
+        // submits); the endpoint already accepts `consent`.
+        const consent =
+          form.querySelector<HTMLInputElement>('[data-consent]')?.checked === true;
 
-        const payload = { email, tag, source, website };
+        const payload = { email, tag, source, website, consent };
 
         // Fire analytics regardless of backend wiring.
         try {

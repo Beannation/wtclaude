@@ -8,7 +8,7 @@ import ComparisonCard from '../components/ComparisonCard.astro';
 import HonestyBadge from '../components/HonestyBadge.astro';
 import CaptureForm from '../components/CaptureForm.astro';
 import RelatedReading from '../components/RelatedReading.astro';
-import { SHOW_FAST_MODE, FAST_MODE_BADGE, GUARDIAN_PRICE, LINKS, CLOUD_LIVE, SHOW_DASHBOARD_LINK } from '../config';
+import { SHOW_FAST_MODE, FAST_MODE_BADGE, GUARDIAN_PRICE, LINKS, CLOUD_LIVE, SHOW_DASHBOARD_LINK, FABLE_AVAILABLE, FABLE_SUSPENDED_NOTE } from '../config';
 import { softwareApplication } from '../lib/schema';
 
 // §4B meta title (verbatim). Description = §G1 honesty fix (verbatim).
@@ -102,12 +102,26 @@ const jsonLd = softwareApplication(new URL(Astro.url.pathname, Astro.site).href)
         </article>
       </div>
 
-      <p class="mx-auto mt-8 max-w-3xl text-center text-sm leading-relaxed text-ink/70">
-        <strong class="font-semibold text-ink">Just shipped:</strong> WTClaude tracks Claude Fable 5
-        — billing-grade cost in your terminal, and
-        <code class="rounded bg-ink/5 px-1 py-0.5 font-mono text-[13px]">wtclaude fable</code>
-        forecasts the June-23 cliff (a labeled estimate; separate from the June-15 Agent-SDK change).
-      </p>
+      {
+        /* Fable line — gated on the FABLE_AVAILABLE master switch (June 14). While Fable is
+           suspended we relabel to the suspension copy (not deleted); flipping the flag back to
+           true restores the original "Just shipped" line verbatim. */
+        FABLE_AVAILABLE ? (
+          <p class="mx-auto mt-8 max-w-3xl text-center text-sm leading-relaxed text-ink/70">
+            <strong class="font-semibold text-ink">Just shipped:</strong> WTClaude tracks Claude Fable 5
+            — billing-grade cost in your terminal, and
+            <code class="rounded bg-ink/5 px-1 py-0.5 font-mono text-[13px]">wtclaude fable</code>
+            forecasts the June-23 cliff (a labeled estimate; separate from the June-15 Agent-SDK change).
+          </p>
+        ) : (
+          <p class="mx-auto mt-8 max-w-3xl text-center text-sm leading-relaxed text-ink/70">
+            <strong class="font-semibold text-ink">Claude Fable 5 tracking:</strong> WTClaude reads Fable 5
+            billing-grade in your terminal with
+            <code class="rounded bg-ink/5 px-1 py-0.5 font-mono text-[13px]">wtclaude fable</code>.
+            {' '}{FABLE_SUSPENDED_NOTE}
+          </p>
+        )
+      }
     </div>
   </section>
 

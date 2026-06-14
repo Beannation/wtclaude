@@ -1,23 +1,12 @@
 ---
 title: "Claude Fable 5 Pricing Explained: The Free Window, Usage Credits, and the June 23 Cliff"
-description: "Claude Fable 5 is free until June 22, then it starts drawing from your usage credits at $10/$50 per million tokens. Here's the cost picture, plain and honest."
+description: "Claude Fable 5 launched June 9, 2026 and was suspended June 12 under a US export-control order. Here's the cost picture from its brief availability — and what the suspension means."
 pubDate: 2026-06-09
 author: "Peter Bean"
 readingTime: "7 min read"
-faq:
-  - q: "Is Claude Fable 5 free?"
-    a: "Yes, temporarily — from June 9 through June 22, 2026, it's included at no extra cost on Pro, Max, Team, and seat-based Enterprise plans. On June 23 it's removed from plan limits, and continued use draws from usage credits at API rates."
-  - q: "How much does Claude Fable 5 cost?"
-    a: "On the API, $10 per million input tokens and $50 per million output tokens, with a 90% discount on cached input — roughly double the price of Claude Opus 4.8, making it the most expensive generally available Anthropic model."
-  - q: "What happens to Claude Fable 5 after June 22?"
-    a: "Starting June 23 it no longer counts against your plan limits. Continuing to use it consumes usage credits (your pay-as-you-go balance) billed at the per-token API prices, across chat, Claude Code, and other surfaces."
-  - q: "Is Fable 5 the same as Mythos 5?"
-    a: "They're the same underlying model. Mythos 5 has some safeguards lifted and is deployed more narrowly; Fable 5 is the general-availability version that falls back to Opus 4.8 on a small share of high-risk queries."
-  - q: "How do I avoid a surprise bill when the free window ends?"
-    a: "Know your real Claude Code spend before June 23, and decide consciously whether Fable stays your default once it starts drawing credits. Going in with accurate numbers — not an estimate — is what keeps July boring."
-  - q: "Can I track what Fable 5 is costing me?"
-    a: "Yes. WTClaude recognizes Fable 5 in terminal Claude Code and reads its cost billing-grade from the statusline. The wtclaude fable command projects what your usage would cost after the free window ends, with a countdown to June 23 — a labeled estimate (\"if the announced $10/$50 holds\"), kept separate from the June-15 Agent-SDK forecast."
 ---
+
+> **⚠ Update — June 12, 2026: Claude Fable 5 has been suspended.** Following a US Commerce Department export-control directive citing national security, Anthropic disabled Claude Fable 5 — and its sibling Mythos 5 — for all users on June 12, just three days after launch. Other Claude models are unaffected. **The free window and the "June 23 cliff" described below no longer apply:** there is currently no Fable 5 to use or be billed for, and whether or when it returns is unclear. We've kept this page up as a factual record of the model's brief availability, and we'll update it if it comes back. (Source: [Anthropic's statement](https://www.anthropic.com/news/fable-mythos-access).)
 
 On June 9, 2026, Anthropic released **Claude Fable 5** — a Mythos-class model it describes as its most powerful generally available model, state-of-the-art across coding, science, and knowledge work. It's free for everyone to try for about two weeks. It's also the most expensive model Anthropic has ever put on general release. Both of those things are true at once, and the gap between them is the part worth understanding before you build a habit around it.
 
@@ -69,6 +58,8 @@ Fable 5 is an excellent model. Just go in with your eyes open: free until the 22
 
 ## See your Fable spend — and the cliff — coming
 
+*(Note, June 14: with Fable 5 suspended, there's no live Fable usage to track right now — the section below describes what WTClaude did during the model's brief availability and what it will do again if Fable returns.)*
+
 Since I build a Claude Code cost tracker, I added Fable support to WTClaude the day the model launched. Here's what it does, with the honest scope.
 
 WTClaude recognizes Fable 5 in your terminal and reads its cost the same billing-grade way it reads the rest of your Claude Code usage — from the statusline, the source behind your bill. (As always, that's billing-grade for Claude Code **in the terminal**; the desktop app and Chat stay honest estimates.) Even during the free window, the statusline reports Fable's cost as a real notional dollar figure — which is essentially what it will start charging you on June 23.
@@ -105,4 +96,4 @@ Yes. WTClaude recognizes Fable 5 in terminal Claude Code and reads its cost bill
 
 ---
 
-*WTClaude is a free, open-source, billing-grade cost tracker for Claude Code. See the cliff coming: `npx wtclaude setup`, then `wtclaude fable`.*
+*WTClaude is a free, open-source, billing-grade cost tracker for Claude Code. Whatever you run — and whatever Anthropic ships next — see your real number: `npx wtclaude setup`, then `wtclaude compare`.*

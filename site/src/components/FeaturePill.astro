@@ -1,15 +1,18 @@
 ---
 /**
  * Feature-status pill for the /features showcase (§6 badge convention).
- *   available → small amber check pill ("Available")
- *   soon      → muted gray pill ("Coming soon")
+ *   available   → small amber check pill ("Available")
+ *   soon        → muted gray pill ("Coming soon")
+ *   unavailable → muted pill ("Unavailable") for a feature whose backing model is
+ *                 temporarily suspended (e.g. Fable while FABLE_AVAILABLE is false).
+ *                 Reversible: flip the gating flag and the page passes 'available' again.
  *
- * USER-FACING RULE: never a phase name (no "Phase 1/0.5/2") — only these two states.
- * Cloud-on items don't pass a third state: the page resolves them to 'available' or
+ * USER-FACING RULE: never a phase name (no "Phase 1/0.5/2") — only these states.
+ * Cloud-on items don't pass a status directly: the page resolves them to 'available' or
  * 'soon' from the single CLOUD_LIVE flag (§5) before rendering.
  */
 interface Props {
-  status: 'available' | 'soon';
+  status: 'available' | 'soon' | 'unavailable';
   class?: string;
 }
 const { status, class: cls = '' } = Astro.props;
@@ -24,6 +27,16 @@ const { status, class: cls = '' } = Astro.props;
         <polyline points="20 6 9 17 4 12" />
       </svg>
       Available
+    </span>
+  ) : status === 'unavailable' ? (
+    <span
+      class={`inline-flex items-center gap-1 rounded-full bg-ink/8 px-2.5 py-[3px] text-[11px] font-semibold uppercase tracking-wide text-ink/55 ${cls}`}
+    >
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <line x1="9" y1="9" x2="9" y2="15" />
+        <line x1="15" y1="9" x2="15" y2="15" />
+      </svg>
+      Unavailable
     </span>
   ) : (
     <span

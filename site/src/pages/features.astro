@@ -4,7 +4,7 @@ import Mark from '../components/Mark.astro';
 import CodeBlock from '../components/CodeBlock.astro';
 import HonestyBadge from '../components/HonestyBadge.astro';
 import FeaturePill from '../components/FeaturePill.astro';
-import { CLOUD_LIVE, GUARDIAN_PRICE } from '../config';
+import { CLOUD_LIVE, GUARDIAN_PRICE, FABLE_AVAILABLE, FABLE_SUSPENDED_NOTE } from '../config';
 
 // SEO — §6 verbatim.
 const title = 'WTClaude features — the most complete Claude Code tracker';
@@ -16,14 +16,19 @@ const description =
  *   'available' / 'soon'  → fixed states.
  *   'cloud'               → cloud-on item: render Available when CLOUD_LIVE (D-13 green),
  *                           else Coming soon. SAME flag as §5 — no second flag.
+ *   'fable'               → Fable-backed item: render Available when FABLE_AVAILABLE, else
+ *                           Unavailable + the `note` (Fable suspended June 12 — reversible).
  * badge → optional HonestyBadge kind (billing-grade = terminal Code only; estimate = forecast/readiness).
+ * note  → shown in place of `body` only while the item resolves to Unavailable; `body` is the
+ *         original/restore copy, kept verbatim so flipping the flag back returns it unchanged.
  */
-type FeatureStatus = 'available' | 'soon' | 'cloud';
+type FeatureStatus = 'available' | 'soon' | 'cloud' | 'fable';
 interface Feature {
   name: string;
   status: FeatureStatus;
   badge?: 'billing-grade' | 'estimate';
   body: string;
+  note?: string;
 }
 interface Group {
   title: string;
@@ -121,8 +126,9 @@ const groups: Group[] = [
       },
       {
         name: 'Tracks Claude Fable 5',
-        status: 'available',
+        status: 'fable',
         body: 'Recognizes Claude Fable 5 in your terminal, reads its cost billing-grade, and forecasts the June-23 cliff with `wtclaude fable` — a labeled estimate, kept separate from the June-15 pools.',
+        note: FABLE_SUSPENDED_NOTE,
       },
     ],
   },
@@ -199,9 +205,12 @@ const groups: Group[] = [
   },
 ];
 
-// Resolve cloud-on items to a concrete pill state from the single CLOUD_LIVE flag.
-const resolve = (s: FeatureStatus): 'available' | 'soon' =>
-  s === 'cloud' ? (CLOUD_LIVE ? 'available' : 'soon') : s;
+// Resolve gated items to a concrete pill state from their single flag:
+//   cloud → CLOUD_LIVE,  fable → FABLE_AVAILABLE.
+const resolve = (s: FeatureStatus): 'available' | 'soon' | 'unavailable' =>
+  s === 'cloud' ? (CLOUD_LIVE ? 'available' : 'soon')
+  : s === 'fable' ? (FABLE_AVAILABLE ? 'available' : 'unavailable')
+  : s;
 
 // Render the body, turning `backtick` spans into inline <code>. Copy itself is unchanged.
 const renderBody = (text: string) =>
@@ -261,9 +270,12 @@ const renderBody = (text: string) =>
                   <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5">
                     <h3 class="font-head text-base text-ink">{f.name}</h3>
                     <FeaturePill status={resolve(f.status)} />
-                    {f.badge && <HonestyBadge kind={f.badge} />}
+                    {f.badge && resolve(f.status) !== 'unavailable' && <HonestyBadge kind={f.badge} />}
                   </div>
-                  <p class="text-sm leading-relaxed text-ink/70" set:html={renderBody(f.body)} />
+                  <p
+                    class="text-sm leading-relaxed text-ink/70"
+                    set:html={renderBody(resolve(f.status) === 'unavailable' && f.note ? f.note : f.body)}
+                  />
                 </div>
               ))}
             </div>

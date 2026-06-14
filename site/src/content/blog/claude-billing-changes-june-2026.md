@@ -4,16 +4,9 @@ description: "The June 15 Claude Code pool split and the June 23 Fable cliff lan
 pubDate: 2026-06-11
 author: "Peter Bean"
 readingTime: "8 min read"
-faq:
-  - q: "Are the June 15 split and the June 23 Fable change the same thing?"
-    a: "No. June 15 re-buckets Claude Code usage into two credit pools (Interactive and Agent-SDK) — an organizational change. June 23 is when Claude Fable 5 stops being free and starts billing per token. Two separate changes, two separate countdowns."
-  - q: "Will using Fable draw from the new pools?"
-    a: "Fable usage is attributed through whichever pool your work falls in (interactive vs agentic), and after June 23 that usage bills from your usage credits at API rates. The two changes touch, but you still track them as two distinct things."
-  - q: "What should I do before each date?"
-    a: "Before June 15, check whether your credits cover the pool you actually use (a readiness check). Before June 23, forecast what Fable would cost you and decide consciously whether to keep it as your default."
-  - q: "Is Claude getting more expensive?"
-    a: "Not as a blanket statement. The June 15 split doesn't change prices — it changes how usage is counted. Fable is a new, premium option that's free for two weeks and then priced like the frontier model it is. The honest move isn't to panic; it's to know your own numbers."
 ---
+
+> **⚠ Update — June 14, 2026: Change #2 below (the June-23 Fable cliff) no longer applies.** Claude Fable 5 was **suspended on June 12** under a US Commerce Department export-control directive — Anthropic disabled Fable 5 and Mythos 5 for all users; other Claude models are unaffected. There is no longer a Fable free window or a June-23 cliff. **Change #1 — the June-15 Claude Code pool split — still stands**, and the rest of this guide (keeping two billing ideas separate) holds up. We've left Change #2 below as a dated record. (Source: [Anthropic's statement](https://www.anthropic.com/news/fable-mythos-access).)
 
 A lot is changing in how Claude bills, and it's changing fast. Inside a single fortnight there are **two separate changes** — and because they land eight days apart and both involve the word "credits," they're remarkably easy to blur into one. They aren't one. Conflating them is the only real way to get tripped up here.
 
@@ -38,7 +31,9 @@ Keep those two rows separate in your head and you've basically got it. Now the d
 
 **What to do:** before the 15th, get a sense of which pool your usage actually falls into and whether your credits cover it. (We wrote a [dedicated explainer on the split](/blog/the-june-15-split) if you want the full version.) A readiness check — `wtclaude readiness` — answers "are my credits enough?" in one line. It's a **labeled estimate**: the cost math is billing-grade, but the pool classification is a heuristic, so it's a forecast, not a guarantee.
 
-## Change #2 — June 23: the Fable cliff
+## Change #2 — June 23: the Fable cliff *(withdrawn — Fable suspended June 12)*
+
+> *Kept as a dated record. Fable 5 was suspended on June 12 (see the update note up top), so the free window and June-23 cliff described here never arrived. The distinction it illustrates — a model's price changing vs. how usage is bucketed — still holds, which is why we left it.*
 
 **What's happening:** Claude Fable 5 (launched June 9) is **included free** on Pro, Max, Team, and seat-based Enterprise plans **through June 22**. On **June 23**, it's removed from those plan limits, and continued use draws **usage credits** billed at API rates — **$10 per million input tokens, $50 per million output** (roughly double Opus 4.8).
 

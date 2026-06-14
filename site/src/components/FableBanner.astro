@@ -1,12 +1,15 @@
 ---
-import { SHOW_FABLE_BANNER, FABLE_BANNER } from '../config';
+import { SHOW_FABLE_BANNER, FABLE_AVAILABLE, FABLE_BANNER } from '../config';
 
 /**
  * Fable-5 launch ticker (PM-GTM-038). Flag-gated: SHOW_FABLE_BANNER=false pulls it in one
  * line, and the string itself lives in config.ts (swap to the post-cliff variant June 23).
+ * ALSO gated on the FABLE_AVAILABLE master switch (June 14): while Fable is suspended the
+ * banner does not render, and flipping FABLE_AVAILABLE=true restores it — no string edit.
  * Dismissible — the choice persists in localStorage. Secondary to the hero: a ticker,
  * not a headline. The copy is GTM-authored verbatim; only `backtick` spans become mono.
  */
+const showBanner = SHOW_FABLE_BANNER && FABLE_AVAILABLE;
 const html = FABLE_BANNER.replace(
   /`([^`]+)`/g,
   '<code class="rounded bg-ink/8 px-1 py-[1px] font-mono text-[0.92em]">$1</code>',
@@ -14,7 +17,7 @@ const html = FABLE_BANNER.replace(
 ---
 
 {
-  SHOW_FABLE_BANNER && (
+  showBanner && (
     <aside data-fable-banner class="w-full border-b border-amber/30 bg-amber-light text-ink">
       <div class="mx-auto flex max-w-6xl items-center justify-center gap-3 px-5 py-2.5">
         <p class="text-center text-sm font-medium leading-snug">
