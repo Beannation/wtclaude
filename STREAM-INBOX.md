@@ -6,6 +6,37 @@ Cross-channel inbox. Sections are owned by their lead. Append; don't rewrite oth
 
 ## 📋 PM
 
+### 2026-06-15 — Fable suspension → ✅ site redeployed + 🟢 0.1.6 PUBLISHED (reversible, nothing removed)
+
+Per `fable-suspension-cleanup-prompt.md` (supersedes `fable-site-copy.md`'s "remove" spec — **relabel, don't delete**). Claude Fable 5 + Mythos 5 were suspended worldwide June 12 (US export-control directive). Everything Fable-facing is now gated behind **one reversible switch per surface**; no strings, cards, commands, or rate entries were deleted.
+
+**PART 1 — SITE ✅ live on wtclaude.com** (commit `f832e0a`, site-only; prod deploy `dpl_6V1gnntJkcEp9zLuAYuxX7DRXSCD`, READY, aliased)
+- Master gate **`FABLE_AVAILABLE = false`** added to `site/src/config.ts` (+ shared `FABLE_SUSPENDED_NOTE`).
+- **Home banner:** renders only when `SHOW_FABLE_BANNER && FABLE_AVAILABLE` → gone now; `FABLE_BANNER` string + post-cliff comment kept. *(Verified live: banner `<aside>` absent.)*
+- **`/features` "Tracks Claude Fable 5" card:** kept; pill → **Unavailable** + the suspension note (new `unavailable` `FeaturePill` state); original body preserved in source. *(Verified live: "Unavailable" + note render; no live "June-23 cliff" body.)*
+- **`/developers`:** "Just shipped: tracks Fable" line relabeled to suspension copy; original line kept in the `FABLE_AVAILABLE` branch. *(Verified live.)*
+- **Both blogs:** applied GTM's authored dated update boxes verbatim (drop-in editorial notes stripped, not published); pulled the now-false **`faq` JSON-LD** from both so the free-window/$10-$50/cliff Q&As can't surface as context-free FAQ rich results; posts stay live as dated records. *(Verified live: update boxes render, FAQPage JSON-LD = 0, "withdrawn" note present.)*
+- **Honesty grep** (`free through june 22|june.?23 .*(cliff|fable)|\$10.*\$50` over `site/src`): every remaining hit is either a **gated, non-rendered** config/source string or **dated-record blog body** — no live present-tense Fable claim renders on a non-blog surface.
+- **(Batched) PM-WEB-014 consent checkbox:** unticked-by-default checkbox added to `CaptureForm.astro` ("Email me about Guardian and WTClaude updates"); posts `consent:true/false`, submit works either way. *(Verified live: `name="consent" data-consent` renders unticked.)*
+
+**PART 2 — CLI 🟢 `wtclaude@0.1.6` (npm `latest`)** (commit `b278f99`, tag `v0.1.6`, both pushed to `main`)
+- **`FABLE_SUSPENDED = true`** added to `src/utils/config.js` (+ `FABLE_SUSPENDED_NOTICE`). `wtclaude fable` now prints a suspension notice (text + `--json` `suspended:true`) instead of the forecast; the command, the `fable-5` rate entry, and **all** the forecast logic are untouched — only the output is gated.
+- Full checklist green: `npm pkg fix` clean · publish/pack dry-runs warning-free, no test-file leak (59 files) · honesty grep (no live forward claim printed) · **`npm test` 43 pass / 0 fail**.
+- **Cold `npx wtclaude@0.1.6` smoke:** `--version`=0.1.6 ✅ · `fable` → suspension notice (text + JSON) ✅ · `today`/`compare` normal, **zero** suspension leakage ✅.
+
+**⤺ TWO restore flip-points (the "when Fable returns" play — replaces the moot June-23 banner-swap):**
+1. **Site:** flip `FABLE_AVAILABLE = true` in `site/src/config.ts` → redeploy `wtclaude-site`. Banner, `/features` "Available", and the `/developers` line all restore to original copy in one edit.
+2. **CLI:** flip `FABLE_SUSPENDED = false` in `src/utils/config.js` → patch-republish (0.1.7). `wtclaude fable` forecast restores.
+3. **Blogs (manual, not flag-gated):** edit the dated update boxes in both Fable posts + restore the `faq` blocks if rich results are wanted again.
+
+**🟧 GTM** — (a) refine the suspension copy (`FABLE_SUSPENDED_NOTE` on site, `FABLE_SUSPENDED_NOTICE` in CLI) + the neutral pullback messaging; (b) **two GTM-owned blog-copy items I deliberately did NOT re-author** (per the "apply GTM's edits, don't re-author" instruction) still frame the June-23 cliff **context-free** on `/blog` + SERP: the `claude-billing-changes-june-2026` **meta `description`** and the "Further reading" **link title** inside `is-claude-code-cost-accurate.md`. GTM's call whether to soften.
+
+**🟦 Strategy** — the "tracks Fable" claim is **paused, not retired** (held behind `FABLE_AVAILABLE`/`FABLE_SUSPENDED`, fully reversible). Update STRAT canon so it isn't scrubbed as a dead claim.
+
+**Ops FYI (npm):** 0.1.6 went out after an npm-auth detour (account had a security-key 2FA; published via web auth). If 2FA was left **disabled** on the npm account to get this out, recommend re-enabling it and/or adding an **Automation token** (bypasses 2FA) for future CI publishes.
+
+---
+
 ### 2026-06-10 — Bug-fix pass → 🟢 0.1.5 PUBLISHED · launch-stopper CLEAR
 
 All 9 QA findings resolved in one pass and **`wtclaude@0.1.5` is live on npm** — https://www.npmjs.com/package/wtclaude/v/0.1.5 (registry shasum `000a98a5…` matches the dry-run tarball exactly). Commit `3bfe4a4`, tag `v0.1.5`, pushed to `main`. **🔴 launch-stopper is cleared — the marketing compare-CTA push can resume** (read the GTM flag below before finalizing copy; reframe is GTM's ticket PM-GTM-039, not this stream).
