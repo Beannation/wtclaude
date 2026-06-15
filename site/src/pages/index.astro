@@ -26,7 +26,7 @@ const jsonLd = softwareApplication(new URL(Astro.url.pathname, Astro.site).href)
       style="background: radial-gradient(60% 50% at 50% 0%, rgba(232,148,58,0.18) 0%, rgba(26,25,21,0) 70%);"
     >
     </div>
-    <div class="relative mx-auto max-w-3xl px-5 pb-16 pt-32 text-center sm:pt-36">
+    <div class="relative mx-auto max-w-3xl px-5 pb-8 pt-32 text-center sm:pt-36">
       <Mark class="mx-auto mb-7 h-14 w-14 text-surface" />
       <h1 class="font-head text-4xl leading-tight sm:text-5xl">
         Built on the right data from day one.
@@ -64,7 +64,7 @@ const jsonLd = softwareApplication(new URL(Astro.url.pathname, Astro.site).href)
         /* Social proof — Peerlist Launchpad (flag-gated; one-line pull via SHOW_PEERLIST_BADGE
            after voting closes June 21). Dark hero → theme="dark". */
         SHOW_PEERLIST_BADGE && (
-          <div class="mt-9 flex flex-col items-center gap-2.5">
+          <div class="mt-6 flex flex-col items-center gap-2.5">
             <p class="font-mono text-xs uppercase tracking-wide text-surface/45">As featured on</p>
             <PeerlistBadge theme="dark" />
           </div>
