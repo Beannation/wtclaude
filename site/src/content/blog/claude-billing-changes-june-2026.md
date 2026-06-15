@@ -16,20 +16,20 @@ So here's a clear, no-drama map: what each change actually is, when it lands, wh
 
 | | **Change #1** | **Change #2** |
 |---|---|---|
-| **What** | Claude Code usage splits into two credit pools | Claude Fable 5's free window ends |
-| **When** | **June 15** | **June 23** |
+| **What** | Claude Code usage is now split into two credit pools | Claude Fable 5's free window ends |
+| **When** | **June 15 — live now** | **June 23** |
 | **Touches** | How your Code usage is *bucketed* (Interactive vs Agent-SDK) | One *model* moving from free to pay-per-token |
 | **Who** | Claude Code users | Anyone using Fable 5 |
 
 Keep those two rows separate in your head and you've basically got it. Now the detail.
 
-## Change #1 — June 15: the Claude Code pool split
+## Change #1 — June 15 (now live): the Claude Code pool split
 
-**What's happening:** Claude Code usage moves to a **two-pool model** — an **Interactive** pool (your hands-on, back-and-forth work) and an **Agent-SDK** pool (agentic / SDK-driven workloads). Your usage is attributed to one or the other, and they're tracked separately.
+**What happened:** As of June 15, Claude Code usage is split into a **two-pool model** — an **Interactive** pool (your hands-on, back-and-forth work) and an **Agent-SDK** pool (agentic / SDK-driven workloads). Your usage is attributed to one or the other, and they're tracked separately.
 
 **Why it matters:** if a lot of your work is agentic, you'll draw down the Agent-SDK pool faster than a single combined number would ever suggest. Budgeting against one lumped figure quietly stops working the moment your usage leans one way.
 
-**What to do:** before the 15th, get a sense of which pool your usage actually falls into and whether your credits cover it. (We wrote a [dedicated explainer on the split](/blog/the-june-15-split) if you want the full version.) A readiness check — `wtclaude readiness` — answers "are my credits enough?" in one line. It's a **labeled estimate**: the cost math is billing-grade, but the pool classification is a heuristic, so it's a forecast, not a guarantee.
+**What to do:** now that it's live, see which pool your usage actually falls into — a good tracker shows the split automatically, no reinstall. (We wrote a [dedicated explainer on the split](/blog/the-june-15-split) if you want the full version.) `wtclaude today` now shows your spend **per-pool**, billing-grade in the terminal — so instead of forecasting whether your credits would cover you, you can see exactly where each pool stands.
 
 ## Change #2 — June 23: the Fable cliff *(withdrawn — Fable suspended June 12)*
 

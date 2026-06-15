@@ -1,0 +1,24 @@
+---
+import { SHOW_PEERLIST_BADGE } from '../config';
+
+/**
+ * Peerlist "Live on Launchpad" badge (PM, June 15). Time-sensitive social proof —
+ * voting ends June 21. Self-gates on SHOW_PEERLIST_BADGE so flipping that one flag
+ * pulls every placement at once. The embed URL + project IDs are the exact snippet
+ * from Peerlist and must NOT change; only the `theme` query param swaps to match a
+ * light vs dark background. External link opens in a new tab.
+ */
+interface Props {
+  theme?: 'light' | 'dark';
+}
+const { theme = 'light' } = Astro.props;
+const src = `https://peerlist.io/api/v1/projects/embed/PRJHA9EMMRPGD8R6K3RQD7K8OLJ7N7?showUpvote=false&theme=${theme}`;
+---
+
+{
+  SHOW_PEERLIST_BADGE && (
+    <a href="https://peerlist.io/beannationdefi/project/wtclaude" target="_blank" rel="noreferrer">
+      <img src={src} alt="WTClaude" style="width:auto;height:72px;" />
+    </a>
+  )
+}

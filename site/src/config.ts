@@ -46,6 +46,15 @@ export const FAST_MODE_BADGE: 'inferred' | null = 'inferred';
 export const SHOW_TASKS_FEATURE = false;
 
 /**
+ * Peerlist "Live on Launchpad" badge (PM, June 15). Time-sensitive social proof while
+ * WTClaude is live on the Peerlist Launchpad — VOTING ENDS JUNE 21. SHOW_PEERLIST_BADGE=false
+ * pulls every badge (homepage hero strip + footer) in one flip — a one-line removal when
+ * voting closes. The embed URL/IDs live in PeerlistBadge.astro and are fixed; only the
+ * theme query param swaps light/dark per surface.
+ */
+export const SHOW_PEERLIST_BADGE = true;
+
+/**
  * Internal "Draft — copy gap" markers (`DraftNote.astro`) on the persona pages
  * (/complete, /business, /business/finance). These are dev-only flags for GTM —
  * keep FALSE in production so they never render publicly. Flip true locally to see them.

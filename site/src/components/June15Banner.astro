@@ -4,7 +4,7 @@ import { DUAL_POOL_ACTIVATION_DATE } from '../config';
 /**
  * Full-width amber, date-gated banner. BOTH variants render at build time; a tiny
  * client island flips pre→post on the activation date and ticks the live countdown.
- * No-JS default shows the pre-split variant (correct until June 15).
+ * No-JS default shows the post-split variant (June 15 has passed; the JS island still date-gates both).
  */
 ---
 
@@ -17,7 +17,7 @@ import { DUAL_POOL_ACTIVATION_DATE } from '../config';
     <!-- PRE-split -->
     <a
       href="/blog/the-june-15-split"
-      class="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center text-sm font-medium leading-snug hover:underline"
+      class="hidden flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center text-sm font-medium leading-snug hover:underline"
       data-variant="pre"
       data-track="countdown_banner_click"
     >
@@ -29,7 +29,7 @@ import { DUAL_POOL_ACTIVATION_DATE } from '../config';
     <!-- POST-split (hidden until activation) -->
     <a
       href="/blog/the-june-15-split"
-      class="hidden flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center text-sm font-medium leading-snug hover:underline"
+      class="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center text-sm font-medium leading-snug hover:underline"
       data-variant="post"
       data-track="countdown_banner_click"
     >
