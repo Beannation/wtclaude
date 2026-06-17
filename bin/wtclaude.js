@@ -33,6 +33,7 @@ import { registerReadiness } from '../src/cli/readiness.js';
 import { registerLeaderboard } from '../src/cli/leaderboard.js';
 import { registerUninstall } from '../src/cli/uninstall.js';
 import { registerExport } from '../src/cli/export.js';
+import { maybeBackgroundSync } from '../src/sync/autosync.js';
 
 const program = new Command();
 
@@ -78,5 +79,10 @@ registerReadiness(program);
 registerLeaderboard(program);
 registerUninstall(program);
 registerExport(program);
+
+// Opportunistic, fully-detached background push — only when the user has opted
+// in (`sync --enable`) and local data has changed since the last sync. Debounced
+// and non-blocking; a no-op for everyone else. Never runs on the collector path.
+maybeBackgroundSync(process.argv);
 
 program.parse();

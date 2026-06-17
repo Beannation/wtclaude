@@ -70,6 +70,41 @@ wtclaude debrief
 
 **Local-first by default:** out of the box there's no cloud and no account — your usage data stays on your machine. Cloud sync and the web dashboard are entirely **opt-in**; until you turn them on, nothing leaves your machine.
 
+## Cloud sync (optional)
+
+Everything above works fully offline. Cloud sync is **opt-in** and off until you turn it on — and there are **no keys to paste.** WTClaude runs the backend; the CLI ships a browser-safe publishable key (it can't bypass row-level security, and every privileged write happens server-side). Turning sync on lets you see your usage in the web dashboard and across machines.
+
+```bash
+# See exactly what sync would send, then opt in (one push runs on confirm)
+wtclaude sync --enable
+
+# Push on demand, any time
+wtclaude sync
+
+# Status: on/off, last sync, your anonymous ID
+wtclaude sync --status
+
+# Turn it back off (your local data and config are kept)
+wtclaude sync --disable
+```
+
+Before anything leaves your machine, `--enable` shows a preview of exactly what's uploaded: **counts, flags, and salted hashes only — never prompts, code, file names, or project paths.** Nothing uploads until you confirm (use `--enable --yes` for non-interactive setups). Once enabled, WTClaude also pushes opportunistically in the background when your local data changes — debounced and non-blocking. Set `WTCLAUDE_NO_AUTOSYNC=1` to disable just the background push, or `wtclaude sync --disable` to stop sync entirely.
+
+<details>
+<summary><strong>Advanced / self-host</strong></summary>
+
+Instead of the hosted backend, you can point the CLI at your own Supabase project by adding its **publishable** key to `~/.wtclaude/config.json` (these override the shipped defaults):
+
+```json
+{
+  "supabase_url": "https://YOUR-PROJECT.supabase.co",
+  "supabase_publishable_key": "sb_publishable_..."
+}
+```
+
+Use the browser-safe publishable key (`sb_publishable_…`) only — never a secret/service key in the CLI. Then run `wtclaude sync --enable`.
+</details>
+
 ## Why Not Just Fix JSONL?
 
 It's an upstream bug in Claude Code (filed Feb 2026, still unfixed). The JSONL write path logs during streaming for crash-resistance — but never updates with the real numbers after the response completes. Cache metrics happen to be accurate because they're in the initial response header.

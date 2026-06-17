@@ -56,15 +56,31 @@ export function getOrCreateAnonymousId() {
   return config.anonymous_id;
 }
 
+// ── Hosted backend (shipped) ─────────────────────────────────────────────────
+// WTClaude runs the Supabase project, so cloud sync works out-of-the-box with no
+// credentials to paste. The CLI ships the public URL + the browser-safe
+// PUBLISHABLE key. That key (sb_publishable_…) is public BY DESIGN: it cannot
+// bypass RLS, and every privileged write happens server-side in the `sync-data`
+// edge function under the service-role key (a Supabase function secret, never
+// shipped). A secret key (sb_secret_…) must NEVER live here.
+//
+// Self-host (advanced): setting `supabase_url` + `supabase_publishable_key` in
+// ~/.wtclaude/config.json overrides these defaults — see the README "Advanced /
+// self-host" note. User config still wins; it's just no longer required.
+export const HOSTED_SUPABASE_URL = 'https://dddinnggyyabbmrsrhnq.supabase.co';
+export const HOSTED_PUBLISHABLE_KEY = 'sb_publishable_n_tD9PkYUfRr3lc9677q3g_YtVB7rir';
+
 export function getSupabaseConfig() {
   const config = getConfig();
   return {
-    url: config.supabase_url || null,
+    // Hosted defaults so sync works out-of-the-box; user config still overrides
+    // (advanced / self-host) but is no longer required.
+    url: config.supabase_url || HOSTED_SUPABASE_URL,
     // Browser-safe PUBLISHABLE key (sb_publishable_…). The legacy
     // `supabase_anon_key` name is still accepted for backward compatibility,
     // but a privileged service/secret key must NEVER live in the CLI path —
     // all privileged writes happen server-side in the sync-data edge function.
-    publishableKey: config.supabase_publishable_key || config.supabase_anon_key || null,
+    publishableKey: config.supabase_publishable_key || config.supabase_anon_key || HOSTED_PUBLISHABLE_KEY,
     syncEnabled: config.sync_enabled || false,
   };
 }
@@ -79,7 +95,9 @@ export async function syncToCloud() {
   const sbConfig = getSupabaseConfig();
 
   if (!sbConfig.url || !sbConfig.publishableKey) {
-    throw new Error('Supabase not configured. Run: wtclaude sync --configure');
+    // With the hosted defaults shipped this is effectively unreachable; it only
+    // fires if a self-host config blanks out the backend.
+    throw new Error('Cloud sync backend is not available.');
   }
 
   const anonymousId = getOrCreateAnonymousId();
@@ -106,8 +124,9 @@ export async function syncToCloud() {
   }
 
   if (sessionsPayload.length === 0) {
+    // syncToCloud() PUSHES; it must never flip the opt-in (audit #4). Enabling
+    // happens only via `wtclaude sync --enable` + the privacy preview.
     config.last_sync_at = new Date().toISOString();
-    config.sync_enabled = true;
     saveConfig(config);
     return { synced: 0, turns_synced: 0, message: 'Nothing new to sync' };
   }
@@ -129,8 +148,8 @@ export async function syncToCloud() {
 
   const result = await response.json();
 
+  // Record the sync time only — never flip `sync_enabled` here (audit #4).
   config.last_sync_at = new Date().toISOString();
-  config.sync_enabled = true;
   saveConfig(config);
 
   return {

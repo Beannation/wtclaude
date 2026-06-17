@@ -6,39 +6,19 @@ import { listSessions, readSession } from '../utils/sessions.js';
 export function registerSync(program) {
   program
     .command('sync')
-    .description('Sync usage data to the cloud')
-    .option('--configure', 'Set up Supabase connection')
-    .option('--status', 'Show sync status')
-    .option('--enable', 'Enable cloud sync')
-    .option('--disable', 'Disable cloud sync')
+    .description('Push your usage data to the cloud (opt-in)')
+    .option('--status', 'Show cloud sync status')
+    .option('--enable', 'Turn on cloud sync (shows a privacy preview first)')
+    .option('--disable', 'Turn off cloud sync (your local data is kept)')
     .option('-y, --yes', 'Skip the opt-in confirmation prompt (non-interactive)')
     .action(async (opts) => {
-      if (opts.configure) {
-        await configureSynce();
-        return;
-      }
-
       if (opts.status) {
         showStatus();
         return;
       }
 
       if (opts.enable) {
-        const config = getConfig();
-        if (config.sync_enabled) {
-          console.log('\n  Cloud sync is already enabled. Run `wtclaude sync` to push data.\n');
-          return;
-        }
-        // QA-0610-04: show exactly what sync will send and require opt-in before
-        // anything leaves the machine.
-        const ok = await confirmSyncOptIn(config, opts);
-        if (!ok) {
-          console.log('\n  Cloud sync NOT enabled — nothing was sent.\n');
-          return;
-        }
-        config.sync_enabled = true;
-        saveConfig(config);
-        console.log('\n  Cloud sync enabled. Run `wtclaude sync` to push data.\n');
+        await enableSync(opts);
         return;
       }
 
@@ -46,50 +26,54 @@ export function registerSync(program) {
         const config = getConfig();
         config.sync_enabled = false;
         saveConfig(config);
-        console.log('\n  Cloud sync disabled.\n');
+        console.log('\n  Cloud sync turned off. Your local data and config are kept.\n');
         return;
       }
 
-      // Default: run sync
+      // Default: manual push (only if already opted in).
       await runSync();
     });
 }
 
-async function configureSynce() {
-  const config = getConfig();
-
-  // Read from stdin isn't great in this context, so we'll use env vars or direct config
-  console.log('\n  Supabase Configuration');
-  console.log('  ======================\n');
-  console.log('  Add your Supabase credentials to ~/.wtclaude/config.json:\n');
-  console.log('  {');
-  console.log('    "supabase_url": "https://YOUR-PROJECT.supabase.co",');
-  console.log('    "supabase_publishable_key": "sb_publishable_...",');
-  console.log('    "sync_enabled": true');
-  console.log('  }\n');
-  console.log('  Use the browser-safe PUBLISHABLE key (sb_publishable_…) from');
-  console.log('  Supabase dashboard > Settings > API. Never paste a secret key.\n');
-
-  if (config.supabase_url) {
-    console.log(`  Current URL: ${config.supabase_url}`);
-    console.log(`  Sync enabled: ${config.sync_enabled || false}\n`);
-  }
-}
-
 function showStatus() {
   const config = getConfig();
-  const { url, syncEnabled } = getSupabaseConfig();
+  const { url, publishableKey, syncEnabled } = getSupabaseConfig();
+  const ready = Boolean(url && publishableKey);
+  const selfHosted = Boolean(config.supabase_url); // user overrode the hosted backend
 
-  console.log('\n  Sync Status');
-  console.log('  ===========\n');
-  console.log(`  Configured: ${url ? 'Yes' : 'No'}`);
-  console.log(`  Enabled:    ${syncEnabled ? 'Yes' : 'No'}`);
-  console.log(`  Last sync:  ${config.last_sync_at || 'Never'}`);
-  console.log(`  Anonymous ID: ${config.anonymous_id || 'Not created yet'}\n`);
+  console.log('\n  Cloud sync status');
+  console.log('  =================\n');
+  console.log(`  Sync:       ${syncEnabled ? 'on' : 'off'}`);
+  console.log(`  Backend:    ${ready ? (selfHosted ? `self-host (${url})` : 'ready') : 'unavailable'}`);
+  console.log(`  Last sync:  ${config.last_sync_at || 'never'}`);
+  console.log(`  Your ID:    ${config.anonymous_id || '(created on first sync)'}`);
+  console.log('');
+  console.log(syncEnabled
+    ? '  Push now with `wtclaude sync`. Turn off with `wtclaude sync --disable`.\n'
+    : '  Turn it on with `wtclaude sync --enable`.\n');
+}
 
-  if (!url) {
-    console.log('  Run: wtclaude sync --configure\n');
+// `--enable` is the ONLY way data sharing turns on, and only after the privacy
+// preview + explicit opt-in (audit #4). On confirm we flip the flag and do one
+// initial push so the user sees it work.
+async function enableSync(opts) {
+  const config = getConfig();
+  if (config.sync_enabled) {
+    console.log('\n  Cloud sync is already on. Run `wtclaude sync` to push now.\n');
+    return;
   }
+  // QA-0610-04: show exactly what sync will send and require opt-in before
+  // anything leaves the machine.
+  const ok = await confirmSyncOptIn(config, opts);
+  if (!ok) {
+    console.log('\n  Cloud sync NOT enabled — nothing was sent.\n');
+    return;
+  }
+  config.sync_enabled = true;
+  saveConfig(config);
+  console.log('\n  Cloud sync enabled.');
+  // One initial push right after opt-in.
+  await runSync();
 }
 
 async function runSync() {
@@ -97,11 +81,12 @@ async function runSync() {
   const stripped = pruneLegacySecrets();
   if (stripped.length) console.log(`  Removed a disabled legacy secret key from config (${stripped.join(', ')}).`);
 
-  const { url, publishableKey } = getSupabaseConfig();
-
-  if (!url || !publishableKey) {
-    console.log('\n  Supabase not configured yet.');
-    console.log('  Run: wtclaude sync --configure\n');
+  // Consent gate (audit #4): a manual `wtclaude sync` NEVER uploads unless the
+  // user has already opted in via `--enable` (which shows the privacy preview).
+  // It must not silently enable sync, and it must not upload anything otherwise.
+  const config = getConfig();
+  if (config.sync_enabled !== true) {
+    console.log('\n  Cloud sync is off. Run `wtclaude sync --enable` to turn it on.\n');
     return;
   }
 
@@ -113,14 +98,14 @@ async function runSync() {
 
     // Check badges after sync
     const badges = checkBadges();
-    const config = getConfig();
-    const knownBadges = config.earned_badges || [];
+    const cfg = getConfig();
+    const knownBadges = cfg.earned_badges || [];
     const knownSet = new Set(knownBadges);
     const newBadges = badges.filter(b => !knownSet.has(b.type));
 
     if (newBadges.length > 0) {
-      config.earned_badges = badges.map(b => b.type);
-      saveConfig(config);
+      cfg.earned_badges = badges.map(b => b.type);
+      saveConfig(cfg);
 
       for (const badge of newBadges) {
         console.log(`  New badge: ${badge.label}! ${badge.description}`);
