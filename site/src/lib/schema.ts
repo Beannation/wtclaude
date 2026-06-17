@@ -14,8 +14,8 @@ export const abs = (path: string): string =>
   path.startsWith('http') ? path : `${SITE_URL}${path.startsWith('/') ? '' : '/'}${path}`;
 
 /**
- * Site-wide Organization. `sameAs` lists only verifiable profiles — GitHub is confirmed.
- * (X/Twitter omitted until GTM provides a real handle; we don't invent social URLs.)
+ * Site-wide Organization. `sameAs` lists only verifiable profiles — GitHub, plus the
+ * live WTClaude brand socials confirmed by GTM (X + Telegram, PM-WEB-015).
  */
 export const ORGANIZATION = {
   '@context': 'https://schema.org',
@@ -23,7 +23,11 @@ export const ORGANIZATION = {
   name: 'WTClaude',
   url: SITE_URL,
   logo: abs('/assets/wtclaude-app-icon-light.svg'),
-  sameAs: ['https://github.com/Beannation/wtclaude'],
+  sameAs: [
+    'https://github.com/Beannation/wtclaude',
+    'https://x.com/getwtclaude',
+    'https://t.me/wtclaude_news',
+  ],
 };
 
 /**
@@ -38,7 +42,7 @@ export function softwareApplication(url: string) {
     applicationCategory: 'DeveloperApplication',
     operatingSystem: 'macOS, Linux',
     description:
-      'Free, open-source, billing-grade cost tracker for Claude Code. Reads the statusline — the source behind your bill — for real terminal numbers, and is ready for the June 15 dual-pool billing split.',
+      'Free, open-source, billing-grade cost tracker for Claude Code. Reads the statusline — the source behind your bill — for real terminal numbers.',
     url,
     offers: {
       '@type': 'Offer',

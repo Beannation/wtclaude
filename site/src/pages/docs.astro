@@ -2,7 +2,7 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import CodeBlock from '../components/CodeBlock.astro';
 import HonestyBadge from '../components/HonestyBadge.astro';
-import { SHOW_FAST_MODE, FAST_MODE_BADGE, SHOW_TASKS_FEATURE, GUARDIAN_PRICE, CLOUD_LIVE } from '../config';
+import { SHOW_FAST_MODE, FAST_MODE_BADGE, SHOW_TASKS_FEATURE, GUARDIAN_PRICE, CLOUD_LIVE, SPLIT_LIVE } from '../config';
 import { faqPage, breadcrumbs } from '../lib/schema';
 
 const title = 'WTClaude docs — install & quick start';
@@ -14,7 +14,7 @@ const commands = [
   { name: 'setup', desc: 'configure tracking — wires the statusline and creates your local data dir.' },
   {
     name: 'today / week / month',
-    desc: 'real cost, tokens, and model breakdown for the period — and after June 15 the summary splits the total into your **Interactive** (subscription) and **Agent-SDK** (credit) pools automatically. Flags: `--json`, `--since/--until`, `--group-by <project|branch|cost_center|task>`.',
+    desc: `real cost, tokens, and model breakdown for the period${SPLIT_LIVE ? ' — and after June 15 the summary splits the total into your **Interactive** (subscription) and **Agent-SDK** (credit) pools automatically' : ' — and if the Agent-SDK split returns, the summary splits the total per-pool (**Interactive** subscription + **Agent-SDK** credit) automatically'}. Flags: \`--json\`, \`--since/--until\`, \`--group-by <project|branch|cost_center|task>\`.`,
     badge: 'billing-grade' as const,
   },
   {
@@ -48,13 +48,23 @@ const commands = [
   { name: 'whatif', desc: 'plan- and model-comparison math. Flags: `--plan`, `--model`, `--pool`, `--speed`.' },
   {
     name: 'forecast',
-    desc: 'projected Agent-pool spend vs included credits + a June-15 countdown.',
+    desc: SPLIT_LIVE
+      ? 'projected Agent-pool spend vs included credits + a June-15 countdown.'
+      : 'projected Agent-pool spend vs included credits.',
     badge: 'estimate' as const,
   },
-  { name: 'readiness', desc: 'your June-14 credit-coverage check.', badge: 'estimate' as const },
+  {
+    name: 'readiness',
+    desc: SPLIT_LIVE
+      ? 'your June-14 credit-coverage check.'
+      : 'a credit-coverage check (ready if the split returns).',
+    badge: 'estimate' as const,
+  },
   {
     name: 'credits',
-    desc: 'Agent-SDK credit balance and burn. Before June 15: your allocation + a countdown. After: live burn rate.',
+    desc: SPLIT_LIVE
+      ? 'Agent-SDK credit balance and burn. Before June 15: your allocation + a countdown. After: live burn rate.'
+      : 'Agent-SDK credit balance and burn. Today: your real, per-pool-capable totals. If the split lands: live per-pool burn rate.',
     badge: 'estimate' as const,
   },
   {

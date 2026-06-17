@@ -6,7 +6,9 @@ author: "Peter Bean"
 readingTime: "8 min read"
 ---
 
-> **⚠ Update — June 14, 2026: Change #2 below (the June-23 Fable cliff) no longer applies.** Claude Fable 5 was **suspended on June 12** under a US Commerce Department export-control directive — Anthropic disabled Fable 5 and Mythos 5 for all users; other Claude models are unaffected. There is no longer a Fable free window or a June-23 cliff. **Change #1 — the June-15 Claude Code pool split — still stands**, and the rest of this guide (keeping two billing ideas separate) holds up. We've left Change #2 below as a dated record. (Source: [Anthropic's statement](https://www.anthropic.com/news/fable-mythos-access).)
+> **Update — June 15, 2026: neither change below took effect.** Change #1 (the June-15 Agent-SDK split) was **paused** by Anthropic before June 15 — nothing changed, and there's no credit to claim. Change #2 (the Fable cliff) never arrived — Fable 5 was suspended June 12. Both could return with advance notice; we're watching. The guide below is preserved as a record of what was announced.
+
+> **⚠ Update — June 14, 2026: Change #2 below (the June-23 Fable cliff) no longer applies.** Claude Fable 5 was **suspended on June 12** under a US Commerce Department export-control directive — Anthropic disabled Fable 5 and Mythos 5 for all users; other Claude models are unaffected. There is no longer a Fable free window or a June-23 cliff. **Change #1 — the June-15 Claude Code pool split — was paused before it took effect** (see the note above), and the rest of this guide (keeping two billing ideas separate) holds up. We've left Change #2 below as a dated record. (Source: [Anthropic's statement](https://www.anthropic.com/news/fable-mythos-access).)
 
 A lot is changing in how Claude bills, and it's changing fast. Inside a single fortnight there are **two separate changes** — and because they land eight days apart and both involve the word "credits," they're remarkably easy to blur into one. They aren't one. Conflating them is the only real way to get tripped up here.
 
@@ -17,19 +19,19 @@ So here's a clear, no-drama map: what each change actually is, when it lands, wh
 | | **Change #1** | **Change #2** |
 |---|---|---|
 | **What** | Claude Code usage is now split into two credit pools | Claude Fable 5's free window ends |
-| **When** | **June 15 — live now** | **June 23** |
+| **When** | **June 15 — announced, then paused** | **June 23** |
 | **Touches** | How your Code usage is *bucketed* (Interactive vs Agent-SDK) | One *model* moving from free to pay-per-token |
 | **Who** | Claude Code users | Anyone using Fable 5 |
 
 Keep those two rows separate in your head and you've basically got it. Now the detail.
 
-## Change #1 — June 15 (now live): the Claude Code pool split
+## Change #1 — June 15: the Claude Code pool split (paused)
 
-**What happened:** As of June 15, Claude Code usage is split into a **two-pool model** — an **Interactive** pool (your hands-on, back-and-forth work) and an **Agent-SDK** pool (agentic / SDK-driven workloads). Your usage is attributed to one or the other, and they're tracked separately.
+**What was announced:** Starting June 15, Claude Code usage was to split into a **two-pool model** — an **Interactive** pool (your hands-on, back-and-forth work) and an **Agent-SDK** pool (agentic / SDK-driven workloads), with usage attributed to one or the other and tracked separately. Anthropic paused this before it took effect — nothing changed.
 
 **Why it matters:** if a lot of your work is agentic, you'll draw down the Agent-SDK pool faster than a single combined number would ever suggest. Budgeting against one lumped figure quietly stops working the moment your usage leans one way.
 
-**What to do:** now that it's live, see which pool your usage actually falls into — a good tracker shows the split automatically, no reinstall. (We wrote a [dedicated explainer on the split](/blog/the-june-15-split) if you want the full version.) `wtclaude today` now shows your spend **per-pool**, billing-grade in the terminal — so instead of forecasting whether your credits would cover you, you can see exactly where each pool stands.
+**What to do:** nothing today — the split was paused. If a revised version lands, see which pool your usage actually falls into — a good tracker shows the split automatically, no reinstall. (We wrote a [dedicated explainer on the split](/blog/the-june-15-split) if you want the full version.) Either way `wtclaude today` shows your spend **per-pool**, billing-grade in the terminal — so instead of forecasting whether your credits would cover you, you can see exactly where each pool stands.
 
 ## Change #2 — June 23: the Fable cliff *(withdrawn — Fable suspended June 12)*
 
@@ -54,8 +56,8 @@ A clean way to remember it: **June 15 rearranges the room; June 23 puts a price 
 
 ## A simple plan for the next two weeks
 
-- **Now → June 15:** run a readiness check so you know which pool you lean on and whether your credits hold. (Labeled estimate.)
-- **June 15:** the split goes live; a good tracker starts showing your spend per-pool automatically — no reinstall.
+- **Track your real numbers:** run a readiness check so you know which pool you lean on and whether your credits hold. (Labeled estimate.)
+- **June 15:** the split was paused — nothing changed; if a revised version lands, a good tracker shows your spend per-pool automatically, no reinstall.
 - **June 9 → 22:** use free Fable freely, but keep half an eye on whether it's becoming your default.
 - **Before June 23:** run a Fable forecast and make the default a *decision*, not an accident.
 - **June 23:** Fable starts metering; switch from forecast to watching your real, billing-grade cost.

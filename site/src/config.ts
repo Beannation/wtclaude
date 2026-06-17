@@ -7,6 +7,31 @@
 export const DUAL_POOL_ACTIVATION_DATE = '2026-06-15T00:00:00-04:00';
 
 /**
+ * JUNE-15 BANNER GATE (PM, June 16, 2026). Anthropic PAUSED the Agent-SDK billing
+ * split before June 15 — it did not take effect (Help Center art. 15036540). The
+ * June15Banner auto-flips to "the split is live," which is now false, so it must not
+ * render. Mirrors the Fable pattern: the component + both span variants are kept intact
+ * for a one-line restore (flip to true + redeploy) if a revised split lands.
+ * While SHOW_JUNE15_BANNER is false the banner does not render anywhere.
+ */
+export const SHOW_JUNE15_BANNER = false;
+
+/**
+ * SPLIT MASTER GATE (PM, June 16, 2026) — mirrors the Fable FABLE_AVAILABLE pattern so the
+ * whole June-15 dual-pool cluster restores in ONE flip if the split returns. The Agent-SDK
+ * billing split was announced for June 15, then PAUSED before it took effect. While
+ * SPLIT_LIVE is false:
+ *   - pure dated/live UI (countdowns, a live "June-14 Readiness Report" CTA, a live
+ *     "June-15 forecast tile") is hidden — there's no event to count down to;
+ *   - the real, shipped features (dual-pool view, agent-pool forecast, credits-enough check)
+ *     stay, but are reworded to conditional/ready, with SPLIT_STATUS_NOTE shown once per cluster.
+ * Flip to true (+ redeploy) and the dated surfaces restore. Nothing is deleted.
+ */
+export const SPLIT_LIVE = false;
+export const SPLIT_STATUS_NOTE =
+  "Anthropic announced an Agent-SDK billing split for June 15, then paused it before it took effect. Nothing has changed — WTClaude's dual-pool view is built and ready if a revised version returns.";
+
+/**
  * D-13 MASTER GATE — the single "cloud is live" flip (GTM-028).
  *
  * When false (today): the site keeps its §1–4 "coming" states — no cloud-sync claim,
@@ -125,8 +150,10 @@ export const GUARDIAN_PRICE = {
 export const CAPTURE_ENDPOINT = import.meta.env.PUBLIC_CAPTURE_ENDPOINT ?? '';
 export const CAPTURE_METHOD: 'POST' = 'POST';
 
-/** Canonical links. */
+/** Canonical links. Socials are the live WTClaude brand profiles (PM-WEB-015). */
 export const LINKS = {
   github: 'https://github.com/Beannation/wtclaude',
+  x: 'https://x.com/getwtclaude',
+  telegram: 'https://t.me/wtclaude_news',
   install: 'npx wtclaude setup',
 };

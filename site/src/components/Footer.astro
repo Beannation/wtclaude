@@ -35,6 +35,11 @@ import PeerlistBadge from './PeerlistBadge.astro';
           <a href={LINKS.github} target="_blank" rel="noopener" class="text-ink/70 hover:text-ink" data-track="cta_github">GitHub</a>
           {SHOW_DASHBOARD_LINK && <a href="/dashboard" class="text-ink/70 hover:text-ink">Dashboard</a>}
         </nav>
+        <nav class="flex flex-col gap-2" aria-label="Follow">
+          <p class="font-mono text-xs uppercase tracking-wide text-warm">Follow</p>
+          <a href={LINKS.x} target="_blank" rel="noopener" class="text-ink/70 hover:text-ink" data-track="social_x">X</a>
+          <a href={LINKS.telegram} target="_blank" rel="noopener" class="text-ink/70 hover:text-ink" data-track="social_telegram">Telegram</a>
+        </nav>
       </div>
     </div>
 

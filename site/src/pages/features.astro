@@ -4,12 +4,13 @@ import Mark from '../components/Mark.astro';
 import CodeBlock from '../components/CodeBlock.astro';
 import HonestyBadge from '../components/HonestyBadge.astro';
 import FeaturePill from '../components/FeaturePill.astro';
-import { CLOUD_LIVE, GUARDIAN_PRICE, FABLE_AVAILABLE, FABLE_SUSPENDED_NOTE } from '../config';
+import { CLOUD_LIVE, GUARDIAN_PRICE, SPLIT_LIVE, FABLE_AVAILABLE, FABLE_SUSPENDED_NOTE } from '../config';
 
 // SEO — §6 verbatim.
 const title = 'WTClaude features — the most complete Claude Code tracker';
-const description =
-  'Billing-grade accuracy, your whole usage picture, backup across machines, dual-pool readiness for June 15, and a dashboard to see it all. Free & open-source.';
+const description = SPLIT_LIVE
+  ? 'Billing-grade accuracy, your whole usage picture, backup across machines, dual-pool readiness for June 15, and a dashboard to see it all. Free & open-source.'
+  : 'Billing-grade accuracy, your whole usage picture, backup across machines, readiness for Claude’s billing changes whenever they land, and a dashboard to see it all. Free & open-source.';
 
 /**
  * §6 feature groups, verbatim copy. Status:
@@ -100,21 +101,25 @@ const groups: Group[] = [
     ],
   },
   {
-    title: 'Ready for the June 15 billing split',
+    title: SPLIT_LIVE ? 'Ready for the June 15 billing split' : 'Ready when Claude’s billing changes',
     features: [
       {
         name: 'Dual-pool tracking',
         status: 'available',
-        body: 'Interactive and Agent SDK Credits, tracked separately. Lights up automatically on June 15 — no reinstall.',
+        body: SPLIT_LIVE
+          ? 'Interactive and Agent SDK Credits, tracked separately. Lights up automatically on June 15 — no reinstall.'
+          : 'Anthropic’s announced Agent-SDK billing split was paused before June 15. WTClaude’s dual-pool view is built and ready if a revised version returns — no reinstall.',
       },
       {
         name: 'Daily Agent-pool forecast',
         status: 'available',
         badge: 'estimate',
-        body: 'Projected agent-pool spend vs your included credits, with a countdown. (Billing-grade math, heuristic pool split — a forecast, not your exact bill.)',
+        body: SPLIT_LIVE
+          ? 'Projected agent-pool spend vs your included credits, with a countdown. (Billing-grade math, heuristic pool split — a forecast, not your exact bill.)'
+          : 'Projected agent-pool spend vs your included credits — a labeled estimate. (Billing-grade math, heuristic pool split — a forecast, not your exact bill.)',
       },
       {
-        name: 'June-14 Readiness Report',
+        name: SPLIT_LIVE ? 'June-14 Readiness Report' : 'Credits-enough readiness check',
         status: 'available',
         badge: 'estimate',
         body: 'One line: are your credits enough, yes or no, and the one thing to do about it.',
@@ -169,7 +174,9 @@ const groups: Group[] = [
       {
         name: 'Web dashboard',
         status: 'cloud',
-        body: 'Everything the CLI tracks, in a dashboard you can look at: overview, session timeline, the compare view, the what-if calculator, your limit gauge, and the June-15 forecast tile.',
+        body: SPLIT_LIVE
+          ? 'Everything the CLI tracks, in a dashboard you can look at: overview, session timeline, the compare view, the what-if calculator, your limit gauge, and the June-15 forecast tile.'
+          : 'Everything the CLI tracks, in a dashboard you can look at: overview, session timeline, the compare view, the what-if calculator, your limit gauge, and the agent-pool forecast tile.',
       },
     ],
   },
@@ -235,8 +242,8 @@ const renderBody = (text: string) =>
       </h1>
       <p class="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-surface/80">
         One tool for everything: billing-grade accuracy, your full usage picture, backup and sync
-        across machines, a dashboard to see it all, and a tracker that’s ready for the June 15
-        billing split. Free and open-source.
+        across machines, a dashboard to see it all, and a tracker that’s ready
+        {SPLIT_LIVE ? ' for the June 15 billing split' : ' for Claude’s billing changes, whenever they land'}. Free and open-source.
       </p>
 
       <div class="mx-auto mt-9 max-w-md">

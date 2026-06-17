@@ -56,9 +56,9 @@ wtclaude compare
 
 `compare` shows your real, billing-grade number next to the number a session-log tracker would show you, and the gap between them. I won't quote you a universal multiple, because the gap depends entirely on how you use Claude Code — your model mix, how much caching you hit, how much of your work is streamed. For some people it's small. For some it's surprising. The point isn't a scary stat; it's that **you get to see *yours*** instead of trusting that an estimate is close.
 
-## Why this matters more after June 15
+## Why this matters even more around billing changes
 
-It's always nicer to know your real number than a guess. But it stops being optional with the [June 15 billing split](/blog/the-june-15-split), when Claude Code usage moves to two separate credit pools (Interactive and Agent-SDK). If your tracker is already drifting, a billing change splits that drift across two buckets and makes "about right" a lot less comfortable. Knowing which pool your usage actually lands in — from the real source — is worth the ten seconds.
+It's always nicer to know your real number than a guess. And it matters even more around billing changes — like the [announced-then-paused June 15 split](/blog/the-june-15-split), which would have moved Claude Code usage into two separate credit pools (Interactive and Agent-SDK). If your tracker is already drifting, a change like that splits the drift across two buckets and makes "about right" a lot less comfortable. Knowing which pool your usage actually lands in — from the real source — is worth the ten seconds.
 
 ## So, is `/cost` "wrong"?
 

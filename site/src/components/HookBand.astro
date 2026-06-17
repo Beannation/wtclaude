@@ -3,15 +3,17 @@
  * Cross-site HOOK band → /features (website-copy-wave1.md "Landing-page HOOK").
  * Copy is GTM-final and verbatim — do not edit strings here. Place near the bottom
  * of every landing page, directly above the footer. Fires `cta_features` on click.
+ * (June-16: the "June-15 readiness" phrase is gated on SPLIT_LIVE — the split is paused.)
  */
+import { SPLIT_LIVE } from '../config';
 ---
 
 <section class="border-t border-ink/10 bg-card">
   <div class="mx-auto max-w-3xl px-5 py-14 text-center sm:py-16">
     <h2 class="font-head text-2xl sm:text-3xl">See everything WTClaude does.</h2>
     <p class="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-ink/70 sm:text-base">
-      Billing-grade accuracy, backup &amp; multi-machine sync, a full dashboard, June-15
-      readiness — the most complete Claude Code tracker.
+      Billing-grade accuracy, backup &amp; multi-machine sync, a full dashboard,
+      {SPLIT_LIVE ? ' June-15 readiness' : ' billing-change readiness'} — the most complete Claude Code tracker.
     </p>
     <a
       href="/features"

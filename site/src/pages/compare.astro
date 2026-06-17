@@ -13,7 +13,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import CodeBlock from '../components/CodeBlock.astro';
 import HonestyBadge from '../components/HonestyBadge.astro';
 import HookBand from '../components/HookBand.astro';
-import { CLOUD_LIVE } from '../config';
+import { CLOUD_LIVE, SPLIT_LIVE } from '../config';
 import { faqPage, breadcrumbs } from '../lib/schema';
 
 const title = 'WTClaude vs ccusage & other Claude Code cost trackers (2026)';
@@ -26,7 +26,7 @@ const cols = ['WTClaude', 'ccusage', 'Claude-Code-Usage-Monitor', 'ccflare', 'Bu
 const rows = [
   { label: 'Cost data source', cells: ['Statusline (billing-source)', 'Session logs (JSONL)', 'Session logs (JSONL)', 'Session logs (JSONL)', 'Client-side estimate'] },
   { label: 'Real-time burn / predictions', cells: ['Live monitor', '—', 'Yes (its specialty)', 'Charts/filters', 'Session view'] },
-  { label: 'June 15 dual-pool ready', cells: ['Built for it', 'varies', 'varies', 'varies', 'Anthropic-native'] },
+  { label: SPLIT_LIVE ? 'June 15 dual-pool ready' : 'Dual-pool ready', cells: ['Built for it', 'varies', 'varies', 'varies', 'Anthropic-native'] },
   { label: 'Open source', cells: ['Yes (MIT)', 'Yes', 'Yes', 'Yes', 'No (built-in)'] },
   { label: 'Price', cells: ['Free', 'Free', 'Free', 'Free', 'Included'] },
   { label: 'Runtime', cells: ['Node', 'Node', 'Python', 'Node', 'Built-in'] },
@@ -36,7 +36,7 @@ const rows = [
 const faqs = [
   {
     q: "What's the best alternative to ccusage?",
-    a: 'It depends what you want. For a real-time terminal monitor, Claude-Code-Usage-Monitor; for a browser dashboard, ccflare; for billing-grade accuracy from the statusline (rather than a log-based estimate) plus multi-machine totals and June-15 readiness, WTClaude. All of these are free and open source.',
+    a: `It depends what you want. For a real-time terminal monitor, Claude-Code-Usage-Monitor; for a browser dashboard, ccflare; for billing-grade accuracy from the statusline (rather than a log-based estimate) plus multi-machine totals and ${SPLIT_LIVE ? 'June-15 readiness' : 'billing-change readiness'}, WTClaude. All of these are free and open source.`,
   },
   {
     q: 'Are these trackers accurate?',
@@ -49,8 +49,8 @@ const faqs = [
     a: 'No — independent, free, open source (MIT).',
   },
   {
-    q: 'Which is ready for the June 15 billing split?',
-    a: 'WTClaude tracks the two credit pools (Interactive and Agent-SDK) and lights them up automatically.',
+    q: 'Which is ready if Claude’s billing changes?',
+    a: 'The June-15 Agent-SDK split was paused before it took effect. WTClaude already has the dual-pool view built, so if a revised version returns it lights up with no reinstall — meanwhile your terminal numbers are billing-grade today.',
     linkText: 'More on the split.',
     linkHref: '/blog/the-june-15-split',
   },
@@ -198,7 +198,7 @@ const td = 'border-t border-ink/10 px-4 py-3 text-sm align-top';
           The built-in <code class="rounded bg-ink/5 px-1 py-0.5 font-mono text-[13px]">/cost</code> is right there — just remember it's an estimate.
         </li>
         <li>
-          <strong class="font-semibold text-ink">Want billing-grade accuracy (not a reconstruction), June-15 dual-pool readiness, and one total across every machine?</strong>
+          <strong class="font-semibold text-ink">Want billing-grade accuracy (not a reconstruction), {SPLIT_LIVE ? 'June-15 dual-pool readiness' : 'dual-pool readiness'}, and one total across every machine?</strong>
           That's where WTClaude is different — it reads the statusline instead of the logs. Try it:
           <code class="rounded bg-ink/5 px-1 py-0.5 font-mono text-[13px]">npx wtclaude setup</code>, then
           <code class="rounded bg-ink/5 px-1 py-0.5 font-mono text-[13px]">wtclaude compare</code> to see your own gap.

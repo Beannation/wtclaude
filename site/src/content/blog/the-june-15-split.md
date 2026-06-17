@@ -7,7 +7,7 @@ readingTime: '4 min read'
 draftProse: false
 ---
 
-> **Update — June 15: this is now live.** The split described below is in effect as of June 15. This post explains what changed and what to do now.
+> **Update — June 15, 2026: this change was PAUSED. It did not take effect.** Anthropic paused the Agent-SDK billing split before June 15 — Agent SDK, `claude -p`, and third-party apps still draw from your subscription's usage limits, exactly as before, and there's no credit to claim. Anthropic says it's reworking the plan and will give advance notice before anything takes effect. We've kept this post as a record of what was announced, and we're watching for if/when a revised version returns. ([Anthropic's note](https://support.claude.com/en/articles/15036540-use-the-claude-agent-sdk-with-your-claude-plan).)
 
 If you use Claude Code, the way you pay for it **changed on June 15** — and if you run agents, it changed in a way that can bite you mid-month. Here’s what actually happened, who it affects, and how to not get surprised. No hype, just the mechanics.
 
@@ -45,7 +45,7 @@ You don’t need a new workflow. You need three things:
 WTClaude is a free, open-source usage tracker for Claude Code, and it’s built for exactly this moment. A few things worth knowing:
 
 - **It reads the right data.** Instead of the broken session logs, it reads the statusline — the same billing-grade source behind your bill — so your Claude Code numbers are real, not drifting. *(It tracks Claude Code in your terminal today; Cowork and Chat are on the roadmap, and they’ll be clearly labeled as estimates when they arrive.)*
-- **It’s built for both pools.** The dual-pool view lit up automatically on June 15 — no reinstall. `wtclaude today` now shows your spend **per-pool**, billing-grade in the terminal.
+- **It’s built for both pools.** The dual-pool view is built and ready — if a revised split lands, the dual-pool view lights up automatically, no reinstall. `wtclaude today` shows your spend **per-pool**, billing-grade in the terminal.
 - **It projects your agent-pool burn.** A daily projection shows your expected agent-pool spend against your included credits. **This is a forecast, not a crystal ball:** the cost math is billing-grade, but classifying which usage lands in which pool is a heuristic, so we label the whole thing an estimate. Every day of real data makes the projection tighter.
 - **It gives you a credits-enough check.** One line: are your credits enough, yes or no, plus the single thing to do about it. Clearly labeled as an estimate from your tracked usage — never presented as your guaranteed bill.
 
