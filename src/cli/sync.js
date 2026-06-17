@@ -1,6 +1,5 @@
 import { createInterface } from 'node:readline/promises';
 import { getConfig, saveConfig, getSupabaseConfig, syncToCloud, pruneLegacySecrets } from '../sync/index.js';
-import { checkBadges } from '../badges/check.js';
 import { listSessions, readSession } from '../utils/sessions.js';
 
 export function registerSync(program) {
@@ -96,17 +95,10 @@ async function runSync() {
     const result = await syncToCloud();
     console.log(`  ${result.message}\n`);
 
-    // Check badges after sync
-    const badges = checkBadges();
-    const cfg = getConfig();
-    const knownBadges = cfg.earned_badges || [];
-    const knownSet = new Set(knownBadges);
-    const newBadges = badges.filter(b => !knownSet.has(b.type));
-
+    // Newly-earned badges are detected + persisted inside syncToCloud (which also
+    // uploads them to the cloud badges table); just announce what it reports.
+    const newBadges = result.new_badges || [];
     if (newBadges.length > 0) {
-      cfg.earned_badges = badges.map(b => b.type);
-      saveConfig(cfg);
-
       for (const badge of newBadges) {
         console.log(`  New badge: ${badge.label}! ${badge.description}`);
       }

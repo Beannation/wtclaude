@@ -1,6 +1,6 @@
 import { test, beforeEach, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -97,4 +97,66 @@ test('pruneLegacySecrets strips a legacy secret key but keeps the publishable ke
   assert.equal(cfg.supabase_secret_key, undefined);
   assert.equal(cfg.supabase_publishable_key, 'sb_publishable_keep');
   assert.equal(cfg.sync_enabled, true, 'pruning must not touch the opt-in flag');
+});
+
+// ── 0.1.8: earned badges ride the sync payload (the badge-sync gap fix) ───────
+// Regression for the bug where the dashboard Badges tab showed 0 despite locally
+// earned badges: the CLI computed badges but never sent them to the cloud.
+
+// Stub global fetch; capture each POST body. Returns a minimal Response-like.
+function stubFetch(calls) {
+  const real = globalThis.fetch;
+  globalThis.fetch = async (url, opts) => {
+    calls.push({ url, body: JSON.parse(opts.body) });
+    return { ok: true, status: 200, json: async () => ({ synced: 1, turns_synced: 1, message: 'ok' }), text: async () => '' };
+  };
+  return () => { globalThis.fetch = real; };
+}
+
+// One session with a turn → earns at least `first_session` (and 100k_club here).
+function seedEarningSession() {
+  mkdirSync(SESSIONS, { recursive: true });
+  const turn = {
+    turn: 1, ts: '2026-06-10T12:00:00Z', model: 'claude-opus-4-8',
+    input_tokens: 60000, output_tokens: 50000, cache_read_tokens: 0, cache_write_tokens: 0,
+    cost_usd: 0.5, speed_tier: 'standard',
+  };
+  writeFileSync(join(SESSIONS, 'sess-1.ndjson'), JSON.stringify(turn) + '\n');
+}
+
+test('syncToCloud includes earned badges (badge_type + earned_at) in the payload', async () => {
+  seedEarningSession();
+  writeConfig({ sync_enabled: true, anonymous_id: 'anon-badge' });
+  const calls = [];
+  const restore = stubFetch(calls);
+  try {
+    await syncToCloud();
+  } finally {
+    restore();
+  }
+  assert.equal(calls.length, 1, 'one POST to the edge function');
+  const badges = calls[0].body.badges;
+  assert.ok(Array.isArray(badges) && badges.length >= 1, 'payload carries a non-empty badges array');
+  const first = badges.find((b) => b.badge_type === 'first_session');
+  assert.ok(first, 'the first_session badge is sent');
+  assert.match(first.earned_at, /^\d{4}-\d\d-\d\dT/, 'earned_at is an ISO timestamp');
+  const cfg = readConfig();
+  assert.equal(cfg.badge_earned_at.first_session, first.earned_at, 'earn timestamp persisted in config');
+  assert.ok((cfg.synced_badge_types || []).includes('first_session'), 'synced types recorded after push');
+});
+
+test('badges are not re-sent and earned_at does not churn once synced', async () => {
+  seedEarningSession();
+  writeConfig({ sync_enabled: true, anonymous_id: 'anon-badge' });
+  const calls = [];
+  const restore = stubFetch(calls);
+  try {
+    await syncToCloud();                                  // first push: turns + badges
+    const stamp = readConfig().badge_earned_at.first_session;
+    await syncToCloud();                                  // nothing new: no turns, badges already synced
+    assert.equal(calls.length, 1, 'no second POST — no new turns and badges already in the cloud');
+    assert.equal(readConfig().badge_earned_at.first_session, stamp, 'earned_at is stable across syncs');
+  } finally {
+    restore();
+  }
 });

@@ -2,6 +2,7 @@ import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { CONFIG_FILE } from '../utils/paths.js';
 import { listSessions, readSession, summarizeTurns } from '../utils/sessions.js';
+import { checkBadges } from '../badges/check.js';
 
 export function getConfig() {
   if (!existsSync(CONFIG_FILE)) return {};
@@ -123,13 +124,42 @@ export async function syncToCloud() {
     sessionsPayload.push({ session_id: id, summary, turns: newTurns });
   }
 
-  if (sessionsPayload.length === 0) {
+  // Earned badges → cloud. The CLI has always computed badges locally
+  // (badges/check.js) but never sent them, so the dashboard's Badges tab read an
+  // empty table. Ride the same opt-in-gated push. Persist a STABLE earn timestamp
+  // per badge (badge_earned_at) so re-syncs don't churn earned_at; the edge upsert
+  // is on-conflict-do-nothing, so the timestamp is set once and kept. Track which
+  // types the cloud already has (synced_badge_types) so we push badges that were
+  // earned-locally-but-never-uploaded even when there are no new turns to sync.
+  const earned = checkBadges();
+  const earnedTypes = earned.map((b) => b.type);
+  const prevEarned = new Set(config.earned_badges || []);
+  const newBadges = earned.filter((b) => !prevEarned.has(b.type)); // newly earned → CLI announce
+
+  let badgesToSend = [];
+  if (earned.length) {
+    config.badge_earned_at = config.badge_earned_at || {};
+    const stampNow = new Date().toISOString();
+    for (const b of earned) {
+      if (!config.badge_earned_at[b.type]) config.badge_earned_at[b.type] = stampNow;
+    }
+    const syncedSet = new Set(config.synced_badge_types || []);
+    badgesToSend = earned
+      .filter((b) => !syncedSet.has(b.type)) // only what the cloud doesn't have yet
+      .map((b) => ({ badge_type: b.type, earned_at: config.badge_earned_at[b.type] }));
+  }
+
+  if (sessionsPayload.length === 0 && badgesToSend.length === 0) {
     // syncToCloud() PUSHES; it must never flip the opt-in (audit #4). Enabling
     // happens only via `wtclaude sync --enable` + the privacy preview.
     config.last_sync_at = new Date().toISOString();
+    if (earned.length) config.earned_badges = earnedTypes;
     saveConfig(config);
-    return { synced: 0, turns_synced: 0, message: 'Nothing new to sync' };
+    return { synced: 0, turns_synced: 0, message: 'Nothing new to sync', new_badges: newBadges };
   }
+
+  const payload = { sessions: sessionsPayload };
+  if (badgesToSend.length) payload.badges = badgesToSend;
 
   const response = await fetch(`${sbConfig.url}/functions/v1/sync-data`, {
     method: 'POST',
@@ -138,7 +168,7 @@ export async function syncToCloud() {
       Authorization: `Bearer ${sbConfig.publishableKey}`,
       'x-anonymous-id': anonymousId,
     },
-    body: JSON.stringify({ sessions: sessionsPayload }),
+    body: JSON.stringify(payload),
   });
 
   if (!response.ok) {
@@ -148,13 +178,18 @@ export async function syncToCloud() {
 
   const result = await response.json();
 
-  // Record the sync time only — never flip `sync_enabled` here (audit #4).
+  // Record the sync time + badge state — never flip `sync_enabled` here (audit #4).
   config.last_sync_at = new Date().toISOString();
+  if (earned.length) {
+    config.earned_badges = earnedTypes;
+    config.synced_badge_types = earnedTypes; // everything earned is now in the cloud
+  }
   saveConfig(config);
 
   return {
     synced: result.synced ?? sessionsPayload.length,
     turns_synced: result.turns_synced ?? 0,
     message: result.message || `Synced ${sessionsPayload.length} session(s)`,
+    new_badges: newBadges,
   };
 }

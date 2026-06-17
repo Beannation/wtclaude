@@ -15,9 +15,15 @@ const corsHeaders = {
 // turns had no UNIQUE(session_id, turn_number)), it now delegates ALL writes to a
 // single transactional Postgres RPC, sync_user_batch (migration 005). The function
 // body runs in one transaction: get-or-create user → upsert sessions → upsert turns
-// (idempotent) → recompute daily summaries split by (date, usage_pool). Any error
-// rolls the whole batch back, so a partial write is impossible and the CLI can
-// safely retry the same backlog (every write is idempotent).
+// (idempotent) → upsert earned badges (idempotent, migration 008) → recompute daily
+// summaries split by (date, usage_pool). Any error rolls the whole batch back, so a
+// partial write is impossible and the CLI can safely retry the same backlog (every
+// write is idempotent).
+//
+// `badges` (optional): [{ badge_type, earned_at }] earned locally by the user. The
+// RPC upserts them ON CONFLICT (user_id, badge_type) DO NOTHING — earned_at is set
+// once and never rewritten. Older CLIs that omit `badges` resolve to the same RPC
+// via the p_badges default ('[]'), so the deploy order is independent.
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -37,11 +43,13 @@ serve(async (req) => {
 
     const body = await req.json();
     const sessions = Array.isArray(body?.sessions) ? body.sessions : [];
+    const badges = Array.isArray(body?.badges) ? body.badges : [];
 
     // One atomic call — all-or-nothing.
     const { data, error } = await supabase.rpc("sync_user_batch", {
       p_anonymous_id: anonymousId,
       p_sessions: sessions,
+      p_badges: badges,
     });
     if (error) throw error;
 
