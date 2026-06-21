@@ -2,16 +2,16 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Mark from '../components/Mark.astro';
 import CaptureForm from '../components/CaptureForm.astro';
-import DraftNote from '../components/DraftNote.astro';
 import HookBand from '../components/HookBand.astro';
 
-const title = 'WTClaude for Business — Claude management for SMB (coming soon)';
+const title =
+  'WTClaude for Business — right-size the Claude cap without throttling your best engineers (coming soon)';
 const description =
-  'Enterprise-grade Claude management for SMB. You were handed Claude to manage, with no manual — WTClaude is the manual. Coming soon.';
+  "Anthropic gives you a cap. WTClaude helps you right-size it per team — cut waste, not velocity, and see the 150-seat cliff coming. Smart guardrails for SMB Claude spend. Coming soon.";
 ---
 
 <BaseLayout title={title} description={description} noNavPad heroDark>
-  <!-- HERO (lead message — Strategy brief A3, verbatim) -->
+  <!-- HERO (lead message — SMB copy v1.11 §1, verbatim) -->
   <section class="relative overflow-hidden bg-ink text-surface">
     <div
       class="pointer-events-none absolute inset-0 opacity-70"
@@ -22,35 +22,58 @@ const description =
       <Mark class="mx-auto mb-7 h-14 w-14 text-surface" />
       <span class="inline-block rounded-full bg-surface/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-surface/70">Coming soon · for teams</span>
       <h1 class="mt-5 font-head text-4xl leading-tight sm:text-5xl">
-        Enterprise-grade Claude management for SMB — coming soon.
+        Right-size the cap — without throttling your best engineers.
       </h1>
       <p class="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-surface/80">
-        You were handed Claude to manage, with no manual. WTClaude is the manual.
+        Anthropic gives you a cap. WTClaude helps you right-size it per team: where to set it, who's
+        about to blow it and why — so the budget's safe and your best engineers aren't throttled.
+        Coming soon.
       </p>
     </div>
   </section>
 
-  <section class="mx-auto max-w-3xl px-5 py-16">
-    <DraftNote brief="Strategy brief A3 (SMB Management)" class="mb-12" />
-
-    <!-- Lead substance: education + change-guidance (primary); management/seat-mix (secondary) -->
-    <div class="grid gap-6 sm:grid-cols-2">
+  <section class="mx-auto max-w-5xl px-5 py-16">
+    <!-- Lead cards (re-ranked heroes): smart-cap-tuning · coaching-as-dollars · cliff-management -->
+    <div class="grid gap-6 md:grid-cols-3">
       <article class="rounded-2xl border border-ink/10 bg-card p-7 shadow-sm">
-        <h2 class="font-head text-lg">Education + change-guidance</h2>
+        <h2 class="font-head text-lg">Smart-cap-tuning</h2>
         <p class="mt-2 text-sm leading-relaxed text-ink/70">
-          Every Anthropic change, explained for your team — so you’re never managing Claude blind.
+          Your cap is a chainsaw. We make it a scalpel: where to set Anthropic's cap per team, and a
+          heads-up on who's about to blow it — and whether that's waste or real velocity. We
+          recommend; you stay in control.
         </p>
       </article>
       <article class="rounded-2xl border border-ink/10 bg-card p-7 shadow-sm">
-        <h2 class="font-head text-lg">Management + seat-mix</h2>
+        <h2 class="font-head text-lg">Coaching that shows up as dollars</h2>
         <p class="mt-2 text-sm leading-relaxed text-ink/70">
-          Right-size plans and seats across your team.
+          Cut waste, not output. See which spend is rework and waste vs. real velocity, per team —
+          coaching measured in dollars (waste-cut %, right-sized-seat $), not vibes.
+        </p>
+      </article>
+      <article class="rounded-2xl border border-ink/10 bg-card p-7 shadow-sm">
+        <h2 class="font-head text-lg">Cliff-management</h2>
+        <p class="mt-2 text-sm leading-relaxed text-ink/70">
+          See the 150-seat Team→Enterprise cliff coming, and right-size seats and models to delay or
+          survive it. Past 150, Enterprise seats are access-only — zero bundled usage, every Claude
+          Code token at API rates on top.
         </p>
       </article>
     </div>
 
-    <p class="mt-8 text-center text-sm leading-relaxed text-ink/60">
-      Uncontested for Claude-specialized, education-led, SMB-packaged management.
+    <!-- The peace-treaty line (centered) -->
+    <p class="mx-auto mt-12 max-w-3xl text-center text-sm leading-relaxed text-ink/70">
+      A blunt cap is a lose-lose dial: set it low and finance feels safe but your best engineers get
+      throttled; set it high and eng's happy but the budget's exposed. A smart guardrail ends that
+      fight — finance gets a budget it can trust, and eng keeps the headroom it actually needs.
+    </p>
+
+    <!-- Positioning / honesty line (centered) -->
+    <p class="mx-auto mt-6 max-w-3xl text-center text-sm leading-relaxed text-ink/65">
+      We're the insight + coaching layer — hard enforcement is Anthropic's admin tier; we make your
+      guardrails smart, we don't impose them. Independent: Anthropic sells tokens, we help you spend
+      the right amount. Uncontested for Claude-specialized smart-cap-tuning, coaching, and
+      cliff-management — with billing-grade, per-employee allocation and chargeback built on top of
+      Anthropic's own team spend data, not a re-run of it.
     </p>
 
     <!-- CTA: email-signup capture (no pricing — embargo) -->
