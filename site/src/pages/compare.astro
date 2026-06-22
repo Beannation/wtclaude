@@ -177,6 +177,19 @@ const td = 'border-t border-ink/10 px-4 py-3 text-sm align-top';
       </table>
     </div>
 
+    <!-- The OAuth structural-edge block (SMB copy v1.12 §4, verbatim) — proof beside the comparison.
+         Scoped to the Analytics API third-party tools build on, NOT Anthropic's own dashboard. -->
+    <section class="mt-14 rounded-2xl border border-amber/30 bg-amber-light/40 p-7">
+      <h2 class="font-head text-2xl">The blind spot in FinOps tools — and why ours isn't</h2>
+      <p class="mt-4 max-w-3xl text-base leading-relaxed text-ink/80">
+        Most cost tools read Anthropic's Claude Code Analytics API. That API only returns API-key
+        users — your OAuth/subscription seat developers (the most common setup) never show up. So the
+        third-party FinOps tools you'd otherwise use can be blind to your actual Claude Code
+        developers — one org went from 9+ visible users to 1–2 after moving engineers to OAuth.
+        WTClaude's local collector reads cost where Claude writes it, so it sees those developers.
+      </p>
+    </section>
+
     <!-- When to use which -->
     <section class="mt-14">
       <h2 class="font-head text-2xl">When to use which (the honest guide)</h2>

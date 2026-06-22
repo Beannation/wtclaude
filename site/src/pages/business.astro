@@ -4,14 +4,15 @@ import Mark from '../components/Mark.astro';
 import CaptureForm from '../components/CaptureForm.astro';
 import HookBand from '../components/HookBand.astro';
 
+// SMB copy — Messaging v1.12 ("the bundle") §1, applied VERBATIM. NO pricing — waitlist CTA.
 const title =
-  'WTClaude for Business — right-size the Claude cap without throttling your best engineers (coming soon)';
+  "WTClaude for Business — the independent, all-in-one way to run your team's Claude spend (coming soon)";
 const description =
-  "Anthropic gives you a cap. WTClaude helps you right-size it per team — cut waste, not velocity, and see the 150-seat cliff coming. Smart guardrails for SMB Claude spend. Coming soon.";
+  "One independent, billing-grade place to run Claude for your team: see under the cap in real time, never pay for a seat nobody's using, and give every team lead their own view. Coming soon.";
 ---
 
 <BaseLayout title={title} description={description} noNavPad heroDark>
-  <!-- HERO (lead message — SMB copy v1.11 §1, verbatim) -->
+  <!-- HERO (lead message — SMB copy v1.12 §1, verbatim) -->
   <section class="relative overflow-hidden bg-ink text-surface">
     <div
       class="pointer-events-none absolute inset-0 opacity-70"
@@ -22,63 +23,89 @@ const description =
       <Mark class="mx-auto mb-7 h-14 w-14 text-surface" />
       <span class="inline-block rounded-full bg-surface/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-surface/70">Coming soon · for teams</span>
       <h1 class="mt-5 font-head text-4xl leading-tight sm:text-5xl">
-        Right-size the cap — without throttling your best engineers.
+        Run your team's Claude spend — in one independent place.
       </h1>
       <p class="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-surface/80">
-        Anthropic gives you a cap. WTClaude helps you right-size it per team: where to set it, who's
-        about to blow it and why — so the budget's safe and your best engineers aren't throttled.
-        Coming soon.
+        Anthropic sells you the seats. WTClaude is the independent, billing-grade layer that helps
+        you spend the right amount on them: real-time alerts under the cap, seats right-sized so you
+        never pay for idle ones, and a view for every team lead. Coming soon.
       </p>
     </div>
   </section>
 
   <section class="mx-auto max-w-5xl px-5 py-16">
-    <!-- Lead cards (re-ranked heroes): smart-cap-tuning · coaching-as-dollars · cliff-management -->
+    <!-- The three hero cards (v1.12 §1): see-under-the-cap · never-pay-for-an-unused-seat · delegated team-lead views -->
     <div class="grid gap-6 md:grid-cols-3">
       <article class="rounded-2xl border border-ink/10 bg-card p-7 shadow-sm">
-        <h2 class="font-head text-lg">Smart-cap-tuning</h2>
+        <h2 class="font-head text-lg">See under the cap — in real time</h2>
         <p class="mt-2 text-sm leading-relaxed text-ink/70">
-          Your cap is a chainsaw. We make it a scalpel: where to set Anthropic's cap per team, and a
-          heads-up on who's about to blow it — and whether that's waste or real velocity. We
-          recommend; you stay in control.
+          Anthropic lets you set a ceiling but shows nothing happening underneath it until the bill.
+          WTClaude shows live per-person spend under the cap and alerts you to a runaway in minutes,
+          not at invoice time.
+        </p>
+        <p class="mt-3 text-xs leading-relaxed text-ink/55">
+          Real-time runs on our lightweight collector or your admin's OTel export — not Anthropic's
+          once-a-day data. A quick setup step we're upfront about.
         </p>
       </article>
       <article class="rounded-2xl border border-ink/10 bg-card p-7 shadow-sm">
-        <h2 class="font-head text-lg">Coaching that shows up as dollars</h2>
+        <h2 class="font-head text-lg">Never pay for a seat nobody's using</h2>
         <p class="mt-2 text-sm leading-relaxed text-ink/70">
-          Cut waste, not output. See which spend is rework and waste vs. real velocity, per team —
-          coaching measured in dollars (waste-cut %, right-sized-seat $), not vibes.
+          Premium is 5× the price of Standard — for capacity, not features. WTClaude watches every
+          seat and tells you which Premium seats fit Standard and which sit idle, and pushes you the
+          heads-up — so reclaiming the waste isn't a manual chore you forget. You confirm the change;
+          we never touch your account.
         </p>
       </article>
       <article class="rounded-2xl border border-ink/10 bg-card p-7 shadow-sm">
-        <h2 class="font-head text-lg">Cliff-management</h2>
+        <h2 class="font-head text-lg">Give every team lead their own view</h2>
         <p class="mt-2 text-sm leading-relaxed text-ink/70">
-          See the 150-seat Team→Enterprise cliff coming, and right-size seats and models to delay or
-          survive it. Past 150, Enterprise seats are access-only — zero bundled usage, every Claude
-          Code token at API rates on top.
+          On a Team plan, only the owner can see analytics. WTClaude gives each team lead a view
+          scoped to their own team, rolling up to leadership automatically — enterprise-grade
+          management without the enterprise plan. It's cost-management, never surveillance.
         </p>
       </article>
     </div>
 
-    <!-- The peace-treaty line (centered) -->
+    <!-- The package line (centered) -->
     <p class="mx-auto mt-12 max-w-3xl text-center text-sm leading-relaxed text-ink/70">
-      A blunt cap is a lose-lose dial: set it low and finance feels safe but your best engineers get
-      throttled; set it high and eng's happy but the budget's exposed. A smart guardrail ends that
-      fight — finance gets a budget it can trust, and eng keeps the headroom it actually needs.
+      No single tool does all of this for a team your size — that's the point. WTClaude for Business
+      is the one independent, billing-grade, one-pane package for the person who owns Claude spend:
+      the real-time watchdog, the seat optimizer, delegated team-lead views, and the finance tools —
+      assembled, not bolted together from five vendors.
+    </p>
+
+    <!-- How it connects to your team's Claude (the 3 paths, low-friction in) -->
+    <p class="mx-auto mt-8 max-w-3xl text-center text-sm leading-relaxed text-ink/70">
+      Connect your way: a 30-second Claude Code plugin to start (and when you pair it with Claude's
+      own cost field, your numbers are billing-grade, with the git context other plugins miss); our
+      desktop collector for billing-grade terminal Code + Cowork; or one admin OTel setting for the
+      whole org at once. Start light, upgrade to the best data when you're ready — every number is
+      labeled for exactly how it was measured.
     </p>
 
     <!-- Positioning / honesty line (centered) -->
     <p class="mx-auto mt-6 max-w-3xl text-center text-sm leading-relaxed text-ink/65">
-      We're the insight + coaching layer — hard enforcement is Anthropic's admin tier; we make your
-      guardrails smart, we don't impose them. Independent: Anthropic sells tokens, we help you spend
-      the right amount. Uncontested for Claude-specialized smart-cap-tuning, coaching, and
-      cliff-management — with billing-grade, per-employee allocation and chargeback built on top of
-      Anthropic's own team spend data, not a re-run of it.
+      We're the insight + recommendation layer — hard caps are Anthropic's admin tier; we make your
+      guardrails smart, we don't impose them. Independent: Anthropic sells the seats, so our advice
+      on how many you need is unconflicted. Built on top of Anthropic's own team spend data — we
+      enrich it, we don't re-run it.
     </p>
+
+    <!-- The free hook (v1.12 §1) — shown as a COMING-SOON teaser, NO link (the tool isn't built). -->
+    <!-- TODO SMB-V2: when Build ships /business/seat-audit, flip this teaser to a live CTA linking there -->
+    <div class="mx-auto mt-12 max-w-2xl rounded-2xl border border-ink/10 bg-card p-7 text-center shadow-sm">
+      <span class="inline-block rounded-full border border-ink/15 bg-ink/[0.04] px-3 py-1 text-xs font-semibold uppercase tracking-wide text-warm">Coming soon</span>
+      <p class="mt-4 font-head text-lg">Start free: the 60-second seat audit</p>
+      <p class="mx-auto mt-2 max-w-xl text-sm leading-relaxed text-ink/70">
+        Paste your Anthropic Spend CSV and see what you're overpaying on mis-sized and dormant seats
+        — right in your browser, your data never leaves it. No signup for the headline number.
+      </p>
+    </div>
 
     <!-- CTA: email-signup capture (no pricing — embargo) -->
     <div class="mx-auto mt-10 max-w-md rounded-2xl border border-ink/10 bg-card p-7 text-center shadow-sm">
-      <p class="font-head text-lg">Get notified at launch</p>
+      <p class="font-head text-lg">Get notified when the full product ships</p>
       <div class="mt-4">
         <CaptureForm tag="smb" event="guardian_waitlist" cta="Notify me" />
       </div>

@@ -5,13 +5,14 @@ import HonestyBadge from '../../components/HonestyBadge.astro';
 import CaptureForm from '../../components/CaptureForm.astro';
 import HookBand from '../../components/HookBand.astro';
 
-const title = 'WTClaude for Finance — close the month on Claude, to the dollar (coming soon)';
+// SMB copy — Messaging v1.12 ("the bundle") §2, applied VERBATIM. NO pricing — waitlist CTA.
+const title = 'WTClaude for Finance — the finance module of the one-pane Claude package (coming soon)';
 const description =
-  "Close the month on Claude to the dollar: allocation and chargeback on top of Anthropic's team spend data, a pre-invoice accrual, and the 150-seat cliff — the finance view for whoever has to explain the Claude line item. Coming soon.";
+  "Allocation and chargeback on Anthropic's own spend data, a pre-invoice accrual, budget-vs-actual, an invoice reconciliation check, and the 150-seat cliff — the finance side of the independent WTClaude for Business package. Coming soon.";
 ---
 
 <BaseLayout title={title} description={description} noNavPad heroDark>
-  <!-- HERO (lead message — SMB copy v1.11 §2, verbatim) -->
+  <!-- HERO (lead message — SMB copy v1.12 §2, verbatim) -->
   <section class="relative overflow-hidden bg-ink text-surface">
     <div
       class="pointer-events-none absolute inset-0 opacity-70"
@@ -22,11 +23,12 @@ const description =
       <Mark class="mx-auto mb-7 h-14 w-14 text-surface" />
       <span class="inline-block rounded-full bg-surface/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-surface/70">Coming soon · for finance teams</span>
       <h1 class="mt-5 font-head text-4xl leading-tight sm:text-5xl">
-        Close the month on Claude, to the dollar — and right-size the cap.
+        Close the month on Claude, to the dollar.
       </h1>
       <p class="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-surface/80">
-        Allocation and chargeback, a pre-invoice accrual, and the 150-seat cliff — built for whoever
-        has to explain (and forecast) the Claude line item.
+        The finance module of the WTClaude for Business package: allocation and chargeback, a
+        pre-invoice accrual, budget-vs-actual, an invoice reconciliation check, and a heads-up before
+        the 150-seat cliff — for whoever has to explain (and forecast) the Claude line item.
       </p>
     </div>
   </section>
@@ -37,9 +39,9 @@ const description =
       <article class="rounded-2xl border border-ink/10 bg-card p-7 shadow-sm">
         <h2 class="font-head text-xl">Allocation &amp; chargeback</h2>
         <p class="mt-3 text-sm leading-relaxed text-ink/70">
-          Anthropic's Team plan now gives you a per-user/per-model spend CSV. We turn it into
-          allocation and chargeback by team, project, or cost center — so you can close your books,
-          not just read a list.
+          Anthropic's Team plan gives you a per-user/per-model spend CSV. We turn it into allocation
+          and chargeback by team, project, or cost center — so you can close your books, not just
+          read a list.
         </p>
       </article>
       <article class="rounded-2xl border border-ink/10 bg-card p-7 shadow-sm">
@@ -54,7 +56,7 @@ const description =
       </article>
     </div>
 
-    <!-- Support cards: budget vs. actual + cliff-management -->
+    <!-- Support cards: budget vs. actual · invoice reconciliation · cliff-management · scoped finance view -->
     <div class="mt-6 grid gap-6 md:grid-cols-2">
       <article class="rounded-2xl border border-ink/10 bg-card p-7 shadow-sm">
         <h3 class="font-head text-lg">Budget vs. actual, and right-sizing the cap</h3>
@@ -62,6 +64,14 @@ const description =
           Watch spend against budget as the month runs, so you can set the right caps — ones that
           protect the budget without throttling your best engineers, informed by who actually needs
           the headroom. We recommend and alert; you set the cap, and we don't enforce it.
+        </p>
+      </article>
+      <article class="rounded-2xl border border-ink/10 bg-card p-7 shadow-sm">
+        <h3 class="font-head text-lg">Invoice reconciliation check</h3>
+        <p class="mt-2 text-sm leading-relaxed text-ink/70">
+          Anthropic's own meters can disagree (Code showing one number, the dashboard another).
+          WTClaude flags tracked-vs-invoice variance so a phantom charge doesn't slip through — pure
+          independent reconciliation.
         </p>
       </article>
       <article class="rounded-2xl border border-ink/10 bg-card p-7 shadow-sm">
@@ -73,15 +83,22 @@ const description =
           token at API rates on top.)
         </p>
       </article>
+      <article class="rounded-2xl border border-ink/10 bg-card p-7 shadow-sm">
+        <h3 class="font-head text-lg">A scoped view for finance</h3>
+        <p class="mt-2 text-sm leading-relaxed text-ink/70">
+          Finance gets its own delegated, team-scoped view that rolls up across the org —
+          accountability without chasing every manager. Cost-management, not monitoring.
+        </p>
+      </article>
     </div>
 
-    <!-- Honesty guardrails (centered) -->
+    <!-- Honesty guardrails (centered) — v1.12 §2 verbatim -->
     <p class="mx-auto mt-12 max-w-3xl text-center text-sm leading-relaxed text-ink/65">
       The accrual is a clearly-labeled estimate of the bill — not the guaranteed invoice. This is
       cost allocation, not employee monitoring. We build on top of Anthropic's own team spend data;
       we measure and recommend — we never cap or cut off your team. Allocation and accrual are
-      billing-grade on Code where your admin enables OTel (team-level Code cost rides Anthropic's
-      OTel export), otherwise a clearly-labeled estimate; on Cowork the same OTel caveat applies.
+      billing-grade on Code where your admin enables OTel, otherwise a clearly-labeled estimate; the
+      same OTel caveat applies on Cowork.
     </p>
 
     <!-- CTA: email-signup capture (no pricing — embargo) -->

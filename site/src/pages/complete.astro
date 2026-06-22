@@ -3,12 +3,11 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import Mark from '../components/Mark.astro';
 import HonestyBadge from '../components/HonestyBadge.astro';
 import CaptureForm from '../components/CaptureForm.astro';
-import DraftNote from '../components/DraftNote.astro';
 import HookBand from '../components/HookBand.astro';
 
 const title = 'WTClaude for the Complete Claude User — all your Claude in one view';
 const description =
-  'See your whole Claude life in one place — Chat, Cowork, and Code — with a warning before you hit a limit. Billing-grade for Code in your terminal; an honest estimate for Code in the desktop app, and clearly-labeled estimates for the rest.';
+  'See your whole Claude life in one place — Chat, Cowork, and Code — with a warning before you hit a limit. Billing-grade for Code in your terminal and for Cowork where Claude records the cost locally; honest, clearly-labeled estimates everywhere else.';
 ---
 
 <BaseLayout title={title} description={description} noNavPad heroDark>
@@ -21,7 +20,7 @@ const description =
     </div>
     <div class="relative mx-auto max-w-3xl px-5 pb-16 pt-32 text-center sm:pt-36">
       <Mark class="mx-auto mb-7 h-14 w-14 text-surface" />
-      <span class="inline-block rounded-full bg-surface/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-surface/70">Coming soon · Wave 2</span>
+      <span class="inline-block rounded-full bg-surface/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-surface/70">Coming soon</span>
       <h1 class="mt-5 font-head text-4xl leading-tight sm:text-5xl">
         See your whole Claude life in one place — and never get stuck waiting again.
       </h1>
@@ -32,8 +31,6 @@ const description =
   </section>
 
   <section class="mx-auto max-w-5xl px-5 py-16">
-    <DraftNote brief="Strategy brief A2 (Complete Claude User)" class="mb-12" />
-
     <!-- Co-heroes: attributed limit view + learning layer -->
     <div class="grid gap-6 md:grid-cols-2">
       <article class="rounded-2xl border border-ink/10 bg-card p-7 shadow-sm">
@@ -54,17 +51,19 @@ const description =
     <div class="mt-6 grid gap-6 md:grid-cols-3">
       <article class="rounded-2xl border border-ink/10 bg-card p-7 shadow-sm">
         <h3 class="font-head text-lg">Free</h3>
-        <p class="mt-2 text-sm leading-relaxed text-ink/70">The unified view is free in Phase 0.</p>
+        <p class="mt-2 text-sm leading-relaxed text-ink/70">The complete view is free — always.</p>
       </article>
       <article class="rounded-2xl border border-ink/10 bg-card p-7 shadow-sm">
         <div class="flex flex-wrap items-center gap-1.5">
           <h3 class="font-head text-lg">Honest by surface</h3>
         </div>
         <p class="mt-2 text-sm leading-relaxed text-ink/70">
-          Billing-grade for Code in your terminal <HonestyBadge kind="billing-grade" />; an honest
-          estimate for Code in the desktop app <HonestyBadge kind="estimate" />; a clearly-labeled
-          estimate for Cowork <HonestyBadge kind="estimate" />, and Chat reflected in the shared
-          limit total.
+          Billing-grade for Code in your terminal <HonestyBadge kind="billing-grade" />; billing-grade
+          for Cowork where Claude records the cost to its own local log
+          <HonestyBadge kind="billing-grade" /> (Anthropic-computed); an honest estimate for Code in
+          the desktop app <HonestyBadge kind="estimate" />, and an honest, clearly-labeled estimate
+          everywhere else; Chat is reflected in your shared limit total — never as its own dollar
+          figure.
         </p>
       </article>
       <article class="rounded-2xl border border-ink/10 bg-card p-7 shadow-sm">
@@ -75,8 +74,9 @@ const description =
 
     <!-- Honesty framing (do-NOT-claim guardrails, brief A2 + labeling spec) -->
     <p class="mx-auto mt-10 max-w-3xl text-center text-sm leading-relaxed text-ink/65">
-      Code cost is billing-grade in your terminal; an honest estimate in the desktop app. Cowork is
-      a clearly-labeled estimate. Chat has no local data, so it’s reflected only inside your shared
+      Code cost is billing-grade in your terminal, and an honest estimate in the desktop app. Cowork
+      is billing-grade where Claude writes the cost to its own local log, and a clearly-labeled
+      estimate where it doesn’t. Chat has no local data, so it’s reflected only inside your shared
       limit total — never shown as a Chat dollar figure. The limit view reflects Anthropic’s shared
       rate-limit data, read as accurately as we can.
     </p>

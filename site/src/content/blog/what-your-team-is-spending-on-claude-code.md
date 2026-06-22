@@ -1,98 +1,99 @@
 ---
-title: "What Your Team Spends on Claude Code — and the Cap That's Right for It"
-description: "Anthropic now shows you team spend, so seeing it is the easy part. The hard part: a cap that protects the budget without throttling your best engineers, allocation you can charge back, and the 150-seat cliff. Here's the smart-guardrails approach."
+title: "What Your Team Spends on Claude Code — and Where You're Overpaying for It"
+description: "Anthropic now shows you team spend, so seeing it is the easy part. The hard part: the seats you're overpaying for, the overage that runs away under the cap, and the developers your cost tools can't even see. Here's the independent, billing-grade way to run it — plus a free 60-second seat audit, coming soon."
 pubDate: 2026-06-14
 author: "Peter Bean"
 readingTime: "8 min read"
 faq:
   - q: "Doesn't Anthropic already show my team's spend?"
-    a: "Yes — the Team plan now ships native analytics and a per-user/per-model spend CSV, so seeing the number is table-stakes. The hard part is acting on it: setting a cap that's right per team, allocating the spend back, and forecasting the 150-seat cliff. That's the smart-guardrails layer WTClaude for Business adds on top — join the waitlist."
+    a: "Yes — the Team plan now ships native analytics and a per-user/per-model spend CSV, so seeing the number is table-stakes. The hard part is acting on it: the seats you're overpaying for, the overage running away under the cap, and the OAuth developers many tools can't see. That's the independent layer WTClaude for Business adds on top — a free seat audit is coming soon; join the waitlist."
+  - q: "How do I find seats I'm overpaying for?"
+    a: "A free seat audit is coming soon: paste your Anthropic Spend CSV and it'll show which Premium seats are using Standard-level volume and which seats are dormant — entirely in your browser, nothing uploaded. It's a recommendation to review; you make the change. Join the waitlist and we'll tell you when it ships."
+  - q: "Can WTClaude catch a runaway Claude Code bill in real time?"
+    a: "Yes — but honestly: real-time per-person alerting runs on our lightweight collector or your admin's OTel export, not Anthropic's native API (which is roughly a day behind). With that setup, you catch the spike in minutes instead of at invoice time. We'll always be straight about which data path a number comes from."
   - q: "Does WTClaude enforce or cap spend?"
-    a: "No. We're the insight + coaching layer — we measure and recommend; hard enforcement is Anthropic's admin tier. We help you set their cap right (\"a chainsaw made a scalpel\"), so it protects the budget without throttling your best engineers."
-  - q: "How can I see my own Claude Code spending today?"
-    a: "Each developer's billing-grade number is free, in the terminal — WTClaude reads the statusline, the source behind the bill. The team-wide layer (a cap that's right, allocation, accrual, cliff-management) is coming soon — join the waitlist."
+    a: "No. We're the insight + recommendation layer — we measure and recommend; the only actor that can hard-cap Claude seat spend is Anthropic (its admin tier). We help you set their cap right and tell you where the waste is."
+  - q: "Why can't my other cost tool see all my Claude Code developers?"
+    a: "Most read Anthropic's Claude Code Analytics API, which returns only API-key users — OAuth/subscription seat developers (the most common setup) don't appear. WTClaude's local collector reads cost where Claude writes it, so it sees them. More on /compare."
   - q: "Why doesn't my Claude Code cost tracker match the bill?"
     a: "Most tools estimate cost from local session logs, which don't carry billing-grade cost. Reading the statusline is billing-grade in the terminal. Here's the full explanation."
-  - q: "Can I allocate Claude Code cost to teams or projects for chargeback?"
-    a: "That's exactly what the coming-soon finance view does — cross-surface cost-center allocation. It's cost allocation, not employee monitoring."
   - q: "Is the pre-invoice accrual the same as my actual bill?"
     a: "No — it's a clearly-labeled estimate to help you close the books, never the guaranteed amount Anthropic will charge."
   - q: "Is WTClaude affiliated with Anthropic?"
-    a: "No — it's an independent, free, open-source project, not affiliated with Anthropic."
+    a: "No — it's an independent, free, open-source project, not affiliated with Anthropic. That independence is the point: our advice on what to buy isn't biased toward selling you more."
 ---
 
 Claude Code spread through most engineering teams bottom-up, one developer at a time — faster than any budgeting process. For a while, the hard part was even *seeing* the spend. That part is largely solved now: Anthropic's Team plan ships native analytics and a per-user, per-model spend CSV, so an admin can finally see who's spending what.
 
-So if seeing it is table-stakes, what's actually left? The hard part: doing something about it without throttling the people doing the work. **How do you set a cap that protects the budget but doesn't block your best engineers? How do you allocate the spend back to the team that caused it? And how do you see the 150-seat cliff coming before it doubles your bill?**
+So if seeing it is table-stakes, what's actually left? The money. **A spend report doesn't tell you which seats you're overpaying for, doesn't catch the overage running away under your cap until the invoice, and — depending on how your developers sign in — may not even see them at all.** That's the part still on you, and it's where the dollars are.
 
 Here's the honest version.
 
-## Seeing it isn't the problem anymore — acting on it is
+## The three places teams quietly overpay (or fly blind)
 
-Anthropic now hands Team admins the visibility. Good. But a list of who-spent-what doesn't run your team. Three real problems remain:
+**1. Seat-mix overpay.** A Premium seat is roughly 5× the price of a Standard one — and that's for *usage capacity, not features* (both tiers include Code and Cowork). Anthropic's own docs tell admins to review every few months and downgrade whoever's underusing Premium — a manual chore that's easy to skip. And the Team admin UI has no "last active" view, so dormant seats keep billing. Nobody's automating the downgrade-and-reclaim audit for you, because the company selling the seats isn't the one who'll remind you to buy fewer.
 
-**1. A blunt cap is lose-lose.** Anthropic gives you a cap. Set it low and finance feels safe but your best engineers get throttled mid-task; set it high and eng is happy but the budget's exposed. A single dumb dial pits finance and engineering against each other. What you want is **a cap that's *right*** — set per team, informed by who actually needs the headroom (real velocity) versus who's burning it on rework (waste).
+**2. Overage blindness under the cap.** Teams that turn on extra usage (so a good engineer isn't throttled mid-task) are exposed. Native caps are monthly-period and the spend data lags a day or two — long enough for a runaway agent left going overnight to ring up four figures before anyone notices (a documented case). The advice in the wild is literally "watch the meter weekly, per engineer" — an unproductized manual job. You can set a ceiling, but Anthropic shows you almost nothing happening *underneath* it in real time.
 
-**2. A CSV is a list, not allocation.** The spend export tells you the numbers; it doesn't charge them back. Turning "who spent what" into clean per-team / per-project / cost-center allocation — and a pre-invoice accrual you can close the books against — is still on you.
+**3. The developers your cost tools can't see.** Most third-party cost tools read Anthropic's Claude Code Analytics *API*. That API only returns API-key users — your **OAuth/subscription seat developers, the most common setup, never show up.** One org went from 9+ visible users to 1–2 after moving engineers to OAuth. So the FinOps tool you'd otherwise reach for can be partly blind to your actual Claude Code developers. *(To be precise: this is about the Analytics API those tools build on — not Anthropic's own owner-only dashboard.)*
 
-**3. The 150-seat cliff is unforecasted.** Anthropic's Team plan tops out at 150 seats; past it you're on Enterprise, where seats are access-only with zero bundled usage — every Claude Code token billed at API rates on top. That can roughly double a bill on crossing (one operator reported going from about $400K to $1.4M — his figure, not Anthropic's). Nobody's counting down to that for you.
+And for larger teams, one more on the horizon: **the 150-seat cliff.** A Team plan tops out at 150 seats; past it you're on Enterprise, where seats are access-only with zero bundled usage — every Claude Code token billed at API rates on top. That can roughly double a bill on crossing (one operator reported going from about $400K to $1.4M — his figure, not Anthropic's). Nobody's counting down to it for you.
 
-## What actually moves the needle
+## What actually moves the needle: an independent layer that acts on the data
 
-Seeing the number was step one. The thing that changes outcomes is **a cap that's right** — protect the budget without throttling your best engineers — plus allocation you can charge back, an accrual you can book against, and a heads-up before the cliff. That's coaching and smart guardrails on top of the visibility, not another dashboard that re-shows you the spend.
+Seeing the number was step one. What changes outcomes is a layer that *does something* with it — and the honest reason to trust that layer is that **it isn't selling you the seats.** We're independent, so the advice on how many seats you need (and which tier) is unconflicted. (To be clear about what independence does and doesn't mean: it means our recommendations aren't biased toward selling you more — not that Anthropic is somehow barred from helping you spend less. It isn't.)
 
-## What you can do today — and what's coming
+That's the idea behind **WTClaude for Business**: not one feature, but the package the person who owns Claude spend can't assemble from a single vendor today —
 
-Be straight about what exists right now versus what's on the way, because that line matters:
+- **See under the cap, in real time.** Live per-person spend and overage under your ceiling, with anomaly alerts that catch a runaway in minutes instead of at invoice time. *(Honest caveat: real-time runs on our lightweight collector or your admin's OTel export — not Anthropic's once-a-day API. It's a quick setup step, and we say so.)*
+- **Never pay for a seat nobody's using.** An always-on view of which Premium seats fit Standard and which sit idle, and a push when one does — so reclaiming the waste isn't a chore you forget. You confirm the change; we never touch your account.
+- **Give every team lead their own view.** On a Team plan only the owner can see analytics. WTClaude gives each lead a view scoped to their own team, rolling up to leadership — enterprise-grade management without the enterprise plan. It's cost-management, never surveillance.
 
-**Today (free):** the accurate building block. WTClaude reads the statusline — the source behind your bill — so each developer's Claude Code cost is **billing-grade in the terminal**. Have one developer run it and look at their real number:
+Around those sit the finance tools (allocation and chargeback on Anthropic's own export, a pre-invoice accrual you can book against, an invoice-reconciliation check for when the meters disagree, cliff-management) and the per-team cap right-sizing that protects the budget without throttling your best engineers. We're the **insight + recommendation** plane — hard caps are Anthropic's admin tier; we make your guardrails smart, we don't impose them.
+
+## Start free — two ways
+
+You don't need a procurement project to begin.
+
+**1. The free seat audit (60 seconds, in your browser) — coming soon.** Paste or upload your Anthropic Team Spend CSV and see what you're overpaying on mis-sized and dormant seats — instantly. The whole thing runs on your device: **your spend data never leaves your browser** (and that file carries employee emails and dollars, so that matters). It's a recommendation to review, not a change we make. It's not live yet — [join the waitlist](/business) and we'll tell you the moment it ships.
+
+**2. The per-developer tracker (free, open source).** Want the ground-truth number first? WTClaude reads the statusline — the source behind your bill — so each developer's Claude Code cost is **billing-grade in the terminal**:
 
 ```
 npx wtclaude setup
 wtclaude compare
 ```
 
-That single number, multiplied across a team, is usually the moment the scale of the spend becomes real — and it's a number you can trust, not an estimate.
+That single number, multiplied across your headcount, is usually the moment the scale of the spend becomes real — and it's a number you can trust, not an estimate.
 
-**Coming soon ([WTClaude for Business](/business) — the smart-guardrails layer):** the team-wide layer that turns the spend you can now see into decisions —
-
-- **A cap that's right (smart-cap-tuning):** where to set Anthropic's cap per team, and a heads-up on who's about to blow it — and whether that's waste or real velocity. *Your cap is a chainsaw; we make it a scalpel.* We recommend and alert; we never cap or cut anyone off — hard enforcement is Anthropic's admin tier.
-- **Allocation & chargeback, on top of Anthropic's Spend CSV:** turn the per-user/per-model export into clean per-team / per-project / cost-center allocation — so you can charge it back, not just read a list.
-- **Pre-invoice accrual** *(a clearly-labeled estimate)*: know roughly what the bill will be before it lands — a figure to book against, never the guaranteed invoice.
-- **Cliff-management:** see the 150-seat Team→Enterprise cliff coming and right-size seats and models to delay or survive it.
-- **Coaching tied to hard dollars:** waste-cut %, right-sized-seat $, cliff-delay months — outcomes in dollars, not vibes.
-
-A few honest caveats, because that's how we build: this is **insight + coaching — we measure and recommend, we never enforce or cap** (that's Anthropic's tier). We **enrich** Anthropic's own team spend data, we don't re-run it. Billing-grade applies to Claude Code in the terminal (the desktop app is a labeled estimate); on Cowork, team-wide cost is billing-grade only when your admin enables OTel, otherwise a clearly-labeled estimate. And this is **cost allocation, not employee monitoring** — it answers "what did this work cost," not "what is this person doing."
-
-The finance view is coming soon. If you're the one who has to explain the Claude line item, you can get on the list at [WTClaude for Finance](/business/finance).
-
-## Start with one number
-
-You don't need a procurement project to begin. Have one developer run `wtclaude compare`, look at the real, billing-grade figure, and multiply it by your headcount. That estimate of the whole is usually the entire reason to take this seriously — and from there, the team-wide view fills in the accuracy, the attribution, and the timing.
+A few honest caveats, because that's how we build: the team product is **coming soon** (join the waitlist — no pricing games). It's **insight + recommendation — we measure and recommend, we never enforce or cap.** Accuracy is labeled by how it's collected: the collector and OTel are billing-grade; a low-friction plugin path is an estimate unless it's paired with Claude's own cost field. Billing-grade Code in the terminal; the desktop app is a labeled estimate; team-wide Cowork cost is billing-grade only when your admin enables OTel. And it's **cost allocation, not employee monitoring** — it answers "what did this work cost," not "what is this person doing."
 
 ## FAQ
 
 **Doesn't Anthropic already show my team's spend?**
-Yes — the Team plan now ships native analytics and a per-user/per-model spend CSV, so seeing the number is table-stakes. The hard part is acting on it: setting a cap that's right per team, allocating the spend back, and forecasting the 150-seat cliff. That's the smart-guardrails layer WTClaude for Business adds on top — [join the waitlist](/business/finance).
+Yes — the Team plan now ships native analytics and a per-user/per-model spend CSV, so seeing the number is table-stakes. The hard part is acting on it: the seats you're overpaying for, the overage running away under the cap, and the OAuth developers many tools can't see. That's the independent layer WTClaude for Business adds on top — a free seat audit is [coming soon](/business).
+
+**How do I find seats I'm overpaying for?**
+A free seat audit is coming soon: paste your Anthropic Spend CSV and it'll show which Premium seats are using Standard-level volume and which seats are dormant — entirely in your browser, nothing uploaded. It's a recommendation to review; you make the change. [Join the waitlist](/business) and we'll tell you when it ships.
+
+**Can WTClaude catch a runaway Claude Code bill in real time?**
+Yes — but honestly: real-time per-person alerting runs on our lightweight collector or your admin's OTel export, not Anthropic's native API (which is roughly a day behind). With that setup, you catch the spike in minutes instead of at invoice time. We'll always be straight about which data path a number comes from.
 
 **Does WTClaude enforce or cap spend?**
-No. We're the insight + coaching layer — we measure and recommend; hard enforcement is Anthropic's admin tier. We help you set *their* cap right ("a chainsaw made a scalpel"), so it protects the budget without throttling your best engineers.
+No. We're the insight + recommendation layer — we measure and recommend; the only actor that can hard-cap Claude seat spend is Anthropic (its admin tier). We help you set *their* cap right and tell you where the waste is.
 
-**How can I see my own Claude Code spending today?**
-Each developer's billing-grade number is free, in the terminal — WTClaude reads the statusline, the source behind the bill. The team-wide layer (a cap that's right, allocation, accrual, cliff-management) is coming soon — [join the waitlist](/business/finance).
+**Why can't my other cost tool see all my Claude Code developers?**
+Most read Anthropic's Claude Code Analytics API, which returns only API-key users — OAuth/subscription seat developers (the most common setup) don't appear. WTClaude's local collector reads cost where Claude writes it, so it sees them. [More on /compare.](/compare)
 
 **Why doesn't my Claude Code cost tracker match the bill?**
 Most tools estimate cost from local session logs, which don't carry billing-grade cost. Reading the statusline is billing-grade in the terminal. [Here's the full explanation.](/blog/is-claude-code-cost-accurate)
-
-**Can I allocate Claude Code cost to teams or projects for chargeback?**
-That's exactly what the coming-soon finance view does — cross-surface cost-center allocation. It's cost allocation, not employee monitoring.
 
 **Is the pre-invoice accrual the same as my actual bill?**
 No — it's a clearly-labeled estimate to help you close the books, never the guaranteed amount Anthropic will charge.
 
 **Is WTClaude affiliated with Anthropic?**
-No — it's an independent, free, open-source project, not affiliated with Anthropic.
+No — it's an independent, free, open-source project, not affiliated with Anthropic. That independence is the point: our advice on what to buy isn't biased toward selling you more.
 
 ---
 
-*WTClaude is a free, open-source, billing-grade Claude Code cost tracker. Start with one real number: `npx wtclaude setup`, then `wtclaude compare`. For the team finance view (allocation + pre-invoice accrual), [join the waitlist](/business/finance).*
+*WTClaude is a free, open-source, billing-grade Claude Code cost tracker. A free in-browser seat audit for finding overpaid seats is [coming soon](/business); start today with one real number: `npx wtclaude setup`, then `wtclaude compare`. The team product — real-time overage alerts, seat optimization, delegated views, and finance tools — is [coming soon](/business).*
