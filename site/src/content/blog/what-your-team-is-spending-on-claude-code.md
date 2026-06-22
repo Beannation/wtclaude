@@ -1,7 +1,7 @@
 ---
 title: "What Your Team Spends on Claude Code — and Where You're Overpaying for It"
 description: "Anthropic now shows you team spend, so seeing it is the easy part. The hard part: the seats you're overpaying for, the overage that runs away under the cap, and the developers your cost tools can't even see. Here's the independent, billing-grade way to run it — plus a free 60-second seat audit, coming soon."
-pubDate: 2026-06-14
+pubDate: 2026-06-22
 author: "Peter Bean"
 readingTime: "8 min read"
 faq:
