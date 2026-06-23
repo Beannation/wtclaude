@@ -1,0 +1,72 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import { parseSpendReport } from '../../../lib/audit/parse';
+import { computeHooks } from '../../../lib/audit/hooks';
+import { renderFullReport } from '../../../lib/audit/render';
+import { SAMPLE_CSV, SAMPLE_ORG, SAMPLE_SEAT_COUNT } from '../../../lib/audit/sampleData';
+
+// Static, linkable/SEO demo of the full Tier-2 report — built from the fixture at build time.
+// Hard guardrail: unmistakably SAMPLE (banner + watermark + SAMPLE- downloads). Fake data only.
+const title = `Sample Claude Spend Audit — ${SAMPLE_ORG} (demo report)`;
+const description =
+  'A complete, clearly-labeled sample of the free Claude spend audit, run on demo data for a fictional company. This is the full per-person report you get for your own team — your spend file never leaves your browser.';
+
+const parsed = parseSpendReport(SAMPLE_CSV);
+let reportHtml = '<p>Sample unavailable.</p>';
+if (parsed.kind === 'ok') {
+  const hooks = computeHooks(parsed.rows, parsed.columns, { seatCount: SAMPLE_SEAT_COUNT });
+  reportHtml = renderFullReport(hooks, { sample: true, org: SAMPLE_ORG });
+}
+---
+
+<BaseLayout title={title} description={description} noNavPad heroDark ogType="article">
+  <section class="audit-hero relative overflow-hidden bg-ink text-surface">
+    <div
+      class="pointer-events-none absolute inset-0 opacity-70"
+      style="background: radial-gradient(60% 50% at 50% 0%, rgba(232,148,58,0.18) 0%, rgba(26,25,21,0) 70%);"
+    >
+    </div>
+    <div class="relative mx-auto max-w-3xl px-5 pb-12 pt-32 text-center sm:pt-36">
+      <span class="inline-block rounded-full bg-amber-light px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-deep">📊 Sample report · demo data</span>
+      <h1 class="mt-5 font-head text-3xl leading-tight sm:text-4xl">
+        A full Claude spend audit — on demo data for {SAMPLE_ORG}.
+      </h1>
+      <p class="mx-auto mt-5 max-w-xl text-base leading-relaxed text-surface/80">
+        This is exactly what the free audit shows for your own team. The numbers below are fictional.
+        When you run it for real, your spend file never leaves your browser.
+      </p>
+      <a
+        href="/business/audit"
+        class="mt-7 inline-flex rounded-lg bg-amber px-5 py-2.5 text-sm font-semibold text-ink transition hover:bg-amber-deep hover:text-white"
+      >Run my real audit →</a>
+    </div>
+  </section>
+
+  <section class="audit-results-section mx-auto max-w-4xl px-5 py-12" set:html={reportHtml} />
+
+  <style>
+    @media print {
+      body.audit-printing > :not(main) {
+        display: none !important;
+      }
+      body.audit-printing main > :not(.audit-results-section) {
+        display: none !important;
+      }
+      body.audit-printing main {
+        padding: 0 !important;
+      }
+      body.audit-printing {
+        background: #fff;
+      }
+    }
+  </style>
+
+  <script>
+    import { initSampleStatic } from '../../../lib/audit/app';
+    function start() {
+      initSampleStatic();
+    }
+    start();
+    document.addEventListener('astro:page-load', start);
+  </script>
+</BaseLayout>

@@ -1,14 +1,14 @@
 ---
 title: "What Your Team Spends on Claude Code — and Where You're Overpaying for It"
-description: "Anthropic now shows you team spend, so seeing it is the easy part. The hard part: the seats you're overpaying for, the overage that runs away under the cap, and the developers your cost tools can't even see. Here's the independent, billing-grade way to run it — plus a free 60-second seat audit, coming soon."
+description: "Anthropic now shows you team spend, so seeing it is the easy part. The hard part: the seats you're overpaying for, the overage that runs away under the cap, and the developers your cost tools can't even see. Here's the independent, billing-grade way to run it — plus a free 60-second spend audit you can run right now."
 pubDate: 2026-06-22
 author: "Peter Bean"
 readingTime: "8 min read"
 faq:
   - q: "Doesn't Anthropic already show my team's spend?"
-    a: "Yes — the Team plan now ships native analytics and a per-user/per-model spend CSV, so seeing the number is table-stakes. The hard part is acting on it: the seats you're overpaying for, the overage running away under the cap, and the OAuth developers many tools can't see. That's the independent layer WTClaude for Business adds on top — a free seat audit is coming soon; join the waitlist."
+    a: "Yes — the Team plan now ships native analytics and a per-user/per-model spend CSV, so seeing the number is table-stakes. The hard part is acting on it: the seats you're overpaying for, the overage running away under the cap, and the OAuth developers many tools can't see. That's the independent layer WTClaude for Business adds on top — starting with a free spend audit you can run today; the full team product is coming soon, so join the waitlist."
   - q: "How do I find seats I'm overpaying for?"
-    a: "A free seat audit is coming soon: paste your Anthropic Spend CSV and it'll show which Premium seats are using Standard-level volume and which seats are dormant — entirely in your browser, nothing uploaded. It's a recommendation to review; you make the change. Join the waitlist and we'll tell you when it ships."
+    a: "Run the free spend audit: paste your Anthropic Spend Report CSV and it shows where you're overpaying — the seats on Standard-level volume, the seats sitting dormant, who's actually driving the bill, and how much is going to Opus — entirely in your browser, nothing uploaded. It's a recommendation to review; you make the change."
   - q: "Can WTClaude catch a runaway Claude Code bill in real time?"
     a: "Yes — but honestly: real-time per-person alerting runs on our lightweight collector or your admin's OTel export, not Anthropic's native API (which is roughly a day behind). With that setup, you catch the spike in minutes instead of at invoice time. We'll always be straight about which data path a number comes from."
   - q: "Does WTClaude enforce or cap spend?"
@@ -55,7 +55,7 @@ Around those sit the finance tools (allocation and chargeback on Anthropic's own
 
 You don't need a procurement project to begin.
 
-**1. The free seat audit (60 seconds, in your browser) — coming soon.** Paste or upload your Anthropic Team Spend CSV and see what you're overpaying on mis-sized and dormant seats — instantly. The whole thing runs on your device: **your spend data never leaves your browser** (and that file carries employee emails and dollars, so that matters). It's a recommendation to review, not a change we make. It's not live yet — [join the waitlist](/business) and we'll tell you the moment it ships.
+**1. The free spend audit (60 seconds, in your browser).** Paste or upload your Anthropic Spend Report CSV and see where you're overpaying — idle and over-tiered seats, who's driving the bill, and how much is going to Opus — instantly. The whole thing runs on your device: **your spend data never leaves your browser** (and that file carries employee emails and dollars, so that matters). It's a recommendation to review, not a change we make. [Run the free spend audit →](/business/audit)
 
 **2. The per-developer tracker (free, open source).** Want the ground-truth number first? WTClaude reads the statusline — the source behind your bill — so each developer's Claude Code cost is **billing-grade in the terminal**:
 
@@ -71,10 +71,10 @@ A few honest caveats, because that's how we build: the team product is **coming 
 ## FAQ
 
 **Doesn't Anthropic already show my team's spend?**
-Yes — the Team plan now ships native analytics and a per-user/per-model spend CSV, so seeing the number is table-stakes. The hard part is acting on it: the seats you're overpaying for, the overage running away under the cap, and the OAuth developers many tools can't see. That's the independent layer WTClaude for Business adds on top — a free seat audit is [coming soon](/business).
+Yes — the Team plan now ships native analytics and a per-user/per-model spend CSV, so seeing the number is table-stakes. The hard part is acting on it: the seats you're overpaying for, the overage running away under the cap, and the OAuth developers many tools can't see. That's the independent layer WTClaude for Business adds on top — and a free spend audit you can [run right now](/business/audit).
 
 **How do I find seats I'm overpaying for?**
-A free seat audit is coming soon: paste your Anthropic Spend CSV and it'll show which Premium seats are using Standard-level volume and which seats are dormant — entirely in your browser, nothing uploaded. It's a recommendation to review; you make the change. [Join the waitlist](/business) and we'll tell you when it ships.
+Run the free spend audit: paste your Anthropic Spend Report CSV and it shows where you're overpaying — the seats on Standard-level volume, the seats sitting dormant, who's actually driving the bill, and how much is going to Opus — entirely in your browser, nothing uploaded. It's a recommendation to review; you make the change. [Run the free spend audit →](/business/audit)
 
 **Can WTClaude catch a runaway Claude Code bill in real time?**
 Yes — but honestly: real-time per-person alerting runs on our lightweight collector or your admin's OTel export, not Anthropic's native API (which is roughly a day behind). With that setup, you catch the spike in minutes instead of at invoice time. We'll always be straight about which data path a number comes from.
@@ -96,4 +96,4 @@ No — it's an independent, free, open-source project, not affiliated with Anthr
 
 ---
 
-*WTClaude is a free, open-source, billing-grade Claude Code cost tracker. A free in-browser seat audit for finding overpaid seats is [coming soon](/business); start today with one real number: `npx wtclaude setup`, then `wtclaude compare`. The team product — real-time overage alerts, seat optimization, delegated views, and finance tools — is [coming soon](/business).*
+*WTClaude is a free, open-source, billing-grade Claude Code cost tracker. A free in-browser spend audit — overpaid seats, who's driving the bill, and your model mix — is [live now](/business/audit); start today with one real number: `npx wtclaude setup`, then `wtclaude compare`. The team product — real-time overage alerts, seat optimization, delegated views, and finance tools — is [coming soon](/business).*

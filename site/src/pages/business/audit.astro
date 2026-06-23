@@ -1,0 +1,154 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Mark from '../../components/Mark.astro';
+import HookBand from '../../components/HookBand.astro';
+
+// Free Claude spend-audit — 100% client-side, ~zero COGS. Spec: free-seat-audit-experience.md (rev 2).
+// The raw CSV never leaves the browser; the only network call is an AGGREGATE-ONLY lead POST.
+const title = 'Free Claude Spend Audit — find where your team overpays, in your browser';
+const description =
+  'Drop your Claude Spend Report CSV and see idle seats, spend concentration, model-mix waste and $/request outliers in 30 seconds. 100% in your browser — your spend file never leaves it.';
+---
+
+<BaseLayout title={title} description={description} noNavPad heroDark>
+  <!-- HERO -->
+  <section class="audit-hero relative overflow-hidden bg-ink text-surface">
+    <div
+      class="pointer-events-none absolute inset-0 opacity-70"
+      style="background: radial-gradient(60% 50% at 50% 0%, rgba(232,148,58,0.18) 0%, rgba(26,25,21,0) 70%);"
+    >
+    </div>
+    <div class="relative mx-auto max-w-3xl px-5 pb-14 pt-32 text-center sm:pt-36">
+      <Mark class="mx-auto mb-7 h-14 w-14 text-surface" />
+      <span class="inline-block rounded-full bg-surface/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-surface/70">Free · no signup for the headline</span>
+      <h1 class="mt-5 font-head text-4xl leading-tight sm:text-5xl">
+        Find out where your team is overpaying on Claude — in 30 seconds, in your browser.
+      </h1>
+      <p class="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-surface/80">
+        Your spend file never leaves your browser. Nothing is uploaded — the audit runs entirely on
+        your machine, and only you ever see the per-person detail.
+      </p>
+    </div>
+  </section>
+
+  <!-- INTAKE -->
+  <section id="audit-intake" class="mx-auto max-w-3xl px-5 py-14">
+    <!-- How to get the RIGHT file -->
+    <div class="rounded-2xl border border-ink/10 bg-card p-6 shadow-sm">
+      <p class="font-head text-base">Get your Spend Report (≈30 seconds)</p>
+      <ol class="mt-3 space-y-1.5 text-sm text-ink/75">
+        <li><span class="font-mono text-amber-deep">1.</span> <strong>claude.ai</strong> → your initials → <strong>Settings</strong></li>
+        <li><span class="font-mono text-amber-deep">2.</span> <strong>Analytics</strong> → <strong>Spend</strong> → <strong>Export Spend Report</strong></li>
+        <li><span class="font-mono text-amber-deep">3.</span> Choose <strong>Last 90 Days</strong> → download the CSV</li>
+      </ol>
+      <p class="mt-3 text-xs leading-relaxed text-ink/55">
+        You must be an <strong>Owner / Primary-Owner</strong> (not the Team “Admin” role). We ingest this
+        native export — we never re-create it. This is the per-person Spend Report, <em>not</em> the
+        Console / API billing export from platform.claude.com.
+      </p>
+    </div>
+
+    <!-- Dropzone -->
+    <div
+      id="audit-dropzone"
+      role="button"
+      tabindex="0"
+      aria-label="Drop or choose your Spend Report CSV"
+      class="mt-6 cursor-pointer rounded-2xl border-2 border-dashed border-ink/20 bg-card p-10 text-center transition hover:border-amber/60"
+    >
+      <input id="audit-file" type="file" accept=".csv,text/csv,text/plain" class="hidden" />
+      <p class="font-head text-lg">Drop your Spend Report CSV here</p>
+      <p class="mt-1 text-sm text-ink/60">or click to choose a file — it never leaves your browser</p>
+    </div>
+
+    <!-- Optional seat count (unlocks H2 reclaim $) + paste alternative -->
+    <div class="mt-4 grid gap-4 sm:grid-cols-2">
+      <div class="rounded-2xl border border-ink/10 bg-card p-4 shadow-sm">
+        <label for="audit-seats" class="text-sm font-semibold text-ink">Seats you're paying for</label>
+        <p class="mt-0.5 text-xs text-ink/55">Optional — unlocks idle-seat reclaim $ (else we report dead-weight by usage volume only).</p>
+        <input
+          id="audit-seats"
+          type="number"
+          min="1"
+          inputmode="numeric"
+          placeholder="e.g. 24"
+          class="mt-2 w-full rounded-lg border border-ink/15 bg-surface px-3 py-2 text-sm text-ink placeholder:text-warm focus-visible:outline-2 focus-visible:outline-amber"
+        />
+      </div>
+
+      <details class="rounded-2xl border border-ink/10 bg-card p-4 shadow-sm">
+        <summary class="cursor-pointer text-sm font-semibold text-amber-deep">Paste CSV instead</summary>
+        <textarea
+          id="audit-paste"
+          rows="5"
+          placeholder="email,account_uuid,product,model,model_family,total_requests,…"
+          class="mt-3 w-full rounded-lg border border-ink/15 bg-surface p-3 font-mono text-xs text-ink placeholder:text-warm focus-visible:outline-2 focus-visible:outline-amber"
+        ></textarea>
+        <button
+          type="button"
+          data-audit-paste-go
+          class="mt-2 rounded-lg bg-ink px-4 py-2 text-sm font-semibold text-surface transition hover:bg-ink/85"
+        >Audit pasted CSV →</button>
+      </details>
+    </div>
+
+    <!-- The two demo doors -->
+    <div class="mt-6 grid gap-3 sm:grid-cols-2">
+      <button
+        type="button"
+        data-audit-try-sample
+        class="rounded-2xl border border-ink/15 bg-card px-5 py-4 text-left text-sm font-semibold text-ink shadow-sm transition hover:border-amber/60"
+      >
+        Try it on sample data →
+        <span class="mt-0.5 block text-xs font-normal text-ink/55">See the instant headline with demo numbers — no email.</span>
+      </button>
+      <button
+        type="button"
+        data-audit-demo
+        class="rounded-2xl border border-amber/40 bg-amber-light/60 px-5 py-4 text-left text-sm font-semibold text-amber-deep shadow-sm transition hover:border-amber"
+      >
+        No CSV yet? See a full sample report →
+        <span class="mt-0.5 block text-xs font-normal text-ink/60">The complete report on demo data — one email, clearly labeled as a sample.</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- RESULTS (rendered client-side; print target) -->
+  <section class="audit-results-section mx-auto max-w-4xl px-5 pb-20">
+    <div id="audit-results" class="hidden"></div>
+  </section>
+
+  <HookBand />
+
+  <style>
+    /* Print-to-PDF (offline) — show only the report, hide chrome/intake/hero/hookband. */
+    @media print {
+      body.audit-printing > :not(main) {
+        display: none !important;
+      }
+      body.audit-printing main > :not(.audit-results-section) {
+        display: none !important;
+      }
+      body.audit-printing main {
+        padding: 0 !important;
+      }
+      body.audit-printing {
+        background: #fff;
+      }
+    }
+  </style>
+
+  <script>
+    import { initAudit } from '../../lib/audit/app';
+    function start() {
+      initAudit();
+      try {
+        (window as any).umami?.track('lp_view_audit');
+      } catch {
+        /* no-op */
+      }
+    }
+    start();
+    document.addEventListener('astro:page-load', start);
+  </script>
+</BaseLayout>

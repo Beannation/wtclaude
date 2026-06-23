@@ -92,15 +92,20 @@ const description =
       enrich it, we don't re-run it.
     </p>
 
-    <!-- The free hook (v1.12 §1) — shown as a COMING-SOON teaser, NO link (the tool isn't built). -->
-    <!-- TODO SMB-V2: when Build ships /business/seat-audit, flip this teaser to a live CTA linking there -->
-    <div class="mx-auto mt-12 max-w-2xl rounded-2xl border border-ink/10 bg-card p-7 text-center shadow-sm">
-      <span class="inline-block rounded-full border border-ink/15 bg-ink/[0.04] px-3 py-1 text-xs font-semibold uppercase tracking-wide text-warm">Coming soon</span>
-      <p class="mt-4 font-head text-lg">Start free: the 60-second seat audit</p>
+    <!-- The free hook (v1.12 §1) — LIVE: links to the client-side spend audit (SMB-V2). -->
+    <div class="mx-auto mt-12 max-w-2xl rounded-2xl border border-amber/40 bg-amber-light/50 p-7 text-center shadow-sm">
+      <span class="inline-block rounded-full border border-amber/40 bg-card px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-deep">Free · live now</span>
+      <p class="mt-4 font-head text-lg">Start free: the 30-second spend audit</p>
       <p class="mx-auto mt-2 max-w-xl text-sm leading-relaxed text-ink/70">
-        Paste your Anthropic Spend CSV and see what you're overpaying on mis-sized and dormant seats
-        — right in your browser, your data never leaves it. No signup for the headline number.
+        Drop your Anthropic Spend Report CSV and see what you're overpaying on idle seats, spend
+        concentration, model mix and $/request outliers — right in your browser, your data never
+        leaves it. No signup for the headline number.
       </p>
+      <a
+        href="/business/audit"
+        class="mt-5 inline-flex rounded-lg bg-amber px-5 py-2.5 text-sm font-semibold text-ink transition hover:bg-amber-deep hover:text-white"
+        data-track="cta_spend_audit"
+      >Run the free audit →</a>
     </div>
 
     <!-- CTA: email-signup capture (no pricing — embargo) -->
