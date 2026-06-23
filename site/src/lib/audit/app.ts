@@ -10,7 +10,7 @@
  */
 import { CAPTURE_ENDPOINT, CAPTURE_METHOD } from '../../config';
 import { parseSpendReport } from './parse';
-import { computeHooks, toLeadAggregate } from './hooks';
+import { computeHooks } from './hooks';
 import {
   buildReportCsv,
   emailGate,
@@ -196,13 +196,14 @@ async function postLead(opts: { email: string; tag: string; rerun: boolean }): P
     website: '', // honeypot empty for humans
     consent: false,
     monthly_rerun: opts.rerun,
-    audit: toLeadAggregate(state.hooks, { sample: state.mode === 'sample' }),
   };
 
-  // Always log the exact body locally — this is the QA hook proving it's aggregate-only
-  // (no emails-from-file, no names, no per-person rows, no spend file).
+  // Log the exact body locally so anyone can verify what leaves the browser: ONLY
+  // email + tag + source + the monthly-rerun flag. We deliberately send NO spend
+  // numbers/aggregates — no names, no per-person rows, no file. (Honesty posture:
+  // the audit's figures never leave the device; only the email + reminder pref do.)
   // eslint-disable-next-line no-console
-  console.info('[audit lead] aggregate-only payload →', payload);
+  console.info('[audit lead] payload (email + prefs only) →', payload);
 
   if (!CAPTURE_ENDPOINT) return; // local dev / no endpoint: nothing stored, already logged
   try {

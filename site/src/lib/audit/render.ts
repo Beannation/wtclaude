@@ -28,9 +28,10 @@ const fmtMult = (n: number): string => `${Math.round(n)}×`;
 const fmtRatio = (n: number): string => `${Math.round(n)}:1`;
 
 // ---------------------------------------------------------------- shared bits
-/** The verbatim Option-A privacy line — sits AT the email input, never a footer. */
+/** The privacy line — sits AT the email input, never a footer. We transmit only the
+ * email + the monthly-rerun opt-in; no spend numbers ever leave the browser. */
 export const PRIVACY_LINE =
-  'No personal data ever leaves your browser. The email we send contains aggregate totals and recommendations only — never employee names, seats, or your spend file.';
+  'No spend data ever leaves your browser — the audit runs entirely on your device. The only thing we receive is your email address (and, if you tick it, a monthly-reminder preference) — never your numbers, employee names, seats, or your spend file.';
 
 type BadgeKind = 'estimate' | 'proxy' | 'overage' | 'recommend';
 function badge(kind: BadgeKind): string {

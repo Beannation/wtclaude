@@ -8,10 +8,13 @@
 // validation + a basic per-IP rate limit. Deploy with --no-verify-jwt, like the
 // other public fns.
 //
-// Contract (what the site's CaptureForm already sends / expects):
-//   POST { email, tag, source }  ->  2xx { ok: true, ... } on success,
-//                                     4xx { ok: false, error } on rejection.
+// Contract (what the site's forms send / expect):
+//   POST { email, tag, source, consent?, monthly_rerun? }
+//     ->  2xx { ok: true, ... } on success, 4xx { ok: false, error } on rejection.
 //   (The form keys on res.ok / HTTP status; the JSON body is future-proofing.)
+//   `monthly_rerun` is the spend-audit "email me a monthly re-run reminder" opt-in,
+//   persisted in `meta`. The audit's aggregate $ numbers are deliberately NOT stored —
+//   honesty posture: only the email + this preference flag are ever persisted.
 //
 // Resend-ready (future-proof, skips if unset): if RESEND_API_KEY *and* a per-list
 // audience id are configured, the contact is also upserted into a Resend audience;
@@ -132,6 +135,9 @@ serve(async (req) => {
   const list = listFromTag(body?.tag);
   const source = typeof body?.source === "string" ? body.source.slice(0, 200) : null;
   const consent = body?.consent === true;
+  // Spend-audit "monthly re-run reminder" opt-in — a non-PII preference flag (no spend
+  // numbers, no per-person data). Stored in meta; the aggregate audit numbers are not.
+  const monthlyRerun = body?.monthly_rerun === true;
 
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
@@ -142,7 +148,7 @@ serve(async (req) => {
   // report insert vs. dedupe.
   const { data: existing, error: selErr } = await supabase
     .from("email_signups")
-    .select("id")
+    .select("id, meta")
     .eq("email", email)
     .eq("list", list)
     .maybeSingle();
@@ -154,10 +160,20 @@ serve(async (req) => {
   let deduped = false;
   if (existing) {
     deduped = true;
+    // A returning visitor who now ticks the monthly reminder → record it (merge into
+    // existing meta; never clear an opt-in they already gave).
+    const existingMeta = ((existing as any).meta ?? {}) as Record<string, unknown>;
+    if (monthlyRerun && existingMeta.monthly_rerun !== true) {
+      await supabase
+        .from("email_signups")
+        .update({ meta: { ...existingMeta, monthly_rerun: true } })
+        .eq("id", (existing as any).id);
+    }
   } else {
+    const meta = monthlyRerun ? { monthly_rerun: true } : {};
     const { error: insErr } = await supabase
       .from("email_signups")
-      .insert({ email, list, source, consent });
+      .insert({ email, list, source, consent, meta });
     if (insErr) {
       if ((insErr as any).code === "23505") {
         deduped = true; // unique race — treat as dedupe, not an error
