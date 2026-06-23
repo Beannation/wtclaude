@@ -75,7 +75,7 @@ function renderHeadlineView(): void {
       tag: 'spend_audit',
       cta: 'Unlock the full report',
       heading: 'See the full per-person breakdown — free',
-      sub: 'Enter a work email to reveal all 8 hooks and the per-person table — already computed, right here in your browser.',
+      sub: 'Enter a work email to reveal all 8 checks and the per-person table — already computed, right here in your browser.',
     })}
   </div>`;
   setResults(renderHeadline(state.hooks) + gate);

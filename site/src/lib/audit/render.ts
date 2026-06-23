@@ -145,7 +145,7 @@ export function renderHeadline(hooks: Hooks): string {
       <div class="pointer-events-none select-none blur-[6px]" aria-hidden="true">${personTable(hooks, { limit: 5 })}</div>
       <div class="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-gradient-to-b from-card/40 to-card/90 p-6 text-center">
         <p class="font-head text-lg">See the full per-person breakdown — free</p>
-        <p class="max-w-md text-sm text-ink/70">All 8 hooks, every person, the $/request outliers and the Opus-on-cheap-tasks list — unlocked on this page, computed in your browser.</p>
+        <p class="max-w-md text-sm text-ink/70">All 8 checks, every person, the $/request outliers and the Opus-on-cheap-tasks list — unlocked on this page, computed in your browser.</p>
         <a href="#audit-gate" data-audit-scroll class="rounded-lg bg-amber px-5 py-2.5 text-sm font-semibold text-ink transition hover:bg-amber-deep hover:text-white">Unlock the full report →</a>
       </div>
     </div>`;
@@ -354,7 +354,7 @@ export function renderFullReport(
     <div class="flex flex-wrap items-end justify-between gap-3">
       <div>
         <h2 class="font-head text-2xl">Full per-person breakdown</h2>
-        <p class="mt-1 text-sm text-ink/60">${hooks.people.length} people${hooks.seatCount ? ` · ${hooks.seatCount} seats` : ''}${hooks.hasSpend ? ` · ${fmtUsd(hooks.totalNet)} net` : ` · ${fmtInt(hooks.totalRequests)} requests`} · all 8 hooks</p>
+        <p class="mt-1 text-sm text-ink/60">${hooks.people.length} people${hooks.seatCount ? ` · ${hooks.seatCount} seats` : ''}${hooks.hasSpend ? ` · ${fmtUsd(hooks.totalNet)} net` : ` · ${fmtInt(hooks.totalRequests)} requests`} · all 8 checks</p>
       </div>
     </div>
     ${overageNote}
