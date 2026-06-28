@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import fs from 'node:fs';
 import path from 'node:path';
 import sitemap from '@astrojs/sitemap';
+import vercel from '@astrojs/vercel';
 import tailwindcss from '@tailwindcss/vite';
 import { SHOW_DASHBOARD_LINK } from './src/config.ts';
 
@@ -55,6 +56,10 @@ const BUILD_LASTMOD = new Date();
 
 export default defineConfig({
   site: 'https://wtclaude.com',
+  // Output stays static (default) — every existing page is still prerendered to HTML.
+  // The adapter only kicks in for routes marked `export const prerender = false`
+  // (currently just /api/capture-lead), which deploy as Vercel Functions.
+  adapter: vercel(),
   integrations: [
     sitemap({
       serialize(item) {
