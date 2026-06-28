@@ -1,12 +1,13 @@
 /**
  * Spend-audit client controller. Wires the dropzone / paste / sample / demo doors to the
- * pure parse→compute→render pipeline, and handles the email gate + AGGREGATE-ONLY lead POST
+ * pure parse→compute→render pipeline, and handles the email gate + lead POST (email + opt-in only)
  * + offline CSV/PDF download.
  *
  * PRIVACY (Option A, locked): the raw CSV and every per-person row live ONLY in this closure
  * (`state.rows`). They are never assigned to window, never serialized into the lead payload,
- * never sent anywhere. The single network call is the lead POST, whose body is built by
- * `toLeadAggregate` (counts + org totals only). Parsing the file fires NO network request.
+ * never sent anywhere. The single network call is the lead POST, whose body is the email +
+ * opt-in flags only — no totals, counts, names, per-person rows, or the file ever leave the
+ * browser. Parsing the file fires NO network request.
  */
 import { CAPTURE_ENDPOINT, CAPTURE_METHOD } from '../../config';
 import { parseSpendReport } from './parse';
@@ -183,7 +184,7 @@ async function handleGateSubmit(form: HTMLFormElement): Promise<void> {
   renderReportView();
   track(tag === 'spend_audit_demo' ? 'audit_demo_unlock' : 'audit_unlock');
 
-  // Fire the AGGREGATE-ONLY lead in the background (never blocks the reveal).
+  // Fire the lead (email + opt-in only) in the background (never blocks the reveal).
   void postLead({ email, tag, rerun });
 }
 
