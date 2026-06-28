@@ -20,6 +20,14 @@
  *   - The CRM write and the welcome email are independent; one failing must not block the other.
  */
 
+// Branded HTML email templates — synced into site/src/emails/ from the GTM source
+// (WTCLAUDE/Build Files/email-templates/). Imported as raw strings, bundled into the
+// function at build time (Vercel only uploads site/, so they must live inside it).
+import guardianHtml from '../../emails/confirm-guardian.html?raw';
+import businessHtml from '../../emails/confirm-business.html?raw';
+import financeHtml from '../../emails/confirm-finance.html?raw';
+import companionHtml from '../../emails/confirm-companion.html?raw';
+
 // This route is on-demand (not prerendered) — it must run as a Vercel Function.
 export const prerender = false;
 
@@ -134,6 +142,15 @@ now:
   },
 };
 
+// Branded HTML version per tag. Sent as the `html` part (multipart/alternative) with the
+// plain-text body above as the automatic fallback. HTML carries its own footer/preheader.
+const HTML: Record<string, string> = {
+  guardian: guardianHtml,
+  smb: businessHtml,
+  smb_finance: financeHtml,
+  complete: companionHtml,
+};
+
 // --- best-effort per-instance rate limit -------------------------------------
 // NOTE: serverless instances are ephemeral and not shared, so this only throttles a
 // burst hitting the same warm instance. The honeypot is the primary bot defense.
@@ -245,6 +262,8 @@ async function sendWelcome(email: string, tag: string): Promise<boolean> {
     subject: tmpl.subject,
     text: `${tmpl.body}\n\n${FOOTER}`,
   };
+  const html = HTML[tag];
+  if (html) payload.html = html; // multipart/alternative: HTML + plain-text fallback
   if (WELCOME_REPLY_TO) payload.reply_to = WELCOME_REPLY_TO;
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
