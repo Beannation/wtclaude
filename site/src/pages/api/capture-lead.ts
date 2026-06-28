@@ -331,3 +331,10 @@ export const POST = async ({ request, clientAddress }: { request: Request; clien
 
   return json({ ok: true });
 };
+
+// The form only POSTs. Any other method gets a clean 405 (not a 500).
+export const ALL = () =>
+  new Response(JSON.stringify({ error: 'method not allowed' }), {
+    status: 405,
+    headers: { 'Content-Type': 'application/json', Allow: 'POST' },
+  });
