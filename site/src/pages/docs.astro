@@ -225,8 +225,13 @@ const jsonLd = [
   ]),
 ];
 
+// Escape raw angle brackets FIRST so flag placeholders like `--interval <s>`,
+// `--days <n>`, `<ISO>` render as literal text — not as HTML tags. (`<s>` is the
+// strikethrough tag; leaving it raw struck through the whole page.) Then add the
+// code/bold/italic markup, which is the only real HTML we inject.
+const escHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const mdToHtml = (s: string) =>
-  s
+  escHtml(s)
     .replace(/`([^`]+)`/g, '<code class="rounded bg-ink/5 px-1 py-0.5 font-mono text-[13px]">$1</code>')
     .replace(/\*\*([^*]+)\*\*/g, '<strong class="font-semibold text-ink">$1</strong>')
     .replace(/\*([^*]+)\*/g, '<em>$1</em>');
