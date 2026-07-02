@@ -2,86 +2,197 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import CodeBlock from '../components/CodeBlock.astro';
 import HonestyBadge from '../components/HonestyBadge.astro';
-import { SHOW_FAST_MODE, FAST_MODE_BADGE, SHOW_TASKS_FEATURE, GUARDIAN_PRICE, CLOUD_LIVE, SPLIT_LIVE } from '../config';
+import { SHOW_TASKS_FEATURE, GUARDIAN_PRICE, CLOUD_LIVE, SPLIT_LIVE } from '../config';
 import { faqPage, breadcrumbs } from '../lib/schema';
 
-const title = 'WTClaude docs — install & quick start';
+const title = 'WTClaude docs — install & CLI reference';
 const description =
-  'Install WTClaude in 60 seconds and start tracking your real Claude Code usage. Quick start, CLI reference, and FAQ.';
+  'Install WTClaude in 60 seconds and track your real Claude Code usage. Quick start, the full CLI command reference (v0.2.0), and FAQ.';
 
-// CLI reference — the shipped command set (descriptions from the CLI source / build-spec v1.6).
-const commands = [
-  { name: 'setup', desc: 'configure tracking — wires the statusline and creates your local data dir.' },
-  {
-    name: 'today / week / month',
-    desc: `real cost, tokens, and model breakdown for the period${SPLIT_LIVE ? ' — and after June 15 the summary splits the total into your **Interactive** (subscription) and **Agent-SDK** (credit) pools automatically' : ' — and if the Agent-SDK split returns, the summary splits the total per-pool (**Interactive** subscription + **Agent-SDK** credit) automatically'}. Flags: \`--json\`, \`--since/--until\`, \`--group-by <project|branch|cost_center|task>\`.`,
-    badge: 'billing-grade' as const,
-  },
-  {
-    name: 'compare',
-    desc: 'billing-grade vs broken-log number + the gap. `compare --share` exports a shareable image card to your Desktop + clipboard.',
-  },
-  {
-    name: 'session [id]',
-    desc: 'list every session (newest first), or per-turn detail for one session.',
-    badge: 'billing-grade' as const,
-  },
-  {
-    name: 'blocks',
-    desc: 'the rolling 5-hour-block view — buckets every turn into the windows your subscription limit resets on, so you can pace against it.',
-    badge: 'billing-grade' as const,
-  },
-  {
-    name: 'statusline',
-    desc: 'render the short status string on demand — mirrors what the collector prints back into Claude Code’s status line.',
-  },
-  {
-    name: 'watch',
-    desc: 'a live terminal monitor: today’s cost, current 5h-block burn, and the shared plan-limit gauge with a basic, **non-predictive** time-to-limit estimate.',
-  },
-  {
-    name: 'limit',
-    desc:
-      '**your overall plan limit** status (% used + reset countdown). Note: this reads Anthropic’s shared rate-limit bucket, which spans Claude Code, Cowork, and Chat — so it’s your overall plan limit, not a Code-only or per-surface number.',
-    badge: 'billing-grade' as const,
-  },
-  { name: 'whatif', desc: 'plan- and model-comparison math. Flags: `--plan`, `--model`, `--pool`, `--speed`.' },
+// CLI reference — organized by what you're doing. Every description + flag was
+// verified against the shipped `wtclaude --help` (v0.2.0). Run
+// `wtclaude <command> --help` for the authoritative flag list on your install.
+
+// The Agent-SDK credit cluster (forecast / credits / readiness) was built for the
+// June-15 Agent-SDK billing split, which Anthropic PAUSED before it took effect
+// (SPLIT_LIVE=false). The commands still run; the copy stays honest about the pause.
+const forecastingExtra = [
   {
     name: 'forecast',
-    desc: SPLIT_LIVE
-      ? 'projected Agent-pool spend vs included credits + a June-15 countdown.'
-      : 'projected Agent-pool spend vs included credits.',
     badge: 'estimate' as const,
-  },
-  {
-    name: 'readiness',
     desc: SPLIT_LIVE
-      ? 'your June-14 credit-coverage check.'
-      : 'a credit-coverage check (ready if the split returns).',
-    badge: 'estimate' as const,
+      ? 'projected Agent-SDK credit spend vs your included credits, with a countdown. `--days <n>`, `--json`.'
+      : 'projected Agent-SDK credit spend vs your included credits. (The June-15 credit split it was built for was paused — this stays ready if a revised split lands.) `--days <n>`, `--json`.',
   },
   {
     name: 'credits',
-    desc: SPLIT_LIVE
-      ? 'Agent-SDK credit balance and burn. Before June 15: your allocation + a countdown. After: live burn rate.'
-      : 'Agent-SDK credit balance and burn. Today: your real, per-pool-capable totals. If the split lands: live per-pool burn rate.',
     badge: 'estimate' as const,
+    desc: 'your Agent-SDK + fast-mode credit balance and burn. `--json`.',
   },
   {
-    name: 'devices',
-    desc: 'cross-device combined totals + a per-device breakdown. With sync off it degrades to a local-only view of this machine, plus a hint to enable sync.',
+    name: 'readiness',
+    badge: 'estimate' as const,
+    desc: 'a one-time credit-coverage check (built for the June-14 readiness window; the split was paused, so it reads as ready). `--json`.',
   },
-  { name: 'quality', desc: 'your one-shot success rate — edits the model got right without a retry.' },
+];
+
+const cloudCommands = CLOUD_LIVE
+  ? [
+      {
+        name: 'sync',
+        desc: 'opt-in cloud backup + multi-device totals. `--status` / `--enable` / `--disable`. Local-first — nothing leaves your machine until you enable it, and you preview exactly what would sync before it does.',
+      },
+      {
+        name: 'dashboard',
+        desc: 'open the web dashboard in your browser — everything the CLI tracks, in one view.',
+      },
+    ]
+  : [];
+
+const sections = [
+  {
+    title: 'Everyday cost views',
+    blurb: 'Your real spend, read from the statusline behind your bill.',
+    commands: [
+      {
+        name: 'today · week · month',
+        badge: 'billing-grade' as const,
+        desc: 'real cost, tokens, and model breakdown for the day / last 7 / last 30 days. Flags: `--json`, `--csv`, `--clipboard`, `--since`/`--until`, `--group-by <project|branch|cost_center|task>`, `--currency <ISO>`.',
+      },
+      {
+        name: 'compare',
+        badge: 'billing-grade' as const,
+        desc: 'the reveal — your billing-grade cost next to the session-log estimate, and the gap. `--days <n>` widens the window; `--share` saves a shareable card to `~/Desktop`.',
+      },
+      {
+        name: 'report',
+        badge: 'billing-grade' as const,
+        desc: 'a monthly cost report. `--month <YYYY-MM>` picks the month; `--cost-center` breaks it down by cost center.',
+      },
+      {
+        name: 'session [id]',
+        badge: 'billing-grade' as const,
+        desc: 'list sessions (newest first), or per-turn detail for one id. Supports `--json`, `--group-by`, `--csv`, `--clipboard`.',
+      },
+      {
+        name: 'project [hash]',
+        badge: 'billing-grade' as const,
+        desc: 'usage for one project (by hash), or a list of known projects. Supports `--since`/`--until`, `--json`, `--csv`.',
+      },
+      {
+        name: 'blocks',
+        badge: 'billing-grade' as const,
+        desc: 'usage bucketed into the rolling 5-hour windows your subscription limit resets on, so you can pace against it. `--limit <n>` caps how many show.',
+      },
+      {
+        name: 'limit',
+        badge: 'billing-grade' as const,
+        desc: '**your overall plan limit** — % used + reset countdown, from Anthropic’s shared rate-limit bucket (it spans Code, Cowork, and Chat), so it’s your overall plan limit, not a Code-only number.',
+      },
+      {
+        name: 'watch',
+        desc: 'a live terminal monitor: today’s cost, current 5h-block burn, and the plan-limit gauge with a basic, **non-predictive** time-to-limit. `--once` renders one frame; `--interval <s>` sets the refresh.',
+      },
+    ],
+  },
+  {
+    title: 'Models & forecasting',
+    blurb: 'What your usage would cost on each model — every projection a labeled estimate.',
+    commands: [
+      {
+        name: 'compare-models',
+        badge: 'estimate' as const,
+        desc: '**new** — re-prices your recorded usage across **Opus 4.8**, **Sonnet 5**, and **Fable 5**: what would this month cost on each? Split by surface (Code billing-grade · Cowork a labeled estimate · Chat excluded). It re-prices your *recorded* usage, not the same task run on each model. Free. `--days <n>`, `--json`.',
+      },
+      {
+        name: 'whatif',
+        badge: 'estimate' as const,
+        desc: 'quick plan- and model-comparison math on your recent usage. Flags: `--plan <pro|max5|max20>`, `--model <haiku|sonnet|opus>`, `--days <n>`.',
+      },
+      {
+        name: 'fable',
+        badge: 'estimate' as const,
+        desc: 'reads your billing-grade Fable 5 cost in the terminal and forecasts what your pace would cost in **usage credits** after the **July-7 allowance** (Fable is included up to 50% of your weekly limit through July 7, then usage credits at $10/$50 — an allowance cap, not free). A labeled estimate, if the announced $10/$50 holds. `--days <n>`, `--json`.',
+      },
+      ...forecastingExtra,
+    ],
+    note: '**Sonnet 5** is the new Claude Code default (`claude-sonnet-5`). WTClaude prices it correctly — $2/$10, auto-stepping to $3/$15 on Aug 31 — off the model’s own reported tokens, with no unknown-model gaps.',
+  },
+  {
+    title: 'Insights',
+    blurb: 'Beyond the dollars — where your context and effort actually go.',
+    commands: [
+      {
+        name: 'waste',
+        desc: '**new** — reveals the always-loaded skills and rules you never invoke, and what re-reading them costs, computed at **billing-grade cache-read rates** (each item’s token size is a labeled estimate). A read-only reveal: it recommends a **REVIEW**, never removes or changes anything. `--days <n>`, `--all`, `--json`.',
+      },
+      {
+        name: 'quality',
+        desc: 'your one-shot success rate — edits the model landed without a retry (file-aware, salted). Supports `--since`/`--until`, `--json`, `--csv`.',
+      },
+      { name: 'debrief', desc: 'an end-of-day summary — your costliest turn and a tip.' },
+      {
+        name: 'tasks',
+        comingSoon: !SHOW_TASKS_FEATURE,
+        desc: SHOW_TASKS_FEATURE
+          ? 'token/cost breakdown by task category.'
+          : 'token/cost breakdown by task category — coming soon (the live payload doesn’t expose tool names yet, so categories aren’t populated).',
+      },
+      { name: 'badges', desc: 'the usage badges you’ve earned.' },
+      {
+        name: 'leaderboard',
+        desc: 'your local leaderboard standing, plus a privacy preview of exactly what a share would expose. `--json`.',
+      },
+    ],
+  },
+  {
+    title: 'Sync & dashboard',
+    blurb: 'Opt-in and local-first — nothing leaves your machine until you turn it on.',
+    commands: [
+      ...cloudCommands,
+      {
+        name: 'devices',
+        desc: 'combined + per-device totals (rides cloud sync; with sync off it’s a local-only view of this machine, plus a hint to enable sync).',
+      },
+      {
+        name: 'share',
+        desc: 'manage anonymous data sharing for the leaderboard + benchmarks. `--preview` shows exactly what would be shared; `--enable` / `--disable`.',
+      },
+      { name: 'invite', desc: 'generate a shareable invite link.' },
+    ],
+  },
+  {
+    title: 'Setup & utility',
+    blurb: '',
+    commands: [
+      {
+        name: 'setup',
+        desc: 'configure WTClaude — wires the Claude Code statusline and creates your local data dir; reads the credential Claude already wrote (no login). `--plan <pro|max5|max20>`, `--yes` for non-interactive.',
+      },
+      {
+        name: 'export',
+        desc: 'dump all local WTClaude data to JSON — everything stored about you. `--out <file>`, `--pretty`.',
+      },
+      {
+        name: 'uninstall',
+        desc: 'remove the WTClaude statusline hook. `--keep-data` leaves your local data; `--purge` also deletes `~/.wtclaude/`.',
+      },
+      {
+        name: 'statusline',
+        desc: 'render the WTClaude status line from your latest turn — a preview of what the collector prints back into Claude Code.',
+      },
+    ],
+  },
 ];
 
 const faqs = [
   {
     q: 'Is it accurate?',
-    a: 'For Claude Code, yes — billing-grade. We read the statusline path, the same source behind your bill. Forward-looking projections (the forecast/readiness) are clearly-labeled estimates.',
+    a: 'For Claude Code, yes — billing-grade. We read the statusline path, the same source behind your bill (Anthropic-computed, not a guarantee of your invoice). Forward-looking projections — the forecast, the Fable forecast, the cross-model comparison — are clearly-labeled estimates.',
   },
   {
     q: 'Does it track Cowork or Chat?',
-    a: 'Not yet. Today WTClaude tracks Claude Code. A unified view across Cowork and Chat is coming (as honest estimates, clearly labeled).',
+    a: 'Terminal Code is the billing-grade surface. `compare-models` also shows a Cowork row as a labeled estimate where its data is present, and excludes Chat (no local cost data) rather than showing a fake zero. Fuller Cowork/Chat coverage is on the roadmap, always clearly labeled.',
   },
   {
     q: 'Does it work with the Claude desktop app?',
@@ -113,6 +224,12 @@ const jsonLd = [
     { name: 'Docs', path: '/docs' },
   ]),
 ];
+
+const mdToHtml = (s: string) =>
+  s
+    .replace(/`([^`]+)`/g, '<code class="rounded bg-ink/5 px-1 py-0.5 font-mono text-[13px]">$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong class="font-semibold text-ink">$1</strong>')
+    .replace(/\*([^*]+)\*/g, '<em>$1</em>');
 ---
 
 <BaseLayout title={title} description={description} jsonLd={jsonLd}>
@@ -155,6 +272,13 @@ const jsonLd = [
         Requirements: macOS or Linux, Node, and the <strong class="text-ink/80">Claude Code CLI in your terminal</strong>. Free, MIT-licensed.
       </p>
       <p class="mt-3 rounded-lg border border-ink/10 bg-amber-light/30 px-4 py-3 text-sm leading-relaxed text-ink/70">
+        <strong class="font-semibold text-ink">New in v0.2.0:</strong>
+        <code class="rounded bg-ink/5 px-1 py-0.5 font-mono text-[13px]">wtclaude compare-models</code> prices your usage across
+        Opus 4.8 · Sonnet 5 · Fable 5, and
+        <code class="rounded bg-ink/5 px-1 py-0.5 font-mono text-[13px]">wtclaude waste</code> finds the context you’re paying for
+        but never using. Sonnet 5 (the new default) is now tracked correctly.
+      </p>
+      <p class="mt-3 rounded-lg border border-ink/10 bg-card px-4 py-3 text-sm leading-relaxed text-ink/70">
         WTClaude reads the statusline, which only the terminal CLI emits — the Claude desktop app and
         Cowork don’t run it. (Desktop/Cowork tracking comes later, as clearly-labeled estimates.)
       </p>
@@ -163,88 +287,47 @@ const jsonLd = [
     <!-- CLI REFERENCE -->
     <section class="mt-16">
       <h2 class="font-head text-2xl">CLI reference</h2>
-      <p class="mt-2 text-sm text-warm">The launch commands. We show only what ships.</p>
-      <dl class="mt-6 divide-y divide-ink/10 rounded-2xl border border-ink/10 bg-card">
-        {
-          commands.map((cmd) => (
-            <div class="px-5 py-4">
-              <dt class="flex flex-wrap items-center gap-2">
-                <code class="font-mono text-sm font-semibold text-ink">{cmd.name}</code>
-                {cmd.badge && <HonestyBadge kind={cmd.badge} />}
-              </dt>
-              <dd class="mt-1.5 text-sm leading-relaxed text-ink/70" set:html={cmd.desc
-                .replace(/`([^`]+)`/g, '<code class="rounded bg-ink/5 px-1 py-0.5 font-mono text-[13px]">$1</code>')
-                .replace(/\*\*([^*]+)\*\*/g, '<strong class="font-semibold text-ink">$1</strong>')} />
-            </div>
-          ))
-        }
+      <p class="mt-2 text-sm leading-relaxed text-warm">
+        Everything the shipped CLI (v0.2.0) runs — run
+        <code class="rounded bg-ink/5 px-1 py-0.5 font-mono text-[13px]">wtclaude &lt;command&gt; --help</code> for the full flags on
+        your install. <strong class="font-medium text-ink/75">Billing-grade</strong> = terminal Code, Anthropic-computed (not a
+        guarantee of your invoice); everything else is a labeled estimate.
+      </p>
 
-        {
-          CLOUD_LIVE && (
-            <Fragment>
-              <div class="px-5 py-4">
-                <dt class="flex flex-wrap items-center gap-2">
-                  <code class="font-mono text-sm font-semibold text-ink">sync</code>
-                </dt>
-                <dd class="mt-1.5 text-sm leading-relaxed text-ink/70">
-                  opt-in cloud backup + multi-device totals.{' '}
-                  <code class="rounded bg-ink/5 px-1 py-0.5 font-mono text-[13px]">--enable</code> /{' '}
-                  <code class="rounded bg-ink/5 px-1 py-0.5 font-mono text-[13px]">--disable</code> /{' '}
-                  <code class="rounded bg-ink/5 px-1 py-0.5 font-mono text-[13px]">--status</code>.
-                  Local-first — nothing leaves your machine until you enable it, and you preview
-                  exactly what syncs first.
-                </dd>
-              </div>
-              <div class="px-5 py-4">
-                <dt class="flex flex-wrap items-center gap-2">
-                  <code class="font-mono text-sm font-semibold text-ink">dashboard</code>
-                </dt>
-                <dd class="mt-1.5 text-sm leading-relaxed text-ink/70">
-                  open the web dashboard in your browser — everything the CLI tracks, in one view.
-                </dd>
-              </div>
-            </Fragment>
-          )
-        }
+      {
+        sections.map((sec) => (
+          <div class="mt-8">
+            <h3 class="font-head text-lg text-ink">{sec.title}</h3>
+            {sec.blurb && <p class="mt-1 text-sm text-ink/55">{sec.blurb}</p>}
+            <dl class="mt-4 divide-y divide-ink/10 rounded-2xl border border-ink/10 bg-card">
+              {sec.commands.map((cmd) => (
+                <div class="px-5 py-4">
+                  <dt class="flex flex-wrap items-center gap-2">
+                    <code class="font-mono text-sm font-semibold text-ink">{cmd.name}</code>
+                    {'badge' in cmd && cmd.badge && <HonestyBadge kind={cmd.badge} />}
+                    {'comingSoon' in cmd && cmd.comingSoon && (
+                      <span class="rounded-full bg-ink/5 px-2 py-[2px] text-[11px] font-medium uppercase text-warm">coming soon</span>
+                    )}
+                  </dt>
+                  <dd class="mt-1.5 text-sm leading-relaxed text-ink/70" set:html={mdToHtml(cmd.desc)} />
+                </div>
+              ))}
+            </dl>
+            {sec.note && (
+              <p
+                class="mt-3 rounded-lg border border-ink/10 bg-amber-light/30 px-4 py-3 text-sm leading-relaxed text-ink/70"
+                set:html={mdToHtml(sec.note)}
+              />
+            )}
+          </div>
+        ))
+      }
 
-        {
-          SHOW_FAST_MODE && (
-            <div class="px-5 py-4">
-              <dt class="flex flex-wrap items-center gap-2">
-                <code class="font-mono text-sm font-semibold text-ink">debrief</code>
-                {FAST_MODE_BADGE === 'inferred' && <HonestyBadge kind="inferred" />}
-              </dt>
-              <dd class="mt-1.5 text-sm leading-relaxed text-ink/70">
-                your daily summary; includes a <code class="rounded bg-ink/5 px-1 py-0.5 font-mono text-[13px]">Fast-mode: ~$X</code> line when you’ve used fast mode.
-              </dd>
-            </div>
-          )
-        }
-
-        <div class="px-5 py-4">
-          <dt class="flex flex-wrap items-center gap-2">
-            <code class="font-mono text-sm font-semibold text-ink">tasks</code>
-            {
-              SHOW_TASKS_FEATURE ? null : (
-                <span class="rounded-full bg-ink/5 px-2 py-[2px] text-[11px] font-medium uppercase text-warm">coming soon</span>
-              )
-            }
-          </dt>
-          <dd class="mt-1.5 text-sm leading-relaxed text-ink/70">
-            {
-              SHOW_TASKS_FEATURE
-                ? 'token/cost breakdown by task category.'
-                : 'token/cost breakdown by task category — coming soon (the live payload doesn’t expose tool names yet, so categories aren’t populated).'
-            }
-          </dd>
-        </div>
-      </dl>
-
-      <p class="mt-4 text-sm leading-relaxed text-ink/60">
+      <p class="mt-8 text-sm leading-relaxed text-ink/60">
         <strong class="font-medium text-ink/75">Global flags:</strong>
         <code class="rounded bg-ink/5 px-1 py-0.5 font-mono text-[13px]">--json</code> and
         <code class="rounded bg-ink/5 px-1 py-0.5 font-mono text-[13px]">--csv</code>/<code class="rounded bg-ink/5 px-1 py-0.5 font-mono text-[13px]">--clipboard</code>
-        on the summary commands, and <code class="rounded bg-ink/5 px-1 py-0.5 font-mono text-[13px]">--currency=&lt;ISO&gt;</code>
+        on the summary/report commands, and <code class="rounded bg-ink/5 px-1 py-0.5 font-mono text-[13px]">--currency=&lt;ISO&gt;</code>
         for display-only conversion (USD stays the billing-grade source).
       </p>
     </section>
