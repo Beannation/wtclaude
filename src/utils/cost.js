@@ -8,8 +8,8 @@ import { getLatestPricing, getRates } from './pricing.js';
 // Honors per-turn speed_tier ('standard' | 'fast'); fast mode uses the Opus
 // fast_mode rates. Returns 0 (never throws) if the model can't be resolved —
 // the anchor still carries the real cost.
-export function expectedCost(model, speedTier, tokens) {
-  const rates = getRates(model, speedTier || 'standard');
+export function expectedCost(model, speedTier, tokens, today) {
+  const rates = getRates(model, speedTier || 'standard', today);
   if (!rates) return 0;
   const cache = getLatestPricing().cache;
   const t = tokens || {};

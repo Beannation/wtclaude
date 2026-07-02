@@ -6,6 +6,8 @@ import Timeline from './pages/Timeline';
 import Sessions from './pages/Sessions';
 import Devices from './pages/Devices';
 import Compare from './pages/Compare';
+import CompareModels from './pages/CompareModels';
+import ContextWaste from './pages/ContextWaste';
 import WhatIf from './pages/WhatIf';
 import Leaderboard from './pages/Leaderboard';
 import Badges from './pages/Badges';
@@ -22,6 +24,8 @@ function App() {
             <Route path="/sessions" element={<Sessions />} />
             <Route path="/devices" element={<Devices />} />
             <Route path="/compare" element={<Compare />} />
+            <Route path="/compare-models" element={<CompareModels />} />
+            <Route path="/context-waste" element={<ContextWaste />} />
             <Route path="/whatif" element={<WhatIf />} />
             <Route path="/leaderboard" element={<Leaderboard />} />
             <Route path="/badges" element={<Badges />} />

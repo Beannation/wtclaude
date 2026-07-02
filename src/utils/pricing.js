@@ -68,16 +68,41 @@ export function getModelEntry(modelId) {
   return null;
 }
 
+// Resolve the effective base {input, output} for an entry at a given date,
+// honoring an optional `scheduled` rate array (a FUTURE-DATED rate change, e.g.
+// Sonnet 5's Aug-31 intro→standard step-up). The newest scheduled entry whose
+// `effective_date` <= today wins; before any scheduled date the base rate holds.
+// This lets a dated step-up ship NOW without prematurely activating, because the
+// pricing loader itself only sorts by filename, not by effective date.
+export function effectiveRates(entry, today = new Date().toISOString().slice(0, 10)) {
+  let input = entry.input, output = entry.output;
+  if (Array.isArray(entry.scheduled)) {
+    const due = entry.scheduled
+      .filter(s => s && typeof s.effective_date === 'string' && s.effective_date <= today)
+      .sort((a, b) => a.effective_date.localeCompare(b.effective_date));
+    const active = due[due.length - 1];
+    if (active) {
+      if (typeof active.input === 'number') input = active.input;
+      if (typeof active.output === 'number') output = active.output;
+    }
+  }
+  return { input, output };
+}
+
 // Per-MTok rates for a model id at a given speed tier ('standard' | 'fast').
 // Fast mode is Opus-only; falls back to standard rates if the model has none.
-export function getRates(modelId, speedTier = 'standard') {
+// `today` (YYYY-MM-DD) is injectable for testing dated step-ups; defaults to now.
+export function getRates(modelId, speedTier = 'standard', today = new Date().toISOString().slice(0, 10)) {
   const resolved = getModelEntry(modelId);
   if (!resolved) return null;
   const { entry } = resolved;
   if (speedTier === 'fast' && entry.fast_mode) {
-    return { input: entry.fast_mode.input, output: entry.fast_mode.output, key: resolved.key, fallback: resolved.fallback };
+    // fast_mode may itself carry a `scheduled` array; resolve it the same way.
+    const fast = effectiveRates(entry.fast_mode, today);
+    return { input: fast.input, output: fast.output, key: resolved.key, fallback: resolved.fallback };
   }
-  return { input: entry.input, output: entry.output, key: resolved.key, fallback: resolved.fallback };
+  const base = effectiveRates(entry, today);
+  return { input: base.input, output: base.output, key: resolved.key, fallback: resolved.fallback };
 }
 
 // Back-compat shim for existing CLI code. Robust: resolves via alias/family,

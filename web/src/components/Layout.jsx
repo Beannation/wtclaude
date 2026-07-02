@@ -9,6 +9,8 @@ const navItems = [
   { to: '/sessions', label: 'Sessions' },
   { to: '/devices', label: 'Devices' },
   { to: '/compare', label: 'Compare' },
+  { to: '/compare-models', label: 'Compare Models' },
+  { to: '/context-waste', label: 'Context Waste' },
   { to: '/whatif', label: 'What If' },
   { to: '/leaderboard', label: 'Leaderboard' },
   { to: '/badges', label: 'Badges' },

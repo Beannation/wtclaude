@@ -35,26 +35,31 @@ export function isDualPoolActive(todayStr = new Date().toISOString().slice(0, 10
   return todayStr >= getDualPoolActivationDate();
 }
 
-// FABLE MASTER GATE (PM, June 14, 2026). Claude Fable 5 (and Mythos 5) was suspended
-// worldwide on June 12, 2026 under a US export-control directive. While FABLE_SUSPENDED
-// is true, `wtclaude fable` prints a suspension notice instead of a live forecast — the
-// command, the fable-5 rate entry, and ALL the forecast logic stay intact; only the
-// output is gated. Restore path: flip FABLE_SUSPENDED = false and patch-republish.
-export const FABLE_SUSPENDED = true;
+// FABLE MASTER GATE (PM, June 14, 2026 → RE-ARMED July 1, 2026). Claude Fable 5 was
+// suspended June 12, 2026 (US export-control directive) and redeployed by Anthropic on
+// July 1, 2026. Re-arm flips FABLE_SUSPENDED back to false so `wtclaude fable` shows the
+// live forecast again — under the NEW mechanic: Fable 5 is included up to 50% of the
+// weekly usage limit through July 7, then bills usage credits at $10/$50 (an allowance
+// cap, NOT "free"). The command, the fable-5 rate entry, and all the forecast logic were
+// left intact through the suspension, so re-arm is just this flag + the July-7 cliff date.
+// Re-suspend path (if needed): flip back to true and patch-republish.
+export const FABLE_SUSPENDED = false;
 
-// One-line user-facing notice shown while FABLE_SUSPENDED is true. GTM may refine.
+// One-line notice retained for a fast re-suspend (flip FABLE_SUSPENDED back to true).
+// Not shown while Fable is live. GTM owns any refinement.
 export const FABLE_SUSPENDED_NOTICE =
   'Claude Fable 5 is temporarily suspended (US export-control directive, June 12, 2026); the cliff forecast is paused and will resume if Fable returns.';
 
-// The date interactive Fable 5 use starts drawing usage credits (the announced
-// June-23 "Fable cliff" — removed from subscription inclusion on June 22 EOD).
-// Config override first (Anthropic may extend the window / restore inclusion),
-// then the active pricing sheet, then the announced date.
+// The date interactive Fable 5 use moves from the included allowance to usage credits
+// — the "Fable cliff." Re-armed to the July-7, 2026 mechanic: included up to 50% of the
+// weekly limit through July 7, usage credits at $10/$50 after (not "free"). Config
+// override first (Anthropic may move the date), then the active pricing sheet, then the
+// announced July-7 date.
 export function getFableCliffDate() {
   const c = loadConfig();
   if (c.fable_cliff_date) return c.fable_cliff_date;
   const p = getLatestPricing();
-  return p.fable_cliff_date || '2026-06-23';
+  return p.fable_cliff_date || '2026-07-07';
 }
 
 // Plan key (pro | max_5x | max_20x) if the user set one at setup; else null.

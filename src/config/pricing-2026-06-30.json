@@ -1,0 +1,44 @@
+{
+  "version": "2026-06-30",
+  "effective_date": "2026-06-30",
+  "note": "Adds Claude Sonnet 5 (launched Jun 30, 2026 — the new DEFAULT model in Claude Code v2.1.197 and on Free/Pro). Inherits the 2026-06-15 models/rates/pools unchanged. Sonnet 5 ships at the introductory $2/$10 rate through Aug 31, 2026, then steps up to $3/$15 on Sep 1 — encoded as a `scheduled` rate array (the newest scheduled entry whose effective_date <= today wins; before any scheduled date, the base input/output rate applies). This is how a FUTURE-DATED rate change is represented without prematurely activating it (the pricing loader picks the newest FILENAME, so a separate future-dated file would activate immediately — the schedule avoids that). Fable-5 rates carried forward unchanged ($10/$50, cache-read $1). Fable re-arm folded into this same coordinated drop (Jul 1): fable_cliff_date moved 2026-06-23 -> 2026-07-07 for the new mechanic (included up to 50% of the weekly limit through July 7, then usage credits at $10/$50 (an allowance cap, not free). ⚠ VERIFY LIVE rates before any published number (Sonnet 5 $2/$10 intro -> $3/$15 confirmed via anthropic.com/news/claude-sonnet-5 + platform.claude.com/docs/pricing, Jul 1 2026).",
+  "models": {
+    "haiku-4-5": { "input": 1.00, "output": 5.00 },
+    "sonnet-4-6": { "input": 3.00, "output": 15.00 },
+    "sonnet-5": {
+      "input": 2.00,
+      "output": 10.00,
+      "scheduled": [
+        {
+          "effective_date": "2026-08-31",
+          "input": 3.00,
+          "output": 15.00,
+          "note": "introductory pricing ends; standard rate"
+        }
+      ]
+    },
+    "opus-4-8": {
+      "input": 5.00,
+      "output": 25.00,
+      "fast_mode": { "input": 10.00, "output": 50.00 },
+      "aliases": ["opus-4-7", "opus-4-6"]
+    },
+    "fable-5": { "input": 10.00, "output": 50.00 }
+  },
+  "cache": {
+    "read_multiplier": 0.10,
+    "write_multiplier": 0.25
+  },
+  "plans": {
+    "pro": { "price_monthly": 20, "label": "Pro", "agent_sdk_credits_monthly": 20 },
+    "max_5x": { "price_monthly": 100, "label": "Max 5x", "agent_sdk_credits_monthly": 100 },
+    "max_20x": { "price_monthly": 200, "label": "Max 20x", "agent_sdk_credits_monthly": 200 }
+  },
+  "pools": {
+    "interactive": { "label": "Interactive (subscription limits)", "billing_basis": "subscription_limits" },
+    "agent_sdk": { "label": "Agent SDK credits (API rates, no rollover)", "billing_basis": "agent_sdk_credits" }
+  },
+  "dual_pool_activation_date": "2026-06-15",
+  "fable_cliff_date": "2026-07-07",
+  "units": "USD per million tokens"
+}

@@ -12,9 +12,10 @@ import { SCHEMA_VERSION } from '../utils/schema.js';
 // cliff; the Agent-SDK credit pool is a different wallet with its own countdown.
 //
 // EXPLICITLY a labeled estimate/forecast, scoped to "if the announced $10/$50
-// post-June-22 pricing holds" — Anthropic may extend the included window or
-// restore inclusion. ANCHORED on the payload cost field: the PART-1 capture
-// proved the free-window statusline reports a non-zero notional Fable cost at
+// pricing holds" — Fable is included up to 50% of the weekly limit through the
+// July-7 cliff, then usage credits (an allowance cap, not "free"); Anthropic may
+// move the date. ANCHORED on the payload cost field: the PART-1 capture proved
+// the statusline reports a non-zero notional Fable cost at
 // the real rates (cache reads + thinking tokens already baked in), so the
 // accumulated notional IS the post-cliff charge for the same usage. Token math
 // is only the fallback for anchor-less records (and understates thinking).
@@ -22,7 +23,7 @@ import { SCHEMA_VERSION } from '../utils/schema.js';
 export function registerFable(program) {
   program
     .command('fable')
-    .description('Estimate what your Fable 5 usage will cost once the included window ends June 23 (labeled estimate)')
+    .description('Forecast what your Fable 5 usage would cost in usage credits after the July-7 allowance (labeled estimate)')
     .option('--json', 'Output machine-readable JSON')
     .option('--days <n>', 'Look-back window for the run-rate', '7')
     .action((opts) => {
@@ -79,19 +80,21 @@ export function registerFable(program) {
             cache_read: rr.tokens.cacheRead, cache_write: rr.tokens.cacheWrite,
           },
           cliff_date: cliff, days_until_cliff: countdown,
-          pricing_assumption: 'announced post-June-22 rates: $10/MTok in, $1 cached, $50/MTok out — subject to change',
+          allowance: 'included up to 50% of the weekly limit through the cliff date, then usage credits at $10/$50',
+          pricing_assumption: 'announced rates: $10/MTok in, $1 cached, $50/MTok out — subject to change',
         }, null, 2), o);
         return;
       }
 
-      const lines = ['\n  Fable 5 cost forecast  (estimate — the June-23 "Fable cliff")', '  ' + '='.repeat(58)];
+      const lines = ['\n  Fable 5 cost forecast  (estimate — the July-7 "Fable cliff")', '  ' + '='.repeat(58)];
       lines.push('');
       if (countdown != null && countdown > 0) {
-        lines.push(`  Fable 5 is included with your plan until ${cliff} — ${countdown} day${countdown === 1 ? '' : 's'} away.`);
-        lines.push('  After that, interactive Fable use bills usage credits from token #1.');
+        lines.push(`  Fable 5 is included up to 50% of your weekly limit through ${cliff} —`);
+        lines.push(`  ${countdown} day${countdown === 1 ? '' : 's'} away. After that, interactive Fable use bills usage`);
+        lines.push('  credits at $10/$50 from token #1.');
       } else {
-        lines.push(`  The Fable included window has ended (${cliff}) — interactive Fable use`);
-        lines.push('  now bills usage credits from token #1.');
+        lines.push(`  The Fable allowance window has ended (${cliff}) — interactive Fable use`);
+        lines.push('  now bills usage credits at $10/$50 from token #1.');
       }
       lines.push('');
       if (rr.fableTurns === 0) {
@@ -112,9 +115,9 @@ export function registerFable(program) {
         lines.push('  which understates thinking-heavy turns.');
       }
       lines.push('');
-      lines.push('  Estimate only — holds if the announced $10/$50 post-June-22 pricing');
-      lines.push('  holds (Anthropic may extend the window or restore inclusion). Separate');
-      lines.push('  from the Agent-SDK credit pool — see `wtclaude forecast` for that.');
+      lines.push('  Labeled estimate — holds if the announced $10/$50 pricing holds (an');
+      lines.push('  allowance cap; Anthropic may move the July-7 date). Separate from the');
+      lines.push('  Agent-SDK credit pool — see `wtclaude forecast` for that.');
       lines.push('');
       output(lines.join('\n'), o);
     });
