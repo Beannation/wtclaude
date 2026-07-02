@@ -90,37 +90,56 @@ export const SHOW_DRAFT_NOTES = false;
  * FABLE MASTER GATE — the single "Fable is live" flip (PM, June 14, 2026).
  *
  * Claude Fable 5 (and Mythos 5) was suspended worldwide on June 12, 2026 under a US
- * export-control directive. Return is expected but uncertain. Rather than delete the
- * Fable surfaces, every Fable-facing surface keys off this ONE flag so it all restores
- * in a single edit when Fable returns. While FABLE_AVAILABLE is false:
- *   - the home Fable banner does not render (FableBanner.astro: SHOW_FABLE_BANNER && FABLE_AVAILABLE)
- *   - the /features "Tracks Claude Fable 5" card shows "Unavailable" + FABLE_SUSPENDED_NOTE
- *   - the /developers "Just shipped: tracks Fable" line swaps to the suspension copy
- * Nothing is removed — flip to true (+ redeploy) and every Fable surface restores to its
- * normal state with the original copy. Keep FABLE_BANNER + the post-cliff comment below.
- * (The two Fable blog posts carry their own dated update boxes — not flag-gated; refresh
- * those notes by hand when Fable returns.)
+ * export-control directive, then RESTORED July 1, 2026 (REL-GTM). Every Fable-facing
+ * surface keys off this ONE flag so it all restores in a single edit. While
+ * FABLE_AVAILABLE is true (today):
+ *   - the home Fable banner renders (FableBanner.astro: SHOW_FABLE_BANNER && FABLE_AVAILABLE)
+ *   - the /features "Tracks Claude Fable 5" card shows its live copy (no "Unavailable")
+ *   - the /developers Fable line shows its live "tracks Fable" copy
+ * If Fable is ever re-suspended, flip back to false (+ redeploy): the /features card and
+ * /developers line fall back to FABLE_SUSPENDED_NOTE (reworded neutral, kept defined
+ * below) and the banner hides — no strings deleted.
+ * (The two older Fable blog posts carry their own dated update boxes — not flag-gated;
+ * those are dated historical records, left as-is.)
  */
-export const FABLE_AVAILABLE = false;
+export const FABLE_AVAILABLE = true;
 
 /**
- * One-line suspension note, reused by the /features card + /developers line so they read
- * identically. Keep in sync with the blog update boxes. GTM may refine this copy.
+ * Neutral fallback note, reused by the /features card + /developers line IF Fable is ever
+ * re-suspended (FABLE_AVAILABLE=false). Kept defined for that future case; not shown while
+ * Fable is available. Reworded so nothing reads as a current suspension. GTM may refine.
  */
 export const FABLE_SUSPENDED_NOTE =
-  'Claude Fable 5 is temporarily suspended (US export-control directive, June 12, 2026); tracking resumes when it returns.';
+  'Claude Fable 5 tracking pauses if Fable itself is unavailable, and resumes automatically when it returns.';
 
 /**
- * Fable-5 launch ticker (PM-GTM-038). SHOW_FABLE_BANNER=false pulls the home banner in
- * one flip. FABLE_BANNER is the pre-cliff string (now → June 22), verbatim from GTM.
- * NOTE (June 14): the banner now ALSO requires FABLE_AVAILABLE (see master gate above),
- * so it stays hidden while Fable is suspended without touching this string. Both kept so
- * the banner is a one-line restore. On/after June 23 swap in the post-cliff variant:
- *   'Now tracking Claude Fable 5 — billing-grade cost in your terminal. See what it’s costing you: `wtclaude fable`.'
+ * Fable allowance→credits cliff (REL-GTM §1). Fable 5 is included up to 50% of the weekly
+ * limit through this date, then it bills as usage credits. FableBanner.astro counts down to
+ * it and auto-hides the countdown once it has passed.
+ */
+export const FABLE_CLIFF_DATE = '2026-07-07';
+
+/**
+ * Fable-5 return banner (REL-GTM §1). SHOW_FABLE_BANNER=false pulls the home banner in one
+ * flip; it ALSO requires FABLE_AVAILABLE (master gate above). FABLE_BANNER is the pre-cliff
+ * string (now → July 7), verbatim from GTM §1 "Line". Honesty: says "included up to 50% …
+ * then usage credits," never "free"; the countdown is to the allowance→credits date.
+ *
+ * POST-JULY-7 SWAP (REL-GTM §5): after the cliff, swap FABLE_BANNER → FABLE_BANNER_POST_CLIFF
+ * (staged below, verbatim). Do NOT flip early — it fires only once Fable actually meters.
  */
 export const SHOW_FABLE_BANNER = true;
 export const FABLE_BANNER =
-  'Now tracking Claude Fable 5 — billing-grade cost in your terminal. Free through June 22; see the June-23 cliff coming with `wtclaude fable`.';
+  'Fable 5 is included up to 50% of your weekly limit through July 7 — then it’s usage credits at $10/$50. See what your pace would cost after the allowance: `wtclaude fable`.';
+
+/**
+ * STAGED — REL-GTM §5 post-July-7 variant. NOT LIVE. After July 7 passes, replace the
+ * FABLE_BANNER usage with this constant (and swap the Fable card copy the same way).
+ * Verbatim from GTM §5. Same pattern as the original cliff-day flip: forecast → real cost
+ * once the meter is running.
+ */
+export const FABLE_BANNER_POST_CLIFF =
+  'Fable 5 now bills as usage credits at $10/$50 (cache-read $1). `wtclaude fable` shows your real, billing-grade Fable cost in the terminal from turn one.';
 
 /**
  * Guardian pricing — locked + publishable (GTM-030 / PM-GTM-034). SMB pricing

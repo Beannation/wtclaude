@@ -57,6 +57,26 @@ const groups: Group[] = [
         status: 'available',
         body: 'Each figure is tagged billing-grade, inferred, or estimate. We never show an estimate as if it were exact.',
       },
+      // REL-GTM §3 line items (verbatim). compare-models + Sonnet 5 tracking are live now;
+      // the Fable-5 forecast item is gated on FABLE_AVAILABLE (falls back to the neutral note).
+      {
+        name: '`compare-models` (new)',
+        status: 'available',
+        badge: 'billing-grade',
+        body: 'Opus 4.8 vs Sonnet 5 vs Fable 5, re-priced from your own billing-grade usage. Per-surface split; every projection labeled estimate.',
+      },
+      {
+        name: 'Sonnet 5 tracking',
+        status: 'available',
+        body: 'Prices the new Claude Code default correctly ($2/$10 → $3/$15 Aug 31) off the model’s own tokens — no unknown-model gaps.',
+      },
+      {
+        name: 'Fable 5 forecast',
+        status: 'fable',
+        badge: 'estimate',
+        body: 'Billing-grade Fable cost in the terminal + a labeled forecast of usage-credit cost after the July-7 allowance.',
+        note: FABLE_SUSPENDED_NOTE,
+      },
     ],
   },
   {
@@ -132,7 +152,7 @@ const groups: Group[] = [
       {
         name: 'Tracks Claude Fable 5',
         status: 'fable',
-        body: 'Recognizes Claude Fable 5 in your terminal, reads its cost billing-grade, and forecasts the June-23 cliff with `wtclaude fable` — a labeled estimate, kept separate from the June-15 pools.',
+        body: 'Recognizes Claude Fable 5 in your terminal, reads its cost billing-grade, and forecasts what your pace would cost as usage credits after the July-7 allowance with `wtclaude fable` — a labeled estimate, kept separate from the paused June-15 change.',
         note: FABLE_SUSPENDED_NOTE,
       },
     ],

@@ -104,15 +104,17 @@ const jsonLd = softwareApplication(new URL(Astro.url.pathname, Astro.site).href)
       </div>
 
       {
-        /* Fable line — gated on the FABLE_AVAILABLE master switch (June 14). While Fable is
-           suspended we relabel to the suspension copy (not deleted); flipping the flag back to
-           true restores the original "Just shipped" line verbatim. */
+        /* Fable line — gated on the FABLE_AVAILABLE master switch. Fable was restored July 1
+           (REL-GTM); the true branch shows the live "tracks Fable" copy with the July-7
+           allowance→credits forecast. If Fable is re-suspended, flip FABLE_AVAILABLE=false and
+           the neutral FABLE_SUSPENDED_NOTE branch renders instead — no copy deleted. */
         FABLE_AVAILABLE ? (
           <p class="mx-auto mt-8 max-w-3xl text-center text-sm leading-relaxed text-ink/70">
-            <strong class="font-semibold text-ink">Just shipped:</strong> WTClaude tracks Claude Fable 5
-            — billing-grade cost in your terminal, and
+            <strong class="font-semibold text-ink">Claude Fable 5 is back:</strong> WTClaude tracks it
+            billing-grade in your terminal, and
             <code class="rounded bg-ink/5 px-1 py-0.5 font-mono text-[13px]">wtclaude fable</code>
-            forecasts the June-23 cliff (a labeled estimate; separate from the June-15 Agent-SDK change).
+            forecasts what your pace would cost as usage credits after the July-7 allowance (a labeled
+            estimate; separate from the paused June-15 Agent-SDK change).
           </p>
         ) : (
           <p class="mx-auto mt-8 max-w-3xl text-center text-sm leading-relaxed text-ink/70">
@@ -123,6 +125,65 @@ const jsonLd = softwareApplication(new URL(Astro.url.pathname, Astro.site).href)
           </p>
         )
       }
+    </div>
+  </section>
+
+  <!-- THREE-MODEL CHOICE (REL-GTM §2, verbatim) -->
+  <section class="bg-surface pb-20">
+    <div class="mx-auto max-w-6xl px-5">
+      <div class="mx-auto max-w-3xl text-center">
+        <h2 class="font-head text-3xl sm:text-4xl">Three models now. One honest way to choose.</h2>
+        <p class="mt-5 text-base leading-relaxed text-ink/75">
+          Sonnet 5 is the new Claude Code default. Fable 5 is back. Opus 4.8 is still there for the
+          heavy lifting. WTClaude prices all three from your own real usage — so you choose on what
+          it actually costs you, not the rate card.
+        </p>
+      </div>
+
+      <div class="mt-12 grid gap-6 md:grid-cols-3">
+        <article class="flex flex-col rounded-2xl border border-ink/10 bg-card p-7 shadow-sm">
+          <h3 class="font-head text-lg">Sonnet 5, priced right</h3>
+          <p class="mt-3 text-sm leading-relaxed text-ink/70">
+            The new default (in Claude Code v2.1.197 and on Free/Pro). We price it at $2/$10 —
+            auto-stepping to $3/$15 on Aug 31 — off the model’s own reported tokens, so nothing goes
+            untracked. Cheaper per token than Opus, though its tokenizer runs a bit heavier, so we
+            show you the real number, not the sticker.
+          </p>
+        </article>
+
+        <article class="flex flex-col rounded-2xl border border-amber/30 bg-card p-7 shadow-sm ring-1 ring-amber/5">
+          <h3 class="font-head text-lg">Fable 5, back with a clock</h3>
+          <p class="mt-3 text-sm leading-relaxed text-ink/70">
+            Included up to 50% of your weekly limit through July 7, then usage credits at $10/$50.
+            WTClaude reads its billing-grade cost in your terminal and forecasts what your pace would
+            cost in credits after the allowance — a labeled estimate, with a July-7 countdown.
+          </p>
+        </article>
+
+        <article class="flex flex-col rounded-2xl border border-ink/10 bg-card p-7 shadow-sm">
+          <h3 class="font-head text-lg">Compare all three</h3>
+          <p class="mt-3 text-sm leading-relaxed text-ink/70">
+            <code class="rounded bg-ink/5 px-1 py-0.5 font-mono text-[13px]">wtclaude compare-models</code>
+            re-prices your recorded usage across Opus 4.8, Sonnet 5, and Fable 5 — what would this
+            month cost on each? Split by surface (Code billing-grade, Cowork a labeled estimate, Chat
+            excluded). In the CLI, the dashboard, and the companion.
+          </p>
+        </article>
+      </div>
+
+      <p class="mx-auto mt-8 max-w-3xl text-center text-sm leading-relaxed text-ink/60">
+        Comparisons re-price your recorded usage, not the same task run on each model — every
+        projection is a labeled estimate. We surface the cost of the choice; we don’t judge which
+        model is “better.”
+      </p>
+
+      <div class="mx-auto mt-8 max-w-md text-center">
+        <CodeBlock code="npx wtclaude setup" />
+        <p class="mt-3 text-sm leading-relaxed text-ink/70">
+          then
+          <code class="rounded bg-ink/5 px-1 py-0.5 font-mono text-[13px]">wtclaude compare-models</code>.
+        </p>
+      </div>
     </div>
   </section>
 
