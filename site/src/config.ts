@@ -113,24 +113,26 @@ export const FABLE_SUSPENDED_NOTE =
   'Claude Fable 5 tracking pauses if Fable itself is unavailable, and resumes automatically when it returns.';
 
 /**
- * Fable allowance→credits cliff (REL-GTM §1). Fable 5 is included up to 50% of the weekly
- * limit through this date, then it bills as usage credits. FableBanner.astro counts down to
- * it and auto-hides the countdown once it has passed.
+ * Fable allowance→credits cliff (REL-GTM §1, extended MON-FABLE-EXT-078). Fable 5 is included
+ * up to 50% of the weekly limit through this date, then it bills as usage credits. Anthropic
+ * extended this once already (July 7 → ~July 12) after backlash; it may move again.
+ * FableBanner.astro counts down to it and auto-hides the countdown once it has passed.
  */
-export const FABLE_CLIFF_DATE = '2026-07-07';
+export const FABLE_CLIFF_DATE = '2026-07-12';
 
 /**
- * Fable-5 return banner (REL-GTM §1). SHOW_FABLE_BANNER=false pulls the home banner in one
- * flip; it ALSO requires FABLE_AVAILABLE (master gate above). FABLE_BANNER is the pre-cliff
- * string (now → July 7), verbatim from GTM §1 "Line". Honesty: says "included up to 50% …
- * then usage credits," never "free"; the countdown is to the allowance→credits date.
+ * Fable-5 return banner (REL-GTM §1, extended MON-FABLE-EXT-078). SHOW_FABLE_BANNER=false
+ * pulls the home banner in one flip; it ALSO requires FABLE_AVAILABLE (master gate above).
+ * FABLE_BANNER is the pre-cliff string (now → ~July 12, extended from the original July 7).
+ * Honesty: says "included up to 50% … then usage credits," never "free"; the countdown is to
+ * the allowance→credits date.
  *
- * POST-JULY-7 SWAP (REL-GTM §5): after the cliff, swap FABLE_BANNER → FABLE_BANNER_POST_CLIFF
+ * POST-CLIFF SWAP (REL-GTM §5): after the cliff, swap FABLE_BANNER → FABLE_BANNER_POST_CLIFF
  * (staged below, verbatim). Do NOT flip early — it fires only once Fable actually meters.
  */
 export const SHOW_FABLE_BANNER = true;
 export const FABLE_BANNER =
-  'Fable 5 is included up to 50% of your weekly limit through July 7 — then it’s usage credits at $10/$50. See what your pace would cost after the allowance: `wtclaude fable`.';
+  'Fable 5 is included up to 50% of your weekly limit through ~July 12 (extended from July 7) — then it’s usage credits at $10/$50. See what your pace would cost after the allowance: `wtclaude fable`.';
 
 /**
  * STAGED — REL-GTM §5 post-July-7 variant. NOT LIVE. After July 7 passes, replace the

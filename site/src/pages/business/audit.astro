@@ -2,15 +2,58 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import Mark from '../../components/Mark.astro';
 import HookBand from '../../components/HookBand.astro';
+import { faqPage, breadcrumbs } from '../../lib/schema';
 
 // Free Claude spend-audit — 100% client-side, ~zero COGS. Spec: free-seat-audit-experience.md (rev 2).
 // The raw CSV never leaves the browser; the only network call is an AGGREGATE-ONLY lead POST.
-const title = 'Free Claude Spend Audit — find where your team overpays, in your browser';
+// SEO layer: smb-audit-landing-seo-and-share-card.md Part 1. Target query cluster: claude team
+// spend audit · audit claude spend · claude code cost audit · claude team overspend.
+const title = 'Free Claude Team Spend Audit — 8 Checks, in Your Browser';
 const description =
-  'Drop your Claude Spend Report CSV and see idle seats, spend concentration, model-mix waste and $/request outliers in 30 seconds. 100% in your browser — your spend file never leaves it.';
+  "Paste your Anthropic Spend Report CSV and see where your team is overpaying on Claude — over-tiered and idle seats, model-mix waste, $/request outliers, and more. 8 checks, runs entirely in your browser, nothing uploaded. Free.";
+
+// FAQ (verbatim, Part 1) — renders on-page below + powers FAQPage JSON-LD for rich results.
+const faqs = [
+  {
+    q: 'Is this Claude spend audit really free?',
+    a: 'Yes — the full 8-check audit is free and runs in your browser. The optional continuous-monitoring product is separate and not yet available (you can join the waitlist).',
+  },
+  {
+    q: 'Do you upload or store my spend file?',
+    a: 'No. Everything runs client-side; your CSV never leaves your device.',
+  },
+  {
+    q: 'What do the 8 checks cover?',
+    a: 'Dead-weight seats, spend concentration, model mix, hidden metered surfaces, $/request outliers, discount exposure, domain allocation, and context ratio.',
+  },
+  {
+    q: 'Which file do I need?',
+    a: "The per-user Anthropic Spend Report from claude.ai → Settings → Analytics (not the API/Console billing export). If you upload the wrong one, the tool tells you and points you to the right export.",
+  },
+  {
+    q: 'Will it change anything in my Claude account?',
+    a: 'Never. Every output is a recommendation you review and apply yourself.',
+  },
+];
+
+const jsonLd = [
+  breadcrumbs([
+    { name: 'Home', path: '/' },
+    { name: 'WTClaude for Business', path: '/business' },
+    { name: 'Spend audit', path: '/business/audit' },
+  ]),
+  faqPage(faqs),
+];
 ---
 
-<BaseLayout title={title} description={description} noNavPad heroDark>
+<BaseLayout
+  title={title}
+  description={description}
+  ogImage="/assets/audit-share-card.png"
+  jsonLd={jsonLd}
+  noNavPad
+  heroDark
+>
   <!-- HERO -->
   <section class="audit-hero relative overflow-hidden bg-ink text-surface">
     <div
@@ -22,12 +65,47 @@ const description =
       <Mark class="mx-auto mb-7 h-14 w-14 text-surface" />
       <span class="inline-block rounded-full bg-surface/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-surface/70">Free · no signup for the headline</span>
       <h1 class="mt-5 font-head text-4xl leading-tight sm:text-5xl">
-        Find out where your team is overpaying on Claude — in 30 seconds, in your browser.
+        Audit your team's Claude spend — free, in 60 seconds
       </h1>
       <p class="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-surface/80">
-        Your spend file never leaves your browser. Nothing is uploaded — the audit runs entirely on
-        your machine, and only you ever see the per-person detail.
+        Paste your Anthropic Spend Report CSV. Eight checks run right in your browser — over-tiered
+        and idle seats, who's driving the bill, your model mix, and more. Nothing is uploaded; your
+        data never leaves your device.
       </p>
+    </div>
+  </section>
+
+  <!-- SEO intro + how-it-works (smb-audit-landing-seo-and-share-card.md Part 1) -->
+  <section class="mx-auto max-w-3xl px-5 pt-14">
+    <p class="text-base leading-relaxed text-ink/80">
+      A Claude Team spend audit answers one question: where is the money going, and what could you
+      right-size? This free tool reads your Anthropic Spend Report (the per-user, per-model CSV you
+      export from Settings → Analytics) and runs eight checks on it — entirely in your browser. It
+      finds over-tiered and dormant seats, spend concentration, model-mix waste, hidden metered
+      surfaces, and $/request outliers, and hands you recommendations you confirm. It never uploads
+      your file and never changes anything in your account.
+    </p>
+
+    <div class="mt-8 grid gap-4 sm:grid-cols-3">
+      <div class="rounded-2xl border border-ink/10 bg-card p-5 shadow-sm">
+        <span class="font-mono text-xs font-semibold uppercase tracking-wide text-amber-deep">1 · Export</span>
+        <p class="mt-2 text-sm leading-relaxed text-ink/70">
+          Your Anthropic Spend Report (claude.ai → Settings → Analytics → Export Spend Report; Owner
+          access, last 90 days).
+        </p>
+      </div>
+      <div class="rounded-2xl border border-ink/10 bg-card p-5 shadow-sm">
+        <span class="font-mono text-xs font-semibold uppercase tracking-wide text-amber-deep">2 · Drop it in</span>
+        <p class="mt-2 text-sm leading-relaxed text-ink/70">
+          Parsing and all 8 checks run locally, instantly. Nothing is uploaded.
+        </p>
+      </div>
+      <div class="rounded-2xl border border-ink/10 bg-card p-5 shadow-sm">
+        <span class="font-mono text-xs font-semibold uppercase tracking-wide text-amber-deep">3 · Act on it</span>
+        <p class="mt-2 text-sm leading-relaxed text-ink/70">
+          Right-size over-tiered seats, reclaim dormant ones, trim model mix. You confirm every change.
+        </p>
+      </div>
     </div>
   </section>
 
@@ -47,6 +125,12 @@ const description =
         Console / API billing export from platform.claude.com.
       </p>
     </div>
+
+    <!-- Trust line (prominent, near the dropzone — Part 1) -->
+    <p class="mt-6 rounded-xl border border-amber/30 bg-amber-light/40 px-4 py-3 text-center text-sm font-medium leading-relaxed text-amber-deep">
+      Your spend data never leaves your browser. The whole audit runs on your device — nothing is
+      uploaded, nothing is stored.
+    </p>
 
     <!-- Dropzone -->
     <div
@@ -118,6 +202,35 @@ const description =
     <div id="audit-results" class="hidden"></div>
   </section>
 
+  <!-- FAQ (Part 1) — renders on-page + powers the FAQPage JSON-LD above -->
+  <section class="mx-auto max-w-3xl px-5 pb-16">
+    <h2 class="font-head text-2xl">FAQ</h2>
+    <div class="mt-6 space-y-3">
+      {
+        faqs.map((f) => (
+          <details class="group rounded-xl border border-ink/10 bg-card px-5 py-4">
+            <summary class="flex cursor-pointer items-center justify-between font-medium text-ink marker:content-['']">
+              {f.q}
+              <span class="ml-4 text-warm transition group-open:rotate-45">+</span>
+            </summary>
+            <p class="mt-3 text-sm leading-relaxed text-ink/70">{f.a}</p>
+          </details>
+        ))
+      }
+    </div>
+
+    <!-- Internal links (Part 1) -->
+    <div class="mt-10 border-t border-ink/10 pt-8">
+      <p class="font-mono text-xs uppercase tracking-wide text-warm">Keep reading</p>
+      <ul class="mt-3 space-y-2 text-sm">
+        <li><a href="/blog/how-to-run-a-claude-team-spend-audit" class="font-medium text-amber-deep hover:text-amber">How to run a Claude Team spend audit →</a></li>
+        <li><a href="/blog/claude-team-seat-pricing-premium-vs-standard" class="font-medium text-amber-deep hover:text-amber">Claude Team seat pricing: Premium vs Standard →</a></li>
+        <li><a href="/blog/state-of-claude-pricing-july-2026" class="font-medium text-amber-deep hover:text-amber">The state of Claude pricing — July 2026 →</a></li>
+        <li><a href="/business" class="font-medium text-amber-deep hover:text-amber">WTClaude for Business (the full product) →</a></li>
+      </ul>
+    </div>
+  </section>
+
   <HookBand />
 
   <style>
@@ -143,7 +256,8 @@ const description =
     function start() {
       initAudit();
       try {
-        (window as any).umami?.track('lp_view_audit');
+        const utmContent = new URLSearchParams(window.location.search).get('utm_content');
+        (window as any).umami?.track('lp_view_audit', utmContent ? { utm_content: utmContent } : undefined);
       } catch {
         /* no-op */
       }

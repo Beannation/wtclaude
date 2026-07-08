@@ -37,9 +37,20 @@ interface State {
 
 const state: State = { rows: null, columns: null, hooks: null, mode: 'real', view: 'headline' };
 
-function track(event: string): void {
+/** Campaign attribution (B) — read once per page load, threaded onto every tracked event so
+ * campaign sources stay attributable without touching the lead payload's strict key surface. */
+function utmContent(): string | null {
   try {
-    (window as any).umami?.track(event);
+    return new URLSearchParams(window.location.search).get('utm_content');
+  } catch {
+    return null;
+  }
+}
+
+function track(event: string, data?: Record<string, unknown>): void {
+  try {
+    const utm = utmContent();
+    (window as any).umami?.track(event, utm ? { ...data, utm_content: utm } : data);
   } catch {
     /* analytics must never block the audit */
   }
@@ -257,6 +268,59 @@ function download(kind: 'csv' | 'pdf'): void {
   setTimeout(restore, 1500);
 }
 
+// ---------------------------------------------------------------- share card (Variant A —
+// generic, figure-free, identifier-free; smb-audit-landing-seo-and-share-card.md Part 2)
+const SHARE_URL = 'https://wtclaude.com/business/audit?utm_source=share&utm_medium=social&utm_campaign=smb_audit';
+const SHARE_TITLE = 'I ran the free Claude Team spend audit';
+const SHARE_TEXT =
+  '8 checks on your Anthropic Spend Report — over-tiered seats, model-mix waste, and more. Free, in your browser, nothing uploaded.';
+
+async function shareAudit(statusEl: HTMLElement | null): Promise<void> {
+  track('audit_share_click');
+  const nav = navigator as Navigator & {
+    share?: (data: { title?: string; text?: string; url?: string }) => Promise<void>;
+  };
+  if (nav.share) {
+    try {
+      await nav.share({ title: SHARE_TITLE, text: SHARE_TEXT, url: SHARE_URL });
+      return;
+    } catch {
+      // user cancelled, or the platform declined — fall through to copy-link
+    }
+  }
+  try {
+    await navigator.clipboard.writeText(SHARE_URL);
+    if (statusEl) statusEl.textContent = 'Link copied — share it anywhere.';
+  } catch {
+    if (statusEl) statusEl.textContent = SHARE_URL;
+  }
+}
+
+function downloadShareCard(): void {
+  track('audit_share_download');
+  const a = document.createElement('a');
+  a.href = '/assets/audit-share-card.png';
+  a.download = 'wtclaude-spend-audit-share-card.png';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
+/** Wires the share-card buttons rendered inside renderFullReport() — shared by the live
+ * report (bindOnce) and the static /business/audit/sample page (initSampleStatic). */
+function bindShareOnce(scope: Document): void {
+  scope.addEventListener('click', (e) => {
+    const t = e.target as HTMLElement;
+    if (t.closest('[data-audit-share]')) {
+      void shareAudit(t.closest<HTMLElement>('section')?.querySelector('[data-share-status]') || null);
+      return;
+    }
+    if (t.closest('[data-audit-share-download]')) {
+      downloadShareCard();
+    }
+  });
+}
+
 // ---------------------------------------------------------------- wiring
 function bindOnce(): void {
   if ((window as any).__auditBound) return;
@@ -350,6 +414,8 @@ function bindOnce(): void {
       return;
     }
   });
+
+  bindShareOnce(document);
 }
 
 function readFile(file: File): void {
@@ -392,4 +458,6 @@ export function initSampleStatic(): void {
     }
     if (t.closest('[data-audit-reset]')) window.location.href = '/business/audit';
   });
+
+  bindShareOnce(document);
 }

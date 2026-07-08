@@ -29,6 +29,8 @@ So if seeing it is table-stakes, what's actually left? The money. **A spend repo
 
 Here's the honest version.
 
+<p class="rounded-lg border border-amber/30 bg-amber-light/40 px-4 py-3 text-sm"><a href="/business/audit" data-track="cta_spend_audit_blog_team_spending" class="font-semibold text-amber-deep hover:text-amber">Audit your team's Claude spend, free →</a></p>
+
 ## The three places teams quietly overpay (or fly blind)
 
 **1. Seat-mix overpay.** A Premium seat is roughly 5× the price of a Standard one — and that's for *usage capacity, not features* (both tiers include Code and Cowork). Anthropic's own docs tell admins to review every few months and downgrade whoever's underusing Premium — a manual chore that's easy to skip. And the Team admin UI has no "last active" view, so dormant seats keep billing. Nobody's automating the downgrade-and-reclaim audit for you, because the company selling the seats isn't the one who'll remind you to buy fewer.

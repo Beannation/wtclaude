@@ -19,6 +19,8 @@ faq:
 
 Claude Code billing trips people up because there isn't one model — there are a few, depending on how you pay, and they measure different things. This is the plain-English version: how you're charged, what the limits actually mean, what the credit pools are, and how to see where you stand. (For the specifics that change over time, always check Anthropic's official docs — this is the mental model, not the rate card.)
 
+<p class="rounded-lg border border-amber/30 bg-amber-light/40 px-4 py-3 text-sm"><a href="/business/audit" data-track="cta_spend_audit_blog_billing_explained" class="font-semibold text-amber-deep hover:text-amber">Audit your team's Claude spend, free →</a></p>
+
 ## Two ways you pay
 
 **Subscription (Pro / Max).** You pay a flat monthly fee and get access within **usage limits**. You're not billed per token; instead your usage is measured against rolling windows, and when you hit a limit you wait for it to reset. For subscribers, "how much am I spending?" is really two questions: how close am I to my limit, and — if I'm curious — what would this usage have cost at API rates.

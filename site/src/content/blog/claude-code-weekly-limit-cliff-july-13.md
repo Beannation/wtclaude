@@ -19,6 +19,8 @@ faq:
 
 If you've felt like Claude Code has been more generous since May, you're right — and one part of that generosity has an end date. The **+50% boost to Claude Code weekly limits expires July 13, 2026 (6 PM PDT)**, unless Anthropic extends it. Here's what's actually changing, who it touches, and the calm way to handle it.
 
+<p class="rounded-lg border border-amber/30 bg-amber-light/40 px-4 py-3 text-sm"><a href="/business/audit" data-track="cta_spend_audit_blog_weekly_limit_cliff" class="font-semibold text-amber-deep hover:text-amber">Audit your team's Claude spend, free →</a></p>
+
 ## What's happening
 
 Back in mid-May, Anthropic raised Claude Code's **weekly usage limits by 50%** for all paid plans — Pro, Max, Team, and seat-based Enterprise — across the CLI, IDE, desktop, and web ([ClaudeDevs announcement](https://x.com/ClaudeDevs/status/2054639777685934564)). It was the third wave of limit relaxation in quick succession (after the 5-hour caps doubled on May 6 and peak-hour throttling was removed), and it was explicitly framed as a limited-time boost running **through July 13**.

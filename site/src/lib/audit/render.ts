@@ -302,18 +302,18 @@ export function renderFullReport(
          .slice(0, 3)
          .map((r) => `<li><strong>${esc(r.email.split('@')[0])}</strong> — ${fmtRatio(r.ratio)}</li>`)
          .join('')}</ul>
-       <p class="mt-2 text-xs text-ink/55">This is a <strong>proxy</strong> — true cache-read waste is not in this CSV; that's <code class="font-mono text-ink/70">wtclaude waste</code> / collector territory.</p>`
+       <p class="mt-2 text-xs text-ink/55">This is a <strong>proxy</strong> — the CSV doesn't contain true cache-read waste. To validate it, run <code class="font-mono text-ink/70">wtclaude waste</code> in the CLI for the full breakdown.</p>`
     : `<p>Context ratio needs prompt + completion token columns.</p>`;
 
   const hooksGrid = `<div class="mt-6 grid gap-4 md:grid-cols-2">
-    ${sectionCard('H1 · Power-user concentration', '', `<p><strong>${h1.peopleFor80} of ${h1.totalPeople}</strong> people drive 80% of ${h1.basis === 'spend' ? 'spend' : 'usage'}; top ${h1.basis === 'spend' ? 'spender' : 'user'} is <strong>${fmtMult(h1.topVsMedian)}</strong> the median. Where governance should focus.</p>`)}
-    ${sectionCard('H2 · Dead-weight seats', badge('estimate'), h2Body)}
-    ${sectionCard('H3 · Per-person model mix', h3.available ? badge('estimate') : '', h3Body)}
-    ${sectionCard('H4 · Hidden metered surfaces', h4.available ? badge('estimate') : '', h4Body)}
-    ${sectionCard('H5 · $/request outliers', h5.available ? badge('estimate') : '', h5Body)}
-    ${sectionCard('H6 · Discount / list exposure', h6.available ? badge('estimate') : '', h6Body)}
-    ${sectionCard('H7 · Allocation by domain', '', h7Body)}
-    ${sectionCard('H8 · Context-ratio proxy', badge('proxy'), h8Body)}
+    ${sectionCard('Power-user concentration', '', `<p><strong>${h1.peopleFor80} of ${h1.totalPeople}</strong> people drive 80% of ${h1.basis === 'spend' ? 'spend' : 'usage'}; top ${h1.basis === 'spend' ? 'spender' : 'user'} is <strong>${fmtMult(h1.topVsMedian)}</strong> the median. Where governance should focus.</p>`)}
+    ${sectionCard('Dead-weight seats', badge('estimate'), h2Body)}
+    ${sectionCard('Per-person model mix', h3.available ? badge('estimate') : '', h3Body)}
+    ${sectionCard('Hidden metered surfaces', h4.available ? badge('estimate') : '', h4Body)}
+    ${sectionCard('$/request outliers', h5.available ? badge('estimate') : '', h5Body)}
+    ${sectionCard('Discount / list exposure', h6.available ? badge('estimate') : '', h6Body)}
+    ${sectionCard('Allocation by domain', '', h7Body)}
+    ${sectionCard('Context-ratio proxy', badge('proxy'), h8Body)}
   </div>`;
 
   const tableSection = `<section class="relative mt-6 overflow-hidden rounded-2xl border border-ink/10 bg-card p-1 shadow-sm">
@@ -346,9 +346,24 @@ export function renderFullReport(
     </div>
   </div>`;
 
+  // ---- shareable-result card (smb-audit-landing-seo-and-share-card.md Part 2, Variant A —
+  // generic, figure-free, identifier-free: no numbers, no company/employee identifiers).
+  const shareSection = `<section class="mt-6 rounded-2xl border border-ink/10 bg-card p-6 text-center shadow-sm">
+    <p class="font-head text-base">Nice — that's your audit.</p>
+    <p class="mx-auto mt-2 max-w-md text-sm leading-relaxed text-ink/70">Want to save others the guesswork? Share a quick card (no numbers, nothing about your team) and point a peer at their own free audit.</p>
+    <div class="mt-4 flex flex-wrap items-center justify-center gap-2">
+      <button type="button" data-audit-share class="rounded-lg bg-amber px-5 py-2.5 text-sm font-semibold text-ink transition hover:bg-amber-deep hover:text-white">Share this audit →</button>
+      <button type="button" data-audit-share-download class="rounded-lg border border-ink/15 bg-card px-5 py-2.5 text-sm font-semibold text-ink transition hover:bg-ink/[0.04]">Download card</button>
+    </div>
+    <p class="mt-3 text-xs text-ink/55" data-share-status role="status" aria-live="polite"></p>
+  </section>`;
+
   const honesty = `<p class="mt-6 text-center text-xs leading-relaxed text-ink/55">
     Every figure is a labeled estimate — your spend report should closely match your invoice. ${overage ? 'On seat-based plans the $ is overage-only. ' : ''}All outputs are recommendations you confirm — WTClaude never changes anything, and your spend file never left this browser.
   </p>`;
+
+  // ---- one-click path to the fuller product (E)
+  const learnMore = `<p class="mt-4 text-center text-sm"><a href="/business" data-track="audit_learn_more_business" class="font-semibold text-amber-deep hover:text-amber">Learn more about WTClaude for Business →</a></p>`;
 
   return `<div class="audit-report relative">
     ${sampleBanner}
@@ -362,8 +377,10 @@ export function renderFullReport(
     ${hooksGrid}
     ${tableSection}
     ${downloadBar}
+    ${shareSection}
     ${bridge}
     ${honesty}
+    ${learnMore}
     ${
       opts.sample
         ? `<section class="mt-8 rounded-2xl border border-ink/10 bg-ink p-6 text-center text-surface">
