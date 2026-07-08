@@ -39,9 +39,11 @@ export function isDualPoolActive(todayStr = new Date().toISOString().slice(0, 10
 // suspended June 12, 2026 (US export-control directive) and redeployed by Anthropic on
 // July 1, 2026. Re-arm flips FABLE_SUSPENDED back to false so `wtclaude fable` shows the
 // live forecast again — under the NEW mechanic: Fable 5 is included up to 50% of the
-// weekly usage limit through July 7, then bills usage credits at $10/$50 (an allowance
-// cap, NOT "free"). The command, the fable-5 rate entry, and all the forecast logic were
-// left intact through the suspension, so re-arm is just this flag + the July-7 cliff date.
+// weekly usage limit through ~July 12 (extended from the original July 7 date after
+// backlash — MON-FABLE-EXT-078; hedge it, may move again), then bills usage credits at
+// $10/$50 (an allowance cap, NOT "free"). The command, the fable-5 rate entry, and all the
+// forecast logic were left intact through the suspension, so re-arm is just this flag +
+// the cliff date.
 // Re-suspend path (if needed): flip back to true and patch-republish.
 export const FABLE_SUSPENDED = false;
 
@@ -51,15 +53,15 @@ export const FABLE_SUSPENDED_NOTICE =
   'Claude Fable 5 is temporarily suspended (US export-control directive, June 12, 2026); the cliff forecast is paused and will resume if Fable returns.';
 
 // The date interactive Fable 5 use moves from the included allowance to usage credits
-// — the "Fable cliff." Re-armed to the July-7, 2026 mechanic: included up to 50% of the
-// weekly limit through July 7, usage credits at $10/$50 after (not "free"). Config
-// override first (Anthropic may move the date), then the active pricing sheet, then the
-// announced July-7 date.
+// — the "Fable cliff." Re-armed to the July mechanic: included up to 50% of the weekly
+// limit through ~July 12 (extended from the original July 7 date — MON-FABLE-EXT-078),
+// usage credits at $10/$50 after (not "free"). Config override first (Anthropic may move
+// the date again), then the active pricing sheet, then the announced ~July-12 date.
 export function getFableCliffDate() {
   const c = loadConfig();
   if (c.fable_cliff_date) return c.fable_cliff_date;
   const p = getLatestPricing();
-  return p.fable_cliff_date || '2026-07-07';
+  return p.fable_cliff_date || '2026-07-12';
 }
 
 // Plan key (pro | max_5x | max_20x) if the user set one at setup; else null.
