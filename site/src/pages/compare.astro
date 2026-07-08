@@ -89,7 +89,7 @@ const td = 'border-t border-ink/10 px-4 py-3 text-sm align-top';
       difference matters for some people and barely matters for others; the table shows where it does.
     </p>
     <p class="mt-4 text-sm italic text-warm">
-      Last updated: June 2026. Spot something out of date? It's an open-source project — tell us.
+      Last updated: July 2026. Spot something out of date? It's an open-source project — tell us.
     </p>
 
     <!-- Free spend-audit CTA (campaign lever 2) — small, non-intrusive, SMB-relevant surface only -->
@@ -213,6 +213,111 @@ const td = 'border-t border-ink/10 px-4 py-3 text-sm align-top';
         developers — one org went from 9+ visible users to 1–2 after moving engineers to OAuth.
         WTClaude's local collector reads cost where Claude writes it, so it sees those developers.
       </p>
+    </section>
+
+    <!-- SMB comparison block — CLEARED: competitive-smb-amplify-clearance.md §3 (Competitive, Jul 8
+         2026). Factual-not-attack. Lineman = "estimate-grade," never "broken"; the OAuth-blindness
+         weapon is scoped to the Analytics-API FinOps incumbents ONLY (not Lineman, not Anthropic's
+         own dashboard, per §1B); independence = trust angle only (never the struck conflict-of-
+         interest moat). Adds to — does not replace — the dev-tool table above. -->
+    <section class="mt-14">
+      <h2 class="font-head text-2xl">For SMB teams: how WTClaude compares</h2>
+      <p class="mt-4 max-w-3xl text-base leading-relaxed text-ink/80">
+        Running Claude for a team pulls in a different comparison set — Lineman (the newer,
+        Claude-Code-only cost tool), the FinOps incumbents (Mavvrik, Torii, Zylo, CloudEagle), and
+        Anthropic's own native dashboards. Facts below are as of July 2026 — competitor state moves,
+        so treat this as a snapshot, not a permanent scorecard.
+      </p>
+
+      <div class="mt-6 overflow-x-auto rounded-2xl border border-ink/10 bg-card shadow-sm">
+        <table class="w-full min-w-[760px] border-collapse text-left">
+          <thead>
+            <tr class="bg-ink/[0.03]">
+              <th scope="col" class="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-warm"></th>
+              <th scope="col" class="px-4 py-3 font-mono text-sm font-semibold text-amber-deep">WTClaude</th>
+              <th scope="col" class="px-4 py-3 font-mono text-sm font-semibold text-ink">Lineman</th>
+              <th scope="col" class="px-4 py-3 font-mono text-sm font-semibold text-ink">FinOps incumbents</th>
+              <th scope="col" class="px-4 py-3 font-mono text-sm font-semibold text-ink">Anthropic-native</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row" class={`${td} font-semibold text-ink`}>Cost basis</th>
+              <td class={`${td} text-ink/80`}>Anthropic-computed (terminal Code) + billing-grade Cowork (Pro)</td>
+              <td class={`${td} text-ink/70`}>Token estimate (interceptor)</td>
+              <td class={`${td} text-ink/70`}>Token estimate (Analytics API)</td>
+              <td class={`${td} text-ink/70`}>Anthropic's own; native</td>
+            </tr>
+            <tr>
+              <th scope="row" class={`${td} font-semibold text-ink`}>Sees OAuth/subscription Code seats</th>
+              <td class={`${td} text-ink/80`}>Yes (local read)</td>
+              <td class={`${td} text-ink/70`}>Yes (interceptor)</td>
+              <td class={`${td} text-ink/70`}>No — the Analytics API returns API-key usage only</td>
+              <td class={`${td} text-ink/70`}>Yes (native)</td>
+            </tr>
+            <tr>
+              <th scope="row" class={`${td} font-semibold text-ink`}>Surfaces covered</th>
+              <td class={`${td} text-ink/80`}>Code + Cowork + Chat picture</td>
+              <td class={`${td} text-ink/70`}>Claude Code only</td>
+              <td class={`${td} text-ink/70`}>Multi-vendor SaaS; Claude shallow</td>
+              <td class={`${td} text-ink/70`}>All native surfaces</td>
+            </tr>
+            <tr>
+              <th scope="row" class={`${td} font-semibold text-ink`}>Independent of what it measures</th>
+              <td class={`${td} text-ink/80`}>Yes (sells no tokens, seats, or compression)</td>
+              <td class={`${td} text-ink/70`}>No (sells context compression)</td>
+              <td class={`${td} text-ink/70`}>Yes (but Claude-shallow)</td>
+              <td class={`${td} text-ink/70`}>No (is the vendor)</td>
+            </tr>
+            <tr>
+              <th scope="row" class={`${td} font-semibold text-ink`}>Recommendations / coaching</th>
+              <td class={`${td} text-ink/80`}>Yes — recommend-only, never enforce</td>
+              <td class={`${td} text-ink/70`}>Governance flags</td>
+              <td class={`${td} text-ink/70`}>Allocation / right-sizing</td>
+              <td class={`${td} text-ink/70`}>No — shows data, not what to do</td>
+            </tr>
+            <tr>
+              <th scope="row" class={`${td} font-semibold text-ink`}>Real-time</th>
+              <td class={`${td} text-ink/80`}>Live (under-the-cap)</td>
+              <td class={`${td} text-ink/70`}>~15-min (advertised)</td>
+              <td class={`${td} text-ink/70`}>Daily / batch</td>
+              <td class={`${td} text-ink/70`}>Daily (Enterprise suite "updated daily")</td>
+            </tr>
+            <tr>
+              <th scope="row" class={`${td} font-semibold text-ink`}>Maturity</th>
+              <td class={`${td} text-ink/80`}>—</td>
+              <td class={`${td} text-ink/70`}>~1-person beta — by its own disclosure, the figures shown are a synthetic demo team</td>
+              <td class={`${td} text-ink/70`}>Enterprise, quote-priced</td>
+              <td class={`${td} text-ink/70`}>Anthropic</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="mt-3 text-xs italic text-warm">Competitor facts as of July 2026 — this space moves; tell us if something's out of date.</p>
+
+      <p class="mt-6 max-w-3xl text-sm leading-relaxed text-ink/70">
+        Lineman is a newer, Claude-Code-only tool whose cost view is a token-based estimate, funded off
+        the context-compression it sells; by its own disclosure the figures on its site are a synthetic
+        demo team — and it's actively shipping (<code class="rounded bg-ink/5 px-1 py-0.5 font-mono text-[13px]">@lineman-io/cli</code> v1.0.9, Jul 1). WTClaude reads
+        Anthropic's own cost figure, spans Code + Cowork, and sells you nothing but the tool.
+      </p>
+
+      <ul class="mt-6 space-y-3 text-base leading-relaxed text-ink/80">
+        <li>
+          <strong class="font-semibold text-ink">Already living in Datadog Cloud Cost Management or CloudZero?</strong>
+          Anthropic's Analytics API now pipes there first-party — that may be enough (it's still
+          OAuth-seat-blind, so subscription-seat developers won't show up).
+        </li>
+        <li>
+          <strong class="font-semibold text-ink">Need multi-vendor SaaS governance beyond Claude?</strong>
+          A FinOps incumbent (Mavvrik, Torii, Zylo, CloudEagle) is the broader fit.
+        </li>
+        <li>
+          <strong class="font-semibold text-ink">On subscription/OAuth Claude Code seats, want Anthropic-computed accuracy across Code + Cowork, and recommendations, not just a dashboard?</strong>
+          That's WTClaude's lane — start with the
+          <a href="/business/audit" data-track="cta_spend_audit_compare_smb" class="font-medium text-amber-deep hover:text-amber">free spend audit</a>.
+        </li>
+      </ul>
     </section>
 
     <!-- When to use which -->
