@@ -1,14 +1,14 @@
 ---
 title: "The State of Claude Pricing — July 2026: An Independent Field Guide"
-description: "Fable 5's credits cliff (now July 12), the weekly-limit change, Sonnet 5 as the new default, the paused billing split, seat tiers, and the 150-seat cliff — every recent Claude pricing change, what it means, who it hits, and what to actually do. Plain-English and independent."
+description: "Fable 5's credits cliff (now ~July 19, extended twice), the weekly-limit change, Sonnet 5 as the new default, the paused billing split, seat tiers, and the 150-seat cliff — every recent Claude pricing change, what it means, who it hits, and what to actually do. Plain-English and independent."
 pubDate: 2026-07-08
 author: "Peter Bean"
 readingTime: "10 min read"
 faq:
   - q: "When does Claude Fable 5 start billing as usage credits?"
-    a: "Fable 5 is included for up to 50% of your weekly usage limit through July 12, 2026 (Anthropic extended this from the original July 7 date after backlash). After that allowance it bills as usage credits at $10/$50 per million tokens (cache-read $1); standard Enterprise is credits-only, with no grace if credits aren't funded. Blocked requests reroute to Opus 4.8."
+    a: "Fable 5 is included for up to 50% of your weekly usage limit through ~July 19, 2026 (Anthropic has extended this twice: from the original July 7 date, to July 12, then to ~July 19). After that allowance it bills as usage credits at $10/$50 per million tokens (cache-read $1) from July 20; standard Enterprise is credits-only, with no grace if credits aren't funded. Blocked requests reroute to Opus 4.8."
   - q: "Is the +50% Claude Code weekly limit boost expiring?"
-    a: "It was set to expire around July 13, 2026, unless Anthropic extends it. It's a usage-limit change, not a price change — heavy users would lose some weekly headroom. Check Anthropic's current announcement, as the date can move."
+    a: "It was set to expire July 13, 2026, then Anthropic extended it to ~July 19 — unless it extends again. It's a usage-limit change, not a price change — heavy users would lose some weekly headroom. Check Anthropic's current announcement, as the date can move."
   - q: "Is Claude Sonnet 5 cheaper than Opus 4.8?"
     a: "Per token, yes ($2/$10 intro, stepping to $3/$15 on Aug 31), and it's the new Claude Code default. But its tokenizer emits more tokens for the same work (often ~30% more), so a raw per-million comparison overstates the saving. Price it against your own usage."
   - q: "Did the June 15 Claude billing split happen?"
@@ -25,9 +25,9 @@ This is the plain-English map: what changed, who it actually affects, and what t
 
 | What | When | It's a… | Who feels it | What to do |
 |---|---|---|---|---|
-| **Fable 5 credits cliff** | ~July 12 *(extended from July 7)* | Billing mechanic | Heavy Fable users | Know your credit pace before the allowance runs out |
-| **Weekly-limit change** | ~July 13 *(unless extended)* | Usage limit | Heavy daily users | Know where you stand before the ceiling drops |
-| **↳ The compounding week** | July 12–13 | Both, back-to-back | Heavy teams | Two cliffs in two days — check your footing now |
+| **Fable 5 credits cliff** | ~July 19 *(extended twice: July 7 → July 12 → July 19)* | Billing mechanic | Heavy Fable users | Know your credit pace before the allowance runs out |
+| **Weekly-limit change** | ~July 19 *(extended from July 13; unless extended again)* | Usage limit | Heavy daily users | Know where you stand before the ceiling drops |
+| **↳ The compounding week** | ~July 19–20 | Both, back-to-back | Heavy teams | Two cliffs back-to-back — check your footing now |
 | **Sonnet 5 is the new default** | Now | Model + price | Everyone (it's default) | Price it against your real usage before assuming it's cheaper |
 | **June-15 billing split** | Announced, then **paused** | Non-event (for now) | Nobody, yet | Nothing — but know it may return |
 | **Seat tiers (Standard vs Premium)** | Ongoing | Pricing structure | Team admins | Audit who's on Premium but using Standard-level volume |
@@ -35,19 +35,19 @@ This is the plain-English map: what changed, who it actually affects, and what t
 
 Now the detail.
 
-## 1. Fable 5 is back — and its credits clock just moved to July 12
+## 1. Fable 5 is back — and its credits clock just moved to July 19
 
 Fable 5 returned July 1 after its export-control suspension, with a billing clock attached: it's **included for up to 50% of your weekly usage limit**, and after that allowance it bills as **usage credits at $10/$50 per million** (cache-read $1). Standard Enterprise gets no allowance — credits only, with no grace if credits aren't funded. Blocked requests reroute to Opus 4.8.
 
-Here's the update worth knowing: that allowance cliff was originally **July 7**, and after user backlash **Anthropic extended it to ~July 12**. Which is exactly the pattern to plan around — **these dates move.** (That's the case for a read that doesn't depend on any one date: whatever the calendar says, you want to know your Fable pace in real dollars.)
+Here's the update worth knowing: that allowance cliff was originally **July 7**, Anthropic extended it once to **~July 12** after user backlash, and has now extended it **again to ~July 19** (credits start July 20). Which is exactly the pattern to plan around — **these dates move, twice now.** (That's the case for a read that doesn't depend on any one date: whatever the calendar says, you want to know your Fable pace in real dollars.)
 
-Two honest notes: "included" is an **allowance cap, not free-unlimited** — up to half your weekly limit, then the meter runs. And any "what Fable costs me after the cliff" number is an estimate that depends on your usage and assumes the announced $10/$50 holds. And note the collision below — the extended Fable cliff now lands right next to the weekly-limit change.
+Two honest notes: "included" is an **allowance cap, not free-unlimited** — up to half your weekly limit, then the meter runs. And any "what Fable costs me after the cliff" number is an estimate that depends on your usage and assumes the announced $10/$50 holds. And note the collision below — the twice-extended Fable cliff now lands right next to the weekly-limit change.
 
-## 2. The weekly-limit change (~July 13, unless extended)
+## 2. The weekly-limit change (~July 19, after its own extension)
 
-Separately, the +50% weekly-limit boost that heavy users have leaned on is set to change around **July 13** — *unless Anthropic extends it* (dates like this have moved before, so check the current announcement). This is a **usage-limit change, not a price change**: nobody's bill goes up, but if your habits grew into the extra headroom, you'll hit the weekly wall sooner. The move: see how close you are to the ceiling *before* the ceiling moves, not after. ([We wrote the detail here.](/blog/claude-code-weekly-limit-cliff-july-13))
+Separately, the +50% weekly-limit boost that heavy users have leaned on was set to expire **July 13**, and Anthropic has extended it to **~July 19** — *unless it extends again* (dates like this have moved before, so check the current announcement). This is a **usage-limit change, not a price change**: nobody's bill goes up, but if your habits grew into the extra headroom, you'll hit the weekly wall sooner. The move: see how close you are to the ceiling *before* the ceiling moves, not after. ([We wrote the detail here.](/blog/claude-code-weekly-limit-cliff-july-13))
 
-**The collision worth flagging:** with Fable's cliff pushed to ~July 12, it now lands **right next to** this weekly-limit change — two consumption cliffs in two days (July 12–13). If your team leans on Claude, that's the week to have your footing already checked, not to go find it mid-scramble.
+**The collision worth flagging:** with Fable's cliff pushed to ~July 19, it now lands **right next to** this weekly-limit boost's ~July 19 expiry — two consumption cliffs back-to-back (~July 19–20). If your team leans on Claude, that's the week to have your footing already checked, not to go find it mid-scramble.
 
 ## 3. Sonnet 5 is the new default — cheaper per token, with an asterisk
 
@@ -80,10 +80,10 @@ And underneath it all, one anchor that doesn't move with the news: WTClaude read
 ## FAQ
 
 **When does Claude Fable 5 start billing as usage credits?**
-Included up to 50% of your weekly limit through ~July 12 (extended from July 7 after backlash), then usage credits at $10/$50 per million (cache-read $1); standard Enterprise is credits-only; blocked requests reroute to Opus 4.8.
+Included up to 50% of your weekly limit through ~July 19 (extended twice: July 7 → July 12 → July 19), then usage credits at $10/$50 per million (cache-read $1) from July 20; standard Enterprise is credits-only; blocked requests reroute to Opus 4.8.
 
 **Is the +50% Claude Code weekly limit boost expiring?**
-It was set to change around July 13 unless extended — a usage-limit change, not a price change. Check Anthropic's current announcement, since the date can move.
+It was extended from July 13 to ~July 19, unless it extends again — a usage-limit change, not a price change. Check Anthropic's current announcement, since the date can move.
 
 **Is Claude Sonnet 5 cheaper than Opus 4.8?**
 Per token yes ($2/$10 → $3/$15 Aug 31), and it's the new default — but its tokenizer emits ~30% more tokens for the same work, so price it against your own usage before assuming the saving.

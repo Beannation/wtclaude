@@ -7,8 +7,8 @@ readingTime: "8 min read"
 faq:
   - q: "Is Claude Sonnet 5 cheaper than Opus 4.8?"
     a: "Per token, yes — Sonnet 5 is $2/$10 per million (intro, stepping to $3/$15 on Aug 31) versus Opus 4.8's higher rates. But it's not a guaranteed saving: Sonnet 5's tokenizer emits more tokens for the same work (often around 30% more), so a raw per-million comparison understates the gap. The only honest answer is to price it against your own real usage."
-  - q: "How much does Claude Fable 5 cost after July 12?"
-    a: "Fable 5 is included for up to 50% of your weekly usage limit through ~July 12 (extended from the original July 7 date; on Pro, Max, Team, and premium Enterprise), then it bills as usage credits at $10/$50 per million (cache-read $1). Standard Enterprise is credits-only. Any 'cost after the cliff' figure is a labeled estimate — it depends on your usage and assumes the announced $10/$50 holds."
+  - q: "How much does Claude Fable 5 cost after July 19?"
+    a: "Fable 5 is included for up to 50% of your weekly usage limit through ~July 19 (extended twice, from the original July 7 date to July 12 and then to ~July 19; on Pro, Max, Team, and premium Enterprise), then from July 20 it bills as usage credits at $10/$50 per million (cache-read $1). Standard Enterprise is credits-only. Any 'cost after the cliff' figure is a labeled estimate — it depends on your usage and assumes the announced $10/$50 holds."
   - q: "How do I compare Claude models by cost?"
     a: "WTClaude's compare-models re-prices your own recorded, billing-grade usage across Opus 4.8, Sonnet 5, and Fable 5 and shows what the month would cost on each — split by surface (Code billing-grade, Cowork a labeled estimate, Chat excluded). Every projected number is a labeled estimate, and it compares cost, not model quality."
   - q: "Does WTClaude track Sonnet 5 and Fable 5?"
@@ -32,11 +32,11 @@ Here's the asterisk that matters: **a lower per-token price is not the same as a
 
 The good news for tracking: this tokenizer difference doesn't dent your *cost* number at all. WTClaude prices Sonnet 5 off **the model's own reported token counts** (and, in terminal Code, off Anthropic's own computed cost), so more tokens simply show up as more tokens — no re-calibration, no drift. ([Why a cost tracker can still disagree with your bill.](/blog/is-claude-code-cost-accurate))
 
-## Fable 5 is back — and there's a ~July 12 clock
+## Fable 5 is back — and there's a ~July 19 clock
 
 Fable 5 returned July 1. The billing works like this:
 
-- It's **included for up to 50% of your weekly usage limit through ~July 12** (on Pro, Max, Team, and premium Enterprise plans). *(That cliff was originally July 7; Anthropic extended it to ~the 12th after backlash — treat the date as movable and re-check the current one.)*
+- It's **included for up to 50% of your weekly usage limit through ~July 19** (on Pro, Max, Team, and premium Enterprise plans). *(That cliff was originally July 7; Anthropic extended it to ~July 12 after backlash, then extended it again to ~July 19 — treat the date as movable and re-check the current one.)*
 - After that allowance — or on standard Enterprise, which gets no allowance — Fable bills as **usage credits at $10/$50 per million** (cache-read $1).
 - Requests that get blocked reroute to Opus 4.8.
 
@@ -74,8 +74,8 @@ That's the whole idea: when the model landscape gets confusing, the tracker's jo
 **Is Claude Sonnet 5 cheaper than Opus 4.8?**
 Per token, yes — $2/$10 (intro, → $3/$15 on Aug 31) undercuts Opus. But it's not a guaranteed saving: Sonnet 5's tokenizer emits more tokens for the same work (often ~30% more), so the raw per-million gap overstates the real saving. Price it against your own usage with `wtclaude compare-models`.
 
-**How much does Claude Fable 5 cost after July 12?**
-Included up to 50% of your weekly limit through ~July 12, extended from the original July 7 date (Pro/Max/Team/premium Enterprise), then usage credits at $10/$50 per million (cache-read $1); standard Enterprise is credits-only. Any post-cliff figure is a labeled estimate that depends on your usage and assumes $10/$50 holds.
+**How much does Claude Fable 5 cost after July 19?**
+Included up to 50% of your weekly limit through ~July 19, extended twice from the original July 7 date (July 7 → July 12 → July 19; Pro/Max/Team/premium Enterprise), then from July 20 usage credits at $10/$50 per million (cache-read $1); standard Enterprise is credits-only. Any post-cliff figure is a labeled estimate that depends on your usage and assumes $10/$50 holds.
 
 **How do I compare Claude models by cost?**
 `wtclaude compare-models` re-prices your recorded usage across Opus 4.8, Sonnet 5, and Fable 5 — split by surface (Code billing-grade, Cowork a labeled estimate, Chat excluded), every projection labeled. It compares cost, not quality.
