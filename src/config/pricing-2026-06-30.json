@@ -1,7 +1,7 @@
 {
   "version": "2026-06-30",
   "effective_date": "2026-06-30",
-  "note": "Adds Claude Sonnet 5 (launched Jun 30, 2026 — the new DEFAULT model in Claude Code v2.1.197 and on Free/Pro). Inherits the 2026-06-15 models/rates/pools unchanged. Sonnet 5 ships at the introductory $2/$10 rate through Aug 31, 2026, then steps up to $3/$15 on Sep 1 — encoded as a `scheduled` rate array (the newest scheduled entry whose effective_date <= today wins; before any scheduled date, the base input/output rate applies). This is how a FUTURE-DATED rate change is represented without prematurely activating it (the pricing loader picks the newest FILENAME, so a separate future-dated file would activate immediately — the schedule avoids that). Fable-5 rates carried forward unchanged ($10/$50, cache-read $1). Fable re-arm folded into this same coordinated drop (Jul 1): fable_cliff_date moved 2026-06-23 -> 2026-07-07 for the new mechanic (included up to 50% of the weekly limit through ~July 12, extended from July 7 after backlash — MON-FABLE-EXT-078; hedge it, the date has already moved once and may move again), then usage credits at $10/$50 (an allowance cap, not free). ⚠ VERIFY LIVE rates before any published number (Sonnet 5 $2/$10 intro -> $3/$15 confirmed via anthropic.com/news/claude-sonnet-5 + platform.claude.com/docs/pricing, Jul 1 2026).",
+  "note": "Adds Claude Sonnet 5 (launched Jun 30, 2026 — the new DEFAULT model in Claude Code v2.1.197 and on Free/Pro). Inherits the 2026-06-15 models/rates/pools unchanged. Sonnet 5 ships at the introductory $2/$10 rate through Aug 31, 2026, then steps up to $3/$15 on Sep 1 — encoded as a `scheduled` rate array (the newest scheduled entry whose effective_date <= today wins; before any scheduled date, the base input/output rate applies). This is how a FUTURE-DATED rate change is represented without prematurely activating it (the pricing loader picks the newest FILENAME, so a separate future-dated file would activate immediately — the schedule avoids that). Fable-5 rates carried forward unchanged ($10/$50, cache-read $1). Fable re-arm folded into this same coordinated drop (Jul 1): fable_cliff_date moved 2026-06-23 -> 2026-07-07 for the new mechanic, then extended twice — 2026-07-07 -> 2026-07-12 -> 2026-07-19 (included up to 50% of the weekly limit through ~July 19 — MON-FABLE-EXT-078, re-extended W-020; hedge it, the date has now moved twice and may move again), then usage credits at $10/$50 from July 20 (an allowance cap, not free). ⚠ VERIFY LIVE rates before any published number (Sonnet 5 $2/$10 intro -> $3/$15 confirmed via anthropic.com/news/claude-sonnet-5 + platform.claude.com/docs/pricing, Jul 1 2026).",
   "models": {
     "haiku-4-5": { "input": 1.00, "output": 5.00 },
     "sonnet-4-6": { "input": 3.00, "output": 15.00 },
@@ -39,6 +39,6 @@
     "agent_sdk": { "label": "Agent SDK credits (API rates, no rollover)", "billing_basis": "agent_sdk_credits" }
   },
   "dual_pool_activation_date": "2026-06-15",
-  "fable_cliff_date": "2026-07-12",
+  "fable_cliff_date": "2026-07-19",
   "units": "USD per million tokens"
 }

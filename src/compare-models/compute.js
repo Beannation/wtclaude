@@ -107,7 +107,7 @@ export function computeComparison({ codeTurns = [], coworkTurns = [], today, day
 // Fable is framed as an allowance cap (never "free"); every projection is labeled.
 export const CAVEATS = [
   'Re-prices your recorded usage — not the same task run on each model. A different model emits different token counts for identical work (Sonnet 5’s tokenizer runs ~1.0–1.35× heavier than Opus), so holding tokens fixed understates the true gap. Every projected number is a labeled estimate.',
-  'Fable’s row is priced as usage credits at $10/$50. Fable is included up to 50% of your weekly limit through ~July 12 (extended from July 7), then usage credits — run `wtclaude fable` for the forecast.',
+  'Fable’s row is priced as usage credits at $10/$50. Fable is included up to 50% of your weekly limit through ~July 19 (extended from July 7 → July 12 → July 19), then usage credits — run `wtclaude fable` for the forecast.',
   'Cost, not quality — we surface what the choice costs you; we don’t judge which model is better.',
   'Code is billing-grade (your anchored terminal tokens). Cowork is a labeled estimate (audit-log tokens × rate). Chat is excluded (no local cost data).',
 ];

@@ -78,7 +78,7 @@ test('caveats are honest: no first/only, Fable framed as allowance not free, qua
   const blob = CAVEATS.join(' ').toLowerCase();
   assert.ok(!/\bfirst\b|\bonly\b/.test(blob), 'no first/only');
   assert.ok(!/\bfree\b/.test(blob), 'Fable never described as free');
-  assert.ok(blob.includes('50%') && blob.includes('july 12'), 'Fable allowance mechanic stated');
+  assert.ok(blob.includes('50%') && blob.includes('july 19'), 'Fable allowance mechanic stated');
   assert.ok(blob.includes('not the same task') , 'tokenizer/recorded-usage caveat present');
   assert.ok(blob.includes('quality'), 'cost-not-quality caveat present');
 });

@@ -13,9 +13,10 @@ import { SCHEMA_VERSION } from '../utils/schema.js';
 //
 // EXPLICITLY a labeled estimate/forecast, scoped to "if the announced $10/$50
 // pricing holds" — Fable is included up to 50% of the weekly limit through the
-// ~July 12 cliff (extended from the original July 7 date — MON-FABLE-EXT-078),
-// then usage credits (an allowance cap, not "free"); Anthropic may move the date
-// again. ANCHORED on the payload cost field: the PART-1 capture proved
+// ~July 19 cliff (extended from the original July 7 date to July 12, then to
+// ~July 19 — MON-FABLE-EXT-078, re-extended W-020), then usage credits (an
+// allowance cap, not "free"); Anthropic may move the date again. ANCHORED on
+// the payload cost field: the PART-1 capture proved
 // the statusline reports a non-zero notional Fable cost at
 // the real rates (cache reads + thinking tokens already baked in), so the
 // accumulated notional IS the post-cliff charge for the same usage. Token math
@@ -24,7 +25,7 @@ import { SCHEMA_VERSION } from '../utils/schema.js';
 export function registerFable(program) {
   program
     .command('fable')
-    .description('Forecast what your Fable 5 usage would cost in usage credits after the ~July-12 allowance (labeled estimate)')
+    .description('Forecast what your Fable 5 usage would cost in usage credits after the ~July-19 allowance (labeled estimate)')
     .option('--json', 'Output machine-readable JSON')
     .option('--days <n>', 'Look-back window for the run-rate', '7')
     .action((opts) => {
@@ -87,7 +88,7 @@ export function registerFable(program) {
         return;
       }
 
-      const lines = ['\n  Fable 5 cost forecast  (estimate — the ~July-12 "Fable cliff")', '  ' + '='.repeat(58)];
+      const lines = ['\n  Fable 5 cost forecast  (estimate — the ~July-19 "Fable cliff")', '  ' + '='.repeat(58)];
       lines.push('');
       if (countdown != null && countdown > 0) {
         lines.push(`  Fable 5 is included up to 50% of your weekly limit through ${cliff} —`);
@@ -117,9 +118,9 @@ export function registerFable(program) {
       }
       lines.push('');
       lines.push('  Labeled estimate — holds if the announced $10/$50 pricing holds (an');
-      lines.push('  allowance cap; Anthropic may move the date again — it already moved once,');
-      lines.push('  from July 7 to ~July 12). Separate from the Agent-SDK credit pool — see');
-      lines.push('  `wtclaude forecast` for that.');
+      lines.push('  allowance cap; Anthropic may move the date again — it has already moved');
+      lines.push('  twice, from July 7 to July 12, then to ~July 19). Separate from the');
+      lines.push('  Agent-SDK credit pool — see `wtclaude forecast` for that.');
       lines.push('');
       output(lines.join('\n'), o);
     });

@@ -39,9 +39,10 @@ export function isDualPoolActive(todayStr = new Date().toISOString().slice(0, 10
 // suspended June 12, 2026 (US export-control directive) and redeployed by Anthropic on
 // July 1, 2026. Re-arm flips FABLE_SUSPENDED back to false so `wtclaude fable` shows the
 // live forecast again — under the NEW mechanic: Fable 5 is included up to 50% of the
-// weekly usage limit through ~July 12 (extended from the original July 7 date after
-// backlash — MON-FABLE-EXT-078; hedge it, may move again), then bills usage credits at
-// $10/$50 (an allowance cap, NOT "free"). The command, the fable-5 rate entry, and all the
+// weekly usage limit through ~July 19 (extended from the original July 7 date, to
+// July 12, then to ~July 19 — MON-FABLE-EXT-078, re-extended W-020; hedge it, may move
+// again), then bills usage credits at $10/$50 (an allowance cap, NOT "free"). The
+// command, the fable-5 rate entry, and all the
 // forecast logic were left intact through the suspension, so re-arm is just this flag +
 // the cliff date.
 // Re-suspend path (if needed): flip back to true and patch-republish.
@@ -54,14 +55,15 @@ export const FABLE_SUSPENDED_NOTICE =
 
 // The date interactive Fable 5 use moves from the included allowance to usage credits
 // — the "Fable cliff." Re-armed to the July mechanic: included up to 50% of the weekly
-// limit through ~July 12 (extended from the original July 7 date — MON-FABLE-EXT-078),
-// usage credits at $10/$50 after (not "free"). Config override first (Anthropic may move
-// the date again), then the active pricing sheet, then the announced ~July-12 date.
+// limit through ~July 19 (extended from the original July 7 date, to July 12, then to
+// ~July 19 — MON-FABLE-EXT-078, re-extended W-020), usage credits at $10/$50 after (not
+// "free"). Config override first (Anthropic may move the date again), then the active
+// pricing sheet, then the announced ~July-19 date.
 export function getFableCliffDate() {
   const c = loadConfig();
   if (c.fable_cliff_date) return c.fable_cliff_date;
   const p = getLatestPricing();
-  return p.fable_cliff_date || '2026-07-12';
+  return p.fable_cliff_date || '2026-07-19';
 }
 
 // Plan key (pro | max_5x | max_20x) if the user set one at setup; else null.
