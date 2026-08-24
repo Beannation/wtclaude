@@ -70,15 +70,32 @@ export const COMPARE_MODELS = [
 
 const todayStr = () => new Date().toISOString().slice(0, 10);
 
-// Mirror of pricing.normalizeModel: drop the `claude-` prefix, a `[…]` context
-// suffix (e.g. [1m]), and a trailing `-YYYYMMDD` date suffix.
-function normalizeModel(id) {
-  if (!id) return null;
-  return String(id)
-    .toLowerCase()
+// Mirror of pricing.parseModelId: split a raw model id into { provider, key }.
+// Drops a leading `<provider>/` segment and an `anthropic.` namespace (the
+// provider-prefixed shapes Claude Code started emitting in v2.1.223 —
+// `vertex_ai/claude-sonnet-5`, `bedrock/anthropic.claude-opus-5-20260724`),
+// then the `claude-` prefix, a `[…]` context suffix (e.g. [1m]), and a trailing
+// `-YYYYMMDD` date suffix.
+//
+// Without the provider handling these ids missed every key AND every alias, fell
+// through the opus-only family fallback, and resolved to null — so the dashboard
+// priced them at $0 and silently dropped them out of the comparison.
+export function parseModelId(id) {
+  if (!id) return { provider: null, key: null };
+  let s = String(id).toLowerCase().trim();
+  let provider = null;
+  const slash = s.indexOf('/');
+  if (slash > 0) { provider = s.slice(0, slash); s = s.slice(slash + 1); }
+  if (s.startsWith('anthropic.')) { provider = provider || 'bedrock'; s = s.slice('anthropic.'.length); }
+  const key = s
     .replace(/^claude-/, '')
     .replace(/\[[^\]]*\]$/, '')
     .replace(/-\d{8}$/, '');
+  return { provider, key: key || null };
+}
+
+function normalizeModel(id) {
+  return parseModelId(id).key;
 }
 
 // Mirror of pricing.getModelEntry: exact key → alias → opus-* family fallback.

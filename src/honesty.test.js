@@ -119,7 +119,7 @@ test('honesty gate: every credits-denominated surface carries the list-rate labe
   // overstate the real cost invisibly. Anthropic's own /usage carries the same
   // hedge. Any file that talks about usage credits must carry the label.
   const REQUIRED = 'bundle discounts up to 30% and promos not reflected';
-  const mustCarry = ['cli/fable.js'];
+  const mustCarry = ['cli/fable.js', 'cli/credits.js'];
   for (const rel of mustCarry) {
     const src = readFileSync(join(ROOT, 'src', rel), 'utf8');
     assert.ok(src.includes(REQUIRED), `${rel} prints credits figures but is missing the list-rate label: "${REQUIRED}"`);

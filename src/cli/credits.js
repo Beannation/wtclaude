@@ -52,6 +52,7 @@ export function registerCredits(program) {
             subscription_usd: round(spend.subscription),
           },
           oauth_extra_usage: extra,
+          rate_basis: 'at standard API list rates; bundle discounts up to 30% and promos not reflected',
         }, null, 2), o);
         return;
       }
@@ -104,6 +105,14 @@ export function registerCredits(program) {
         lines.push('  (OAuth extra_usage balance not cached yet — enable sync to populate it;');
         lines.push('   the figures above are local billing-grade spend.)');
       }
+      // R-27: pre-purchased usage bundles cut the effective rate by up to 30%
+      // ($50->$45, $250->$200, $1000->$700) and local data cannot see which
+      // bundle a user holds, so any credits figure we print at list rates can
+      // overstate the real cost invisibly. Anthropic's own /usage carries the
+      // same limitation and says so.
+      lines.push('');
+      lines.push('  Figures are at standard API list rates; bundle discounts up to 30% and');
+      lines.push('  promos not reflected.');
       lines.push('');
       output(lines.join('\n'), o);
     });

@@ -298,8 +298,16 @@ function collect() {
     deltaOutput = Math.max(0, cumOutput - (prev.cumulative_output ?? 0));
     deltaCacheRead = Math.max(0, cumCacheRead - (prev.cumulative_cache_read ?? 0));
     deltaCacheWrite = Math.max(0, cumCacheWrite - (prev.cumulative_cache_write ?? 0));
+    // Compare LIKE FOR LIKE. `prev.cumulative_cost_usd` was written through
+    // round6(), so subtracting it from the raw payload value leaves a
+    // sub-microcent residue on an unchanged payload — enough to defeat the
+    // duplicate guard below, which then writes a row whose own cost rounds to
+    // $0. That produced 3,432 phantom rows in a 24,751-record local corpus
+    // (13.9%), every one of them carrying a cumulative identical to its
+    // predecessor, and zero counter-examples. They cost nothing but they
+    // inflated the denominator of every per-turn metric.
     deltaCost = cumCost != null && typeof prev.cumulative_cost_usd === 'number'
-      ? Math.max(0, cumCost - prev.cumulative_cost_usd)
+      ? Math.max(0, round6(cumCost) - prev.cumulative_cost_usd)
       : 0;
     turn = (prev.turn ?? 0) + 1;
 
@@ -356,6 +364,17 @@ function collect() {
     session_id: f.sessionId,
     turn,
     model: f.modelId,
+    // HONESTY FLAG (B2). `model` is the session's CONFIGURED model, taken from
+    // the payload's `model.id` — documented as "Current model identifier and
+    // display name". It is NOT the model that actually served the response.
+    // Anthropic's Cookbook is explicit that serving-model analytics must come
+    // from `usage.iterations` ("Analytics recorded against the requested model
+    // will be wrong whenever a fallback is used"), and the statusline payload
+    // carries no `iterations` field and no serving-model field of any kind
+    // (verified against the statusline docs, 2026-08-24). So a fallback-served
+    // turn is attributed here to the requested model, and we cannot see that it
+    // happened. Recording the provenance is the honest thing we CAN do.
+    model_source: 'session_setting',
     input_tokens: deltaInput,
     output_tokens: deltaOutput,
     cache_read_tokens: deltaCacheRead,

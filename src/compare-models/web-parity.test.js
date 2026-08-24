@@ -66,3 +66,30 @@ test('CLI and dashboard compare the same three models, in the same order', () =>
   assert.deepEqual(WEB_MODELS, CLI_MODELS, 'compare-models drifted between CLI and dashboard');
   assert.equal(CLI_MODELS[0].key, 'opus-5', 'the Opus compared must be CC\'s current default');
 });
+
+// B6 (2026-08-24): the CLI learned to handle v2.1.223's provider-prefixed model
+// ids; the dashboard mirror had not, so `vertex_ai/claude-sonnet-5` missed every
+// key and every alias, fell through the opus-only family fallback, resolved to
+// null, and was priced at $0 — silently dropped from the comparison.
+test('web mirror parses provider-prefixed model ids the same way the CLI does', async () => {
+  const web = await import('../../web/src/lib/compareModels.js');
+  const cli = await import('../utils/pricing.js');
+  const cases = [
+    'vertex_ai/claude-sonnet-5',
+    'bedrock/anthropic.claude-opus-5-20260724',
+    'anthropic.claude-haiku-4-5',
+    'claude-opus-5[1m]',
+    'claude-sonnet-5',
+  ];
+  for (const id of cases) {
+    const w = web.parseModelId(id);
+    const c = cli.parseModelId(id);
+    assert.deepEqual([w.provider, w.key], [c.provider, c.key], `parseModelId drifted on "${id}"`);
+  }
+});
+
+test('web mirror never prices a provider-prefixed turn at $0', async () => {
+  const web = await import('../../web/src/lib/compareModels.js');
+  const usd = web.expectedCost('vertex_ai/claude-sonnet-5', { input_tokens: 1_000_000 }, '2026-08-24');
+  assert.ok(usd > 0, 'a real Anthropic model behind a provider prefix must not cost $0');
+});

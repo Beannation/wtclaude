@@ -170,3 +170,60 @@ test('collector never labels a non-Fable model usage_credits, on any plan', () =
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+// ───────────────────────────────────────────────────────────────────────────
+// B5 REGRESSION — the duplicate guard must actually suppress duplicates.
+//
+// It compared the RAW payload cumulative against the stored one, which had been
+// written through round6(). On an unchanged payload that leaves a sub-microcent
+// residue, the guard sees a non-zero cost delta and writes a row whose own cost
+// rounds to $0. Measured in the real local corpus on 2026-08-24: 3,432 such rows
+// out of 24,751 (13.9%), every one carrying a cumulative identical to its
+// predecessor and zero counter-examples. They carry no money but they inflate the
+// denominator of every per-turn metric ($/turn, turns/day, $/active-minute).
+// ───────────────────────────────────────────────────────────────────────────
+test('an unchanged payload with sub-microcent cost precision writes NO second row', () => {
+  const dir = setup('s');
+  try {
+    writeFileSync(join(dir, 'config.json'), JSON.stringify({ edit_hash_salt: 's' }));
+    // A cumulative with more precision than round6 keeps — exactly the shape the
+    // live payload produces.
+    const p = payload('dup', { cost: 2.7441944999, input: 1000, output: 100, cwd: '/Users/x/p' });
+    runCollector(dir, p);
+    runCollector(dir, p);   // byte-identical repeat: must be suppressed
+    runCollector(dir, p);
+    const lines = readFileSync(join(dir, 'sessions', 'dup.ndjson'), 'utf8').trim().split('\n');
+    assert.equal(lines.length, 1, `expected 1 record, got ${lines.length} (phantom duplicate rows are back)`);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('a real cost movement after a duplicate still records', () => {
+  const dir = setup('s');
+  try {
+    writeFileSync(join(dir, 'config.json'), JSON.stringify({ edit_hash_salt: 's' }));
+    runCollector(dir, payload('mv', { cost: 1.0000004999, input: 1000, output: 100, cwd: '/Users/x/p' }));
+    runCollector(dir, payload('mv', { cost: 1.0000004999, input: 1000, output: 100, cwd: '/Users/x/p' }));
+    runCollector(dir, payload('mv', { cost: 2.50, input: 2000, output: 200, cwd: '/Users/x/p' }));
+    const lines = readFileSync(join(dir, 'sessions', 'mv.ndjson'), 'utf8').trim().split('\n');
+    assert.equal(lines.length, 2, 'the duplicate is suppressed but the real movement is kept');
+    const last = JSON.parse(lines[1]);
+    assert.ok(last.cost_usd > 1.4, `real delta must survive, got ${last.cost_usd}`);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('B2: every record records that the model stamp is the session setting, not the serving model', () => {
+  const dir = setup('s');
+  try {
+    writeFileSync(join(dir, 'config.json'), JSON.stringify({ edit_hash_salt: 's' }));
+    runCollector(dir, payload('src', { cost: 0.05, input: 1000, output: 100, cwd: '/Users/x/p' }));
+    const rec = JSON.parse(readFileSync(join(dir, 'sessions', 'src.ndjson'), 'utf8').trim());
+    assert.equal(rec.model_source, 'session_setting',
+      'the payload carries no serving-model field, so provenance must be recorded');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

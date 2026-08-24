@@ -6,13 +6,23 @@ Where Anthropic has not stated something, this file says so rather than guessing
 
 ---
 
-## The one number that is billing-grade
+## The one number we do not compute
 
 For **terminal Claude Code**, the headline cost is the `cost.total_cost_usd` field
-that Claude Code itself puts in the statusline payload. We record it and we do not
-recompute it. Every modifier Anthropic applies — data residency, fast mode, long
-context, batch — is already inside that figure before we see it, which is why we
-never multiply it by anything.
+that Claude Code itself puts in the statusline payload. We record it and we never
+recompute it, never multiply it, and never adjust it.
+
+That matters because the modifiers are already inside it: data residency, fast
+mode, long context and batch are all applied before we see the number. Re-applying
+any of them — the 1.1× residency premium in particular — would double-count. (One
+version boundary applies: the residency premium entered that figure in v2.1.239,
+so records from earlier builds in a residency workspace under-report by ~10%.)
+
+What that figure is *not* is a copy of your invoice. Anthropic describes it as
+computed client-side and says it may differ from your actual bill — see [What
+Anthropic says the cost field actually is](#what-anthropic-says-the-cost-field-actually-is)
+below, which is the precise version of this and should be read before anyone
+describes the number in public copy.
 
 Everything else on this page is an estimate, and is labelled as one wherever it is
 shown.
@@ -73,18 +83,81 @@ comparison and never told the user a turn had gone missing.
 
 ### Token counts are context-window occupancy, not billed tokens
 
-**This is our own measurement, not an Anthropic statement.** Across 24,612 local
-records from 75 sessions, the payload's `context_window.total_input_tokens`
-already contains `cache_read + cache_write` — the three sum to within 1–2 tokens
-in 99.2% of records — and `context_window.current_usage.*` is a per-request
-snapshot rather than a cumulative counter.
+This one is **documented by Anthropic**, and we confirmed it against our own data.
+The statusline reference says, verbatim:
+
+> **Combined totals** (`total_input_tokens`, `total_output_tokens`): tokens
+> currently in the context window. `total_input_tokens` is the sum of
+> `input_tokens`, `cache_creation_input_tokens`, and `cache_read_input_tokens`
+
+and describes `context_window.current_usage` as "Token counts from the last API
+call". So these are **current-window and per-request values, not cumulative
+counters**, and the input figure already contains cache reads and writes.
+
+Our own corpus agrees: across 24,612 records from 75 sessions, input equals
+cache-read plus cache-write to within 1–2 tokens in **99.2%** of records.
 
 The practical consequence: the per-turn token figures we store describe how the
-context window grew, not how many tokens were billed. Summing them recovers only
-about a quarter of the billing-grade cost anchor. **Read token counts as context
+context window grew, not how many tokens were billed, and reading them as
+cumulative counters double-counts cached input. Summing them recovers only about a
+quarter of the billing-grade cost anchor. **Read token counts as context
 occupancy. Read cost from the anchor.** Reshaping the collector's token accounting
 is tracked for a later release; the headline cost is unaffected either way,
 because it never came from the tokens.
+
+Source: code.claude.com/docs/en/statusline, read 2026-08-24.
+
+### What Anthropic says the cost field actually is
+
+Our headline comes from `cost.total_cost_usd`. The statusline reference describes
+that field as:
+
+> Estimated session cost in USD, computed client-side. May differ from your actual
+> bill. Resets to $0 when `/clear` starts a new session
+
+That is worth stating plainly. The figure is computed by Claude Code on your
+machine from finalized token counts at list rates — it is not retrieved from
+Anthropic's billing system, and Anthropic does not promise it equals your invoice.
+What it *does* give us, and what the session logs do not, is the correct token
+counts: post-finalization, including thinking tokens.
+
+So: our number matches what Claude Code itself reports for the session. Anyone
+describing it should be careful not to promise more than Anthropic promises about
+its own field.
+
+> **Canon flag.** The product's central claim is worded around this field. The
+> wording is locked canon and is not Build's to change — the discrepancy has been
+> routed to the PMO with the quote above. This note records the fact, not a
+> decision.
+
+Source: code.claude.com/docs/en/statusline, read 2026-08-24.
+
+### The model on a turn is the one you selected, not necessarily the one that answered
+
+Each record's `model` is the session's configured model, taken from the payload's
+`model.id` ("Current model identifier and display name"). Every record now also
+carries `model_source: 'session_setting'` so this is never mistaken for something
+stronger.
+
+Anthropic's Cookbook is explicit that this is the wrong field for attribution:
+
+> Build serving-model analytics from `usage.iterations`, not from the model you
+> requested. The response's `model` field is the model that actually answered, so
+> a fallback-served turn reports Opus 4.8. Analytics recorded against the
+> _requested_ model will be wrong whenever a fallback is used.
+
+The statusline payload carries **no `iterations` field and no serving-model field
+of any kind** — verified against the statusline reference on 2026-08-24, where the
+string "iterations" does not occur.
+
+So a fallback-served turn is attributed here to the model you selected, and we
+cannot see that it happened. Per-model splits should be read as **"attributed by
+session model setting"**. We do not know how often this bites: the Cookbook says
+server-side fallback is per-request opt-in behind a beta header, and Anthropic has
+not stated whether Claude Code sends it, so the exposure is real but unquantified.
+
+Sources: platform.claude.com/cookbook/fable-5-fallback-billing-guide and
+code.claude.com/docs/en/statusline, both read 2026-08-24.
 
 ## Cache pricing
 
