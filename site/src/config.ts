@@ -34,16 +34,15 @@ export const SPLIT_STATUS_NOTE =
 /**
  * D-13 MASTER GATE — the single "cloud is live" flip (GTM-028).
  *
- * When false (today): the site keeps its §1–4 "coming" states — no cloud-sync claim,
- * the dashboard is a "what's next", no live /dashboard link. When true: all GTM-028
- * CLOUD-ON copy publishes at once (Home hero line, /developers §4b dashboard + §4c sync
- * sections, the §7 append, and the docs `sync`/`dashboard` commands) AND the dashboard
- * nav/footer link turns on. ONE FLIP — sync + dashboard ship together.
+ * When false: the site keeps its §1–4 "coming" states — no cloud-sync claim, the dashboard
+ * is a "what's next", no live /dashboard link. When true (today): all GTM-028 CLOUD-ON copy
+ * publishes at once (Home hero line, /developers §4b dashboard + §4c sync sections, the §7
+ * append, and the docs `sync`/`dashboard` commands) AND the dashboard nav/footer link turns
+ * on. ONE FLIP — sync + dashboard ship together.
  *
- * ⚠ DO NOT flip until the PMO confirms D-13 is green:
- *   - the cloud re-test passes Block 5 (sync) + Block 6 (dashboard), AND
- *   - infra confirms the web/ dashboard is deployed (a live /dashboard link 404s otherwise).
- * SEC-ROTATE containment is done (Jun 5); the live gate is the Phase-C deploy + re-test.
+ * ⚠ The gate is TRUE — the CLOUD-ON copy and the /dashboard link are published. Flip back to
+ * false (+ redeploy) only if the dashboard is taken down; a live /dashboard link 404s
+ * otherwise. SEC-ROTATE containment was done Jun 5.
  */
 export const CLOUD_LIVE = true;
 
@@ -71,13 +70,13 @@ export const FAST_MODE_BADGE: 'inferred' | null = 'inferred';
 export const SHOW_TASKS_FEATURE = false;
 
 /**
- * Peerlist "Live on Launchpad" badge (PM, June 15). Time-sensitive social proof while
- * WTClaude is live on the Peerlist Launchpad — VOTING ENDS JUNE 21. SHOW_PEERLIST_BADGE=false
- * pulls every badge (homepage hero strip + footer) in one flip — a one-line removal when
- * voting closes. The embed URL/IDs live in PeerlistBadge.astro and are fixed; only the
- * theme query param swaps light/dark per surface.
+ * Peerlist "Live on Launchpad" badge (PM, June 15). Time-sensitive social proof for the
+ * Peerlist Launchpad run; voting closed June 21, 2026, so the badge is off — this is the
+ * one-line removal the flag was built for, and it pulls every placement (homepage hero
+ * strip + footer) at once. The embed URL/IDs live in PeerlistBadge.astro and are fixed; only
+ * the theme query param swaps light/dark per surface.
  */
-export const SHOW_PEERLIST_BADGE = true;
+export const SHOW_PEERLIST_BADGE = false;
 
 /**
  * Internal "Draft — copy gap" markers (`DraftNote.astro`) on the persona pages

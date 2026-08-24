@@ -1,19 +1,19 @@
 ---
 title: "Claude Team Seat Pricing: Premium vs Standard — and How to Tell Who's Overpaying"
-description: "A Premium Claude seat costs roughly 5× a Standard one — for capacity, not features. Here's how the tiers differ, why teams overpay, and how to find the seats you could right-size (free, in your browser)."
+description: "A Premium Claude seat costs roughly 5× a Standard one — mostly for capacity, not features. Here's how the tiers differ, why teams overpay, and how to find the seats you could right-size (free, in your browser)."
 pubDate: 2026-07-08
 author: "Peter Bean"
 readingTime: "7 min read"
 faq:
   - q: "What's the difference between a Standard and Premium Claude Team seat?"
-    a: "The tiers differ mainly on usage capacity, not features — both include Claude Code and Cowork. A Premium seat costs roughly 5× a Standard one, so putting a light user on Premium is a real overpay. Check Anthropic's current seat pricing, as tiers and prices change."
+    a: "The tiers differ mainly on usage capacity, not features — both include Claude Code and Cowork. The exception is Fable 5: Team Premium includes it up to 50% of the weekly usage limit, while Team Standard bills it as usage credits from the first token. A Premium seat costs roughly 5× a Standard one, so putting a light user on Premium is a real overpay. Check Anthropic's current seat pricing, as tiers and prices change."
   - q: "How do I know which Claude seats to downgrade?"
     a: "Look at each person's actual usage volume against their seat tier: someone on Premium who consistently uses Standard-level volume is a downgrade candidate, and a seat with near-zero usage is a reclaim candidate. A spend audit surfaces both from your Anthropic Spend CSV — as recommendations you confirm, not automatic changes."
   - q: "Does Anthropic automatically right-size my Claude seats?"
     a: "No. Anthropic's docs recommend reviewing periodically and downgrading underused Premium seats, but it's a manual chore — and the company selling seats has no incentive to automate a nudge to buy fewer. Independent tools can flag the candidates for you."
 ---
 
-If you administer Claude for a team, seat tiers are the quietest line item on your bill — and often the most overpaid. The reason is simple: a **Premium seat costs roughly 5× a Standard one**, and the difference is mostly **usage capacity, not features**. Both tiers include Claude Code and Cowork. So the instinct to put everyone on Premium "to be safe" can quietly multiply your bill for capacity most people never touch. *(Tiers and prices change — check Anthropic's current seat pricing for the exact figures.)*
+If you administer Claude for a team, seat tiers are the quietest line item on your bill — and often the most overpaid. The reason is simple: a **Premium seat costs roughly 5× a Standard one**, and the difference is mostly **usage capacity, not features**. Both tiers include Claude Code and Cowork; Fable 5 is the exception — Team Premium includes it up to 50% of the weekly usage limit, while Team Standard bills it as usage credits from the first token. So the instinct to put everyone on Premium "to be safe" can quietly multiply your bill for capacity most people never touch. *(Tiers and prices change — check Anthropic's current seat pricing for the exact figures.)*
 
 <p class="rounded-lg border border-amber/30 bg-amber-light/40 px-4 py-3 text-sm"><a href="/business/audit" data-track="cta_spend_audit_blog_seat_pricing" class="font-semibold text-amber-deep hover:text-amber">Audit your team's Claude spend, free →</a></p>
 
@@ -50,16 +50,16 @@ One honest caveat: the Spend CSV shows *usage volume*, not the *tier* each perso
 
 ## What to do with the result
 
-- **Downgrade** the clearly over-tiered seats to Standard. That's the 5× saving, per seat.
+- **Downgrade** the clearly over-tiered seats to Standard. That's the 5× saving, per seat. Check Fable 5 use first: Team Premium includes Fable 5 up to 50% of the weekly usage limit, while Team Standard bills it as usage credits from the first token.
 - **Reclaim** the dormant ones (unassign or remove).
 - **Put it on a cadence.** Composition drifts, so a one-time cleanup drifts back. A quarterly re-run (the audit takes a minute) keeps the savings from creeping back.
 
-That's the whole play: seats are where the easy, provable money is. See yours in about 60 seconds — [run the free spend audit](/business/audit). It's independent (we don't sell Claude seats), free, and your data stays in your browser. Seats are one piece of the picture — for the rest of what's moving in Claude pricing this month, see [the July 2026 field guide](/blog/state-of-claude-pricing-july-2026) or the [plain billing explainer](/blog/claude-code-billing-explained).
+That's the whole play: seats are where the easy, provable money is. See yours in about 60 seconds — [run the free spend audit](/business/audit). It's independent (we don't sell Claude seats), free, and your data stays in your browser. Seats are one piece of the picture — for the rest of what was moving in Claude pricing in July 2026, see [the July 2026 field guide](/blog/state-of-claude-pricing-july-2026) or the [plain billing explainer](/blog/claude-code-billing-explained).
 
 ## FAQ
 
 **What's the difference between a Standard and Premium Claude Team seat?**
-Mostly usage capacity, not features — both include Claude Code and Cowork. Premium runs roughly 5× a Standard seat, so a light user on Premium is a real overpay. Check Anthropic's current pricing for exact numbers.
+Mostly usage capacity, not features — both include Claude Code and Cowork. The exception is Fable 5: Team Premium includes it up to 50% of the weekly usage limit, while Team Standard bills it as usage credits from the first token. Premium runs roughly 5× a Standard seat, so a light user on Premium is a real overpay. Check Anthropic's current pricing for exact numbers.
 
 **How do I know which Claude seats to downgrade?**
 Compare each person's usage volume to their tier: Premium seats using Standard-level volume are downgrade candidates; near-zero-usage seats are reclaim candidates. The [free spend audit](/business/audit) flags both from your Spend CSV, as recommendations you confirm.

@@ -1,19 +1,21 @@
 ---
 title: "The State of Claude Pricing — July 2026: An Independent Field Guide"
-description: "Fable 5's credits cliff (now ~July 19, extended twice), the weekly-limit change, Sonnet 5 as the new default, the paused billing split, seat tiers, and the 150-seat cliff — every recent Claude pricing change, what it means, who it hits, and what to actually do. Plain-English and independent."
+description: "A dated record of Claude pricing as it stood on July 8, 2026 — Fable 5's billing, the weekly-limit boost, Sonnet 5 as the new default, the paused billing split, seat tiers and the 150-seat cliff. Kept as history; the update at the top carries the current facts."
 pubDate: 2026-07-08
 author: "Peter Bean"
 readingTime: "10 min read"
 faq:
-  - q: "When does Claude Fable 5 start billing as usage credits?"
-    a: "Fable 5 is included for up to 50% of your weekly usage limit through ~July 19, 2026 (Anthropic has extended this twice: from the original July 7 date, to July 12, then to ~July 19). After that allowance it bills as usage credits at $10/$50 per million tokens (cache-read $1) from July 20; standard Enterprise is credits-only, with no grace if credits aren't funded. Blocked requests reroute to Opus 4.8."
+  - q: "How does Claude Fable 5 bill?"
+    a: "By plan, and there is no cliff or countdown. Since July 20, 2026 Fable 5 has been permanent and plan-conditional: on Max, Team Premium and Enterprise Premium it's included up to 50% of your weekly usage limit — a share of that limit, not an allowance on top of it, and not a credits wallet. On Pro and Team Standard it draws usage credits from the first token. On Enterprise Standard it's credits-only, and only if your org enables it."
   - q: "Is the +50% Claude Code weekly limit boost expiring?"
-    a: "It was set to expire July 13, 2026, then Anthropic extended it to ~July 19 — unless it extends again. It's a usage-limit change, not a price change — heavy users would lose some weekly headroom. Check Anthropic's current announcement, as the date can move."
-  - q: "Is Claude Sonnet 5 cheaper than Opus 4.8?"
-    a: "Per token, yes ($2/$10 intro, stepping to $3/$15 on Aug 31), and it's the new Claude Code default. But its tokenizer emits more tokens for the same work (often ~30% more), so a raw per-million comparison overstates the saving. Price it against your own usage."
+    a: "The boost runs May 13 → August 31, 2026 at 11:59 PM PT, unless Anthropic extends it. It applies to weekly limits only (5-hour limits are unaffected), in Claude Code only, on Pro, Max and Team plus legacy seat-based Enterprise. It's a usage-limit change, not a price change — heavy users would lose some weekly headroom. Anthropic's Help Center article 15910845 carries the current dates."
+  - q: "Is Claude Sonnet 5 cheaper than Opus 5?"
+    a: "Per token, yes: Sonnet 5 is $2/$10 per million input/output tokens, against $5/$25 for Opus 5 ($10/$50 in fast mode). Sonnet 5's $2/$10 is permanent — Anthropic cancelled the increase to $3/$15 that had been scheduled for September 1, 2026. But Sonnet 5's tokenizer emits more tokens for the same work (often ~30% more), so a raw per-million comparison overstates the saving. Price it against your own usage."
   - q: "Did the June 15 Claude billing split happen?"
     a: "No. Anthropic announced a plan to split usage into a separate Interactive pool and Agent-SDK pool, then paused it before June 15. Today, agentic and SDK usage still draws from your subscription's usage limits as before."
 ---
+
+> **Update, August 24, 2026:** This is a dated record of where things stood on July 8, 2026 — the sections below are that day's snapshot and haven't been retro-edited. The FAQ at the foot of the page is the exception: it carries current facts, because it also feeds this page's structured data, where a dated caveat doesn't travel. What's changed since. **Sonnet 5 stays at $2/$10 per million, permanently** — Anthropic cancelled the increase to $3/$15 that had been scheduled for September 1, 2026. **Opus 5 launched July 24, 2026** at $5/$25 ($10/$50 in fast mode) and is Claude Code's default `opus`; Opus 4.1 retired August 5, 2026. **Fable 5's credits cliff never arrived** — since July 20, 2026 Fable has been permanent and plan-conditional: included up to 50% of the weekly usage limit on Max, Team Premium and Enterprise Premium; usage credits from the first token on Pro and Team Standard; credits-only on Enterprise Standard, and only if the org enables it. No cliff, no countdown. **The +50% Claude Code weekly-limit boost** runs May 13 → August 31, 2026 at 11:59 PM PT unless Anthropic extends it — weekly limits only, Claude Code only (Anthropic Help Center article 15910845). The June-15 billing split is still paused.
 
 If you run Claude for a team, the last few weeks have been a lot. Prices moved, a model came back, another became the default, a billing change was announced and then un-announced, and a usage limit is set to change again. If you've lost the thread, you're not behind — it genuinely changed this fast.
 
@@ -79,14 +81,14 @@ And underneath it all, one anchor that doesn't move with the news: WTClaude read
 
 ## FAQ
 
-**When does Claude Fable 5 start billing as usage credits?**
-Included up to 50% of your weekly limit through ~July 19 (extended twice: July 7 → July 12 → July 19), then usage credits at $10/$50 per million (cache-read $1) from July 20; standard Enterprise is credits-only; blocked requests reroute to Opus 4.8.
+**How does Claude Fable 5 bill?**
+By plan, and there is no cliff or countdown. Since July 20, 2026 Fable 5 has been permanent and plan-conditional: on Max, Team Premium and Enterprise Premium it's included up to 50% of your weekly usage limit — a share of that limit, not an allowance on top of it, and not a credits wallet. On Pro and Team Standard it draws usage credits from the first token. On Enterprise Standard it's credits-only, and only if your org enables it.
 
 **Is the +50% Claude Code weekly limit boost expiring?**
-It was extended from July 13 to ~July 19, unless it extends again — a usage-limit change, not a price change. Check Anthropic's current announcement, since the date can move.
+The boost runs May 13 → August 31, 2026 at 11:59 PM PT, unless Anthropic extends it. It applies to weekly limits only (5-hour limits are unaffected), in Claude Code only, on Pro, Max and Team plus legacy seat-based Enterprise. It's a usage-limit change, not a price change — heavy users would lose some weekly headroom. Anthropic's Help Center article 15910845 carries the current dates.
 
-**Is Claude Sonnet 5 cheaper than Opus 4.8?**
-Per token yes ($2/$10 → $3/$15 Aug 31), and it's the new default — but its tokenizer emits ~30% more tokens for the same work, so price it against your own usage before assuming the saving.
+**Is Claude Sonnet 5 cheaper than Opus 5?**
+Per token, yes: Sonnet 5 is $2/$10 per million input/output tokens, against $5/$25 for Opus 5 ($10/$50 in fast mode). Sonnet 5's $2/$10 is permanent — Anthropic cancelled the increase to $3/$15 that had been scheduled for September 1, 2026. But Sonnet 5's tokenizer emits more tokens for the same work (often ~30% more), so a raw per-million comparison overstates the saving. Price it against your own usage.
 
 **Did the June 15 Claude billing split happen?**
 No — it was announced, then paused before taking effect. Usage still draws from your subscription limits as before.
