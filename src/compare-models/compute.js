@@ -21,8 +21,12 @@
 import { expectedCost } from '../utils/cost.js';
 
 // The three models compared, newest-generation keys (must match pricing config keys).
+// Opus 5 replaced Opus 4.8 here on 2026-08-24: Opus 5 launched 2026-07-24 and has
+// been Claude Code's default `opus` since v2.1.219, so it is the Opus most users
+// are actually running. Both price at $5/$25, so an Opus 4.8 user re-pricing to
+// Opus 5 nets ~$0 — which is the correct, honest result.
 export const COMPARE_MODELS = [
-  { key: 'opus-4-8', label: 'Opus 4.8' },
+  { key: 'opus-5', label: 'Opus 5' },
   { key: 'sonnet-5', label: 'Sonnet 5' },
   { key: 'fable-5', label: 'Fable 5' },
 ];

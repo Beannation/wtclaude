@@ -17,30 +17,53 @@
 //    which model is "better."
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Ported from config/pricing-2026-06-30.json (USD per million tokens). Sonnet 5
-// ships at the introductory $2/$10 rate through 2026-08-31, then steps up to
-// $3/$15 on the scheduled date — encoded exactly as the config does so the
-// browser resolves the dated step-up the same way getRates() does server-side.
+// MIRROR of src/config/pricing-2026-08-24.json (USD per million tokens). The CLI
+// modules read the rate sheet from disk via node:fs, which cannot run in the
+// browser, so the rates are mirrored here — and src/compare-models/web-parity.test.js
+// asserts this object still equals the shipped sheet, so the two can never drift
+// silently. If that test fails, this block is stale: regenerate it, do not edit
+// the test.
+//
+// CORRECTED 2026-08-24, two independent defects:
+//  1. This table carried `scheduled: [{ effective_date: '2026-08-31', input: 3.0,
+//     output: 15.0 }]` for Sonnet 5. Anthropic CANCELLED that increase on
+//     2026-08-10 ("The previously scheduled increase to $3/$15 per million
+//     input/output tokens on September 1, 2026 will not occur" — platform pricing
+//     docs). Left alone, this dashboard would have stepped every Sonnet 5 estimate
+//     up to a dead price on 2026-08-31, in the browser, with no deploy.
+//  2. `write_multiplier: 0.25` under-priced every cache write. Anthropic bills
+//     cache writes at 1.25x (5-minute) or 2x (1-hour) of base input.
 export const PRICING = {
-  cache: { read_multiplier: 0.1, write_multiplier: 0.25 },
+  cache: {
+    read_multiplier: 0.1,
+    write_multiplier_5m: 1.25,
+    write_multiplier_1h: 2.0,
+    write_multiplier: 2.0,
+  },
   models: {
-    'opus-4-8': { input: 5.0, output: 25.0, aliases: ['opus-4-7', 'opus-4-6'] },
-    'sonnet-5': {
-      input: 2.0,
-      output: 10.0,
-      scheduled: [{ effective_date: '2026-08-31', input: 3.0, output: 15.0 }],
-    },
-    'fable-5': { input: 10.0, output: 50.0 },
-    // Carried for baseline re-pricing of legacy/other models in recorded usage.
+    'opus-5': { input: 5.0, output: 25.0, fast_mode: { input: 10.0, output: 50.0 } },
+    'opus-4-8': { input: 5.0, output: 25.0, fast_mode: { input: 10.0, output: 50.0 } },
+    'opus-4-7': { input: 5.0, output: 25.0 },
+    'opus-4-6': { input: 5.0, output: 25.0 },
+    'opus-4-5': { input: 5.0, output: 25.0 },
+    'opus-4-1': { input: 15.0, output: 75.0, retired: true },
+    'opus-4': { input: 15.0, output: 75.0, retired: true },
+    'sonnet-5': { input: 2.0, output: 10.0 },
     'sonnet-4-6': { input: 3.0, output: 15.0 },
+    'sonnet-4-5': { input: 3.0, output: 15.0 },
+    'sonnet-4': { input: 3.0, output: 15.0, retired: true },
     'haiku-4-5': { input: 1.0, output: 5.0 },
+    'haiku-3-5': { input: 0.8, output: 4.0, retired: true },
+    'fable-5': { input: 10.0, output: 50.0 },
+    'mythos-5': { input: 10.0, output: 50.0 },
   },
 };
 
-// The three models compared — newest-generation keys, matching COMPARE_MODELS in
-// the CLI (src/compare-models/compute.js) and the pricing config keys.
+// The three models compared — must match COMPARE_MODELS in the CLI
+// (src/compare-models/compute.js). Opus 5 has been Claude Code's default `opus`
+// since v2.1.219.
 export const COMPARE_MODELS = [
-  { key: 'opus-4-8', label: 'Opus 4.8' },
+  { key: 'opus-5', label: 'Opus 5' },
   { key: 'sonnet-5', label: 'Sonnet 5' },
   { key: 'fable-5', label: 'Fable 5' },
 ];
@@ -67,8 +90,10 @@ function getModelEntry(modelId) {
     if (Array.isArray(entry.aliases) && entry.aliases.includes(key)) return { key: k, entry };
   }
   if (key.startsWith('opus')) {
-    const fam = Object.entries(PRICING.models).find(([k]) => k.startsWith('opus'));
-    if (fam) return { key: fam[0], entry: fam[1] };
+    // Newest opus by sort order, never whichever key happens to come first —
+    // with retired entries in the table, "first" could mean opus-4 at $15/$75.
+    const newest = Object.keys(PRICING.models).filter((k) => k.startsWith('opus')).sort().pop();
+    if (newest) return { key: newest, entry: PRICING.models[newest] };
   }
   return null;
 }
