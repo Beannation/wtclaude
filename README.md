@@ -111,6 +111,25 @@ It's an upstream bug in Claude Code (filed Feb 2026, still unfixed). The JSONL w
 
 Anthropic's own tools (`/cost`, `/usage`) use the accurate internal state, not JSONL. WTClaude taps into that same accurate source.
 
+## What's exact, what's an estimate, and what it can't see
+
+The headline cost for **terminal Claude Code** is billing-grade: it's the cost
+figure Claude Code itself reports, not a number we recompute. Cowork and Chat
+figures are clearly-labeled estimates.
+
+WTClaude sees local Claude Code sessions on this machine. Sessions that run on
+Anthropic's infrastructure — claude.ai, the desktop and mobile apps,
+`claude --cloud`, scheduled routines — aren't visible to it, and it can't tell
+that one happened.
+
+Anything denominated in usage credits is priced at standard API list rates;
+pre-purchased bundles cut the effective rate by up to 30% and local data can't see
+which bundle you hold, so those figures can overstate your real cost.
+
+Full detail — cache pricing, credit expiry, the paused Agent-SDK split, which
+Claude Code versions changed what, and the questions we deliberately refuse to
+answer because Anthropic hasn't stated them: **[docs/DATA-NOTES.md](docs/DATA-NOTES.md)**.
+
 ## Data Storage
 
 ```
