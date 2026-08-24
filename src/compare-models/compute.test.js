@@ -91,3 +91,17 @@ test('caveats are honest: no first/only, Fable framed as allowance not free, qua
 });
 
 function round(n) { return Math.round(n * 1e6) / 1e6; }
+
+test('compare-models excludes partner-platform turns from both sides and counts them', () => {
+  // Same rule as `whatif`: a Bedrock- or Vertex-served turn is a real Anthropic
+  // model, but those platforms publish their own rates, so pricing it at our
+  // first-party rate and presenting it as our estimate is not something we can
+  // stand behind. Letting it through at $0 removed real spend from the baseline.
+  const s = repriceSurface(
+    [turn('sonnet-5'), turn('vertex_ai/claude-sonnet-5')],
+    { today: '2026-08-24', days: 30 });
+  assert.equal(s.turn_count, 1, 'only the priceable turn is compared');
+  assert.equal(s.unpriced_turn_count, 1);
+  assert.deepEqual(s.unpriced_models, ['vertex_ai/claude-sonnet-5']);
+  assert.equal(round(s.baseline_window_usd), 12, 'baseline is the one priceable turn, not two');
+});
