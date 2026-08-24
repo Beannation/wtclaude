@@ -2,7 +2,6 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Mark from '../components/Mark.astro';
 import June15Banner from '../components/June15Banner.astro';
-import FableBanner from '../components/FableBanner.astro';
 import CodeBlock from '../components/CodeBlock.astro';
 import HookBand from '../components/HookBand.astro';
 import RelatedReading from '../components/RelatedReading.astro';
@@ -73,7 +72,6 @@ const jsonLd = softwareApplication(new URL(Astro.url.pathname, Astro.site).href)
     </div>
   </section>
 
-  <FableBanner />
 
   {SHOW_JUNE15_BANNER && <June15Banner />}
 

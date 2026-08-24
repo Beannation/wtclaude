@@ -7,7 +7,7 @@ import HookBand from '../components/HookBand.astro';
 
 const title = 'WTClaude for the Complete Claude User — all your Claude in one view';
 const description =
-  'See your whole Claude life in one place — Chat, Cowork, and Code — with a warning before you hit a limit. Billing-grade for Code in your terminal and for Cowork where Claude records the cost locally; honest, clearly-labeled estimates everywhere else.';
+  'See your whole Claude life in one place — Chat, Cowork, and Code — with a warning before you hit a limit. Billing-grade for Code in your terminal; honest, clearly-labeled estimates everywhere else.';
 ---
 
 <BaseLayout title={title} description={description} noNavPad heroDark>
@@ -58,12 +58,12 @@ const description =
           <h3 class="font-head text-lg">Honest by surface</h3>
         </div>
         <p class="mt-2 text-sm leading-relaxed text-ink/70">
-          Billing-grade for Code in your terminal <HonestyBadge kind="billing-grade" />; billing-grade
-          for Cowork where Claude records the cost to its own local log
-          <HonestyBadge kind="billing-grade" /> (Anthropic-computed); an honest estimate for Code in
-          the desktop app <HonestyBadge kind="estimate" />, and an honest, clearly-labeled estimate
-          everywhere else; Chat is reflected in your shared limit total — never as its own dollar
-          figure.
+          Billing-grade for Code in your terminal <HonestyBadge kind="billing-grade" />; a
+          clearly-labeled estimate for Cowork <HonestyBadge kind="estimate" />, priced from the
+          tokens in its audit log — Cowork records no cost of its own; an honest estimate for Code
+          in the desktop app <HonestyBadge kind="estimate" />, and an honest, clearly-labeled
+          estimate everywhere else; Chat is reflected in your shared limit total — never as its own
+          dollar figure.
         </p>
       </article>
       <article class="rounded-2xl border border-ink/10 bg-card p-7 shadow-sm">
@@ -75,8 +75,8 @@ const description =
     <!-- Honesty framing (do-NOT-claim guardrails, brief A2 + labeling spec) -->
     <p class="mx-auto mt-10 max-w-3xl text-center text-sm leading-relaxed text-ink/65">
       Code cost is billing-grade in your terminal, and an honest estimate in the desktop app. Cowork
-      is billing-grade where Claude writes the cost to its own local log, and a clearly-labeled
-      estimate where it doesn’t. Chat has no local data, so it’s reflected only inside your shared
+      is a clearly-labeled estimate: its audit log records tokens but no cost, so we price those
+      tokens at list rates rather than reading a figure Claude computed. Chat has no local data, so it’s reflected only inside your shared
       limit total — never shown as a Chat dollar figure. The limit view reflects Anthropic’s shared
       rate-limit data, read as accurately as we can.
     </p>
