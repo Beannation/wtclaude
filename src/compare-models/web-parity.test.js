@@ -93,3 +93,15 @@ test('web mirror never prices a provider-prefixed turn at $0', async () => {
   const usd = web.expectedCost('vertex_ai/claude-sonnet-5', { input_tokens: 1_000_000 }, '2026-08-24');
   assert.ok(usd > 0, 'a real Anthropic model behind a provider prefix must not cost $0');
 });
+
+// S7: the dashboard's context-waste tile keeps its OWN input-rate table. It was
+// missing opus-5 entirely, so every Opus 5 user — Claude Code's default `opus`
+// since v2.1.219 — fell through to the Sonnet default of $2 against a real $5.
+test('web contextWaste input rates cover the shipped sheet and match it', async () => {
+  const { INPUT_RATE_BY_MODEL } = await import('../../web/src/lib/contextWaste.js');
+  const sheet = getLatestPricing().models;
+  for (const [key, entry] of Object.entries(sheet)) {
+    assert.ok(key in INPUT_RATE_BY_MODEL, `contextWaste is missing "${key}" — it will silently use the default rate`);
+    assert.equal(INPUT_RATE_BY_MODEL[key], entry.input, `contextWaste input rate drifted for "${key}"`);
+  }
+});

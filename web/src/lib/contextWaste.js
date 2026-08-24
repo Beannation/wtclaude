@@ -17,18 +17,35 @@
 //    incident response) stays REVIEW, not condemned.
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Mirror of the pricing config values used by waste (config/pricing-2026-06-30.json).
+// Mirror of the input rates in src/config/pricing-2026-08-24.json. Pinned to the
+// shipped sheet by src/compare-models/web-parity.test.js — if that test fails,
+// this table is stale; regenerate it rather than editing the test.
 const CACHE_READ_MULTIPLIER = 0.1;
-// Default input rate when no model is supplied — Sonnet 5's current base rate,
-// matching the CLI fallback (pricing.models['sonnet-5'].input).
+// Default input rate when no model is supplied — Sonnet 5's rate, matching the
+// CLI fallback (pricing.models['sonnet-5'].input).
 const DEFAULT_INPUT_RATE = 2.0;
 
-const INPUT_RATE_BY_MODEL = {
+// COMPLETED 2026-08-24. This table previously held five models and, crucially,
+// no `opus-5`. Opus 5 has been Claude Code's default `opus` since v2.1.219, so
+// every Opus 5 user fell through to DEFAULT_INPUT_RATE — Sonnet's $2 against a
+// real $5, a 2.5x under-estimate of their context-waste cost, on the dashboard
+// tile whose entire job is to size that cost.
+export const INPUT_RATE_BY_MODEL = {
+  'opus-5': 5.0,
   'opus-4-8': 5.0,
-  'sonnet-5': 2.0, // introductory base; the waste tile does not model the dated step-up
-  'fable-5': 10.0,
+  'opus-4-7': 5.0,
+  'opus-4-6': 5.0,
+  'opus-4-5': 5.0,
+  'opus-4-1': 15.0,
+  'opus-4': 15.0,
+  'sonnet-5': 2.0,
   'sonnet-4-6': 3.0,
+  'sonnet-4-5': 3.0,
+  'sonnet-4': 3.0,
   'haiku-4-5': 1.0,
+  'haiku-3-5': 0.8,
+  'fable-5': 10.0,
+  'mythos-5': 10.0,
 };
 
 function round(n) {
