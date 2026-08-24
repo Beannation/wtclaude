@@ -65,3 +65,67 @@ test('summarizeJsonl: a configured user with real JSONL yields a computable gap 
   const gap = accurateInput / jsonl.input_tokens;
   assert.ok(Number.isFinite(gap) && gap > 1, 'gap computes and is finite');
 });
+
+// ───────────────────────────────────────────────────────────────────────────
+// B4 (2026-08-24) — transcript discovery.
+//
+// Two defects, both silent, both biased in OUR favour in a comparison whose
+// whole point is that the session logs undercount:
+//
+//   1. The walk read exactly one level (`projects/<dir>/*.jsonl`). Claude Code
+//      nests subagent and workflow transcripts several levels down. On a real
+//      machine: 49 of 621 transcripts found, and 2.4M of 5.4M session-log INPUT
+//      tokens — input-token undercount being the exact claim the comparison
+//      exists to demonstrate.
+//   2. `CLAUDE_CONFIG_DIR` relocates the whole tree ("Claude Code then stores
+//      your settings, session history, and plugins there instead" — settings
+//      docs). Hardcoding ~/.claude meant those users silently compared against
+//      zero.
+// ───────────────────────────────────────────────────────────────────────────
+test('B4: finds transcripts nested below the first level', async () => {
+  const { mkdtempSync, mkdirSync, writeFileSync, rmSync } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const root = mkdtempSync(join(tmpdir(), 'wtc-jsonl-'));
+  const prevEnv = process.env.CLAUDE_CONFIG_DIR;
+  try {
+    const deep = join(root, 'projects', 'proj-a', 'sess-1', 'subagents', 'workflows', 'wf-1');
+    mkdirSync(deep, { recursive: true });
+    const line = (id) => JSON.stringify({
+      message: { id, usage: { input_tokens: 100, output_tokens: 10 } }, requestId: id,
+    });
+    writeFileSync(join(root, 'projects', 'proj-a', 'top.jsonl'), line('top') + '\n');
+    writeFileSync(join(deep, 'agent-1.jsonl'), line('deep') + '\n');
+
+    process.env.CLAUDE_CONFIG_DIR = root;
+    const mod = await import('./jsonl-reader.js?b4nested');
+    const sessions = mod.readJsonlSessions();
+    const ids = sessions.map(s => s.session_id).sort();
+    assert.deepEqual(ids, ['agent-1', 'top'], 'the nested subagent transcript must be found');
+    const sum = mod.summarizeJsonl(sessions);
+    assert.equal(sum.input_tokens, 200, 'both transcripts must contribute');
+  } finally {
+    if (prevEnv === undefined) delete process.env.CLAUDE_CONFIG_DIR;
+    else process.env.CLAUDE_CONFIG_DIR = prevEnv;
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('B4: "no transcript directory" is distinguishable from "zero usage"', async () => {
+  const { mkdtempSync, rmSync } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const root = mkdtempSync(join(tmpdir(), 'wtc-jsonl-empty-'));
+  const prevEnv = process.env.CLAUDE_CONFIG_DIR;
+  try {
+    process.env.CLAUDE_CONFIG_DIR = root;   // exists, but has no projects/ dir
+    const mod = await import('./jsonl-reader.js?b4missing');
+    assert.equal(mod.transcriptsAvailable(), false,
+      'absence of transcript data must be reportable, not silently rendered as zero usage');
+    assert.deepEqual(mod.readJsonlSessions(), []);
+  } finally {
+    if (prevEnv === undefined) delete process.env.CLAUDE_CONFIG_DIR;
+    else process.env.CLAUDE_CONFIG_DIR = prevEnv;
+    rmSync(root, { recursive: true, force: true });
+  }
+});

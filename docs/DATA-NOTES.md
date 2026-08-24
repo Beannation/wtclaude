@@ -159,6 +159,30 @@ not stated whether Claude Code sends it, so the exposure is real but unquantifie
 Sources: platform.claude.com/cookbook/fable-5-fallback-billing-guide and
 code.claude.com/docs/en/statusline, both read 2026-08-24.
 
+### The `compare` gap is not a like-for-like token comparison
+
+`wtclaude compare` puts our input-token figure next to the session logs' and
+prints a ratio. Two things about that ratio need saying plainly.
+
+**The two sides are not the same quantity.** Our figure is derived from
+`context_window.total_input_tokens`, which Anthropic documents as the sum of
+uncached input, cache creation and cache reads. The session-log figure is the
+API's `input_tokens`, which is uncached input only. Some of the ratio is the real
+session-log undercount the tool exists to show; some of it is the two sides
+measuring different things.
+
+**Transcript discovery used to bias it further in our favour.** Until 2026-08-24
+the reader walked one directory level and honoured neither `CLAUDE_CONFIG_DIR` nor
+nested transcripts, so it read 49 of 621 transcript files on a real machine — 2.4M
+of 5.4M session-log input tokens. Under-reading the other side inflates the gap.
+That is fixed; the ratio it produces is now smaller and more defensible.
+
+> **Canon flag.** The gap figure appears in public copy and in the claim ledger.
+> The first point above is not something Build resolves on its own — it has been
+> routed to the PMO together with the cost-field wording. Until it is settled, the
+> honest internal reading of the ratio is "our window-growth figure against their
+> uncached-input figure", not "they undercount input by N×".
+
 ## Cache pricing
 
 | Cache operation | Multiplier on base input |
