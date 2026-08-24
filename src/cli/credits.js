@@ -1,6 +1,6 @@
 import { getSessionsForDateRange } from '../utils/sessions.js';
 import { poolSpend, getExtraUsage } from '../utils/agentpool.js';
-import { loadConfig, getPlanKey, getDualPoolActivationDate, isDualPoolActive, daysUntil } from '../utils/config.js';
+import { loadConfig, getPlanKey, getDualPoolActivationDate, isDualPoolActive, daysUntil, AGENT_SDK_POOL_PAUSED_NOTE } from '../utils/config.js';
 import { getLatestPricing } from '../utils/pricing.js';
 import { formatCost } from '../utils/cost.js';
 import { output } from './_summary.js';
@@ -52,6 +52,7 @@ export function registerCredits(program) {
             subscription_usd: round(spend.subscription),
           },
           oauth_extra_usage: extra,
+          rate_basis: 'at standard API list rates; bundle discounts up to 30% and promos not reflected',
         }, null, 2), o);
         return;
       }
@@ -63,10 +64,12 @@ export function registerCredits(program) {
       lines.push('  Agent-SDK credit pool');
       lines.push('  ---------------------');
       if (!active) {
-        const badge = countdown != null && countdown >= 0 ? `${countdown} day${countdown === 1 ? '' : 's'}` : 'soon';
-        lines.push(`  Coming soon — activates ${activation} (in ${badge}).`);
-        lines.push('  Your Agent-SDK spend is being recorded in the background now, so the');
-        lines.push('  balance/burn view is accurate the moment it switches on.');
+        // NOT "coming soon on a date" — it was announced for June 15 and paused,
+        // with no new date. Saying "activates <date>" would restate a schedule
+        // that Anthropic withdrew.
+        lines.push('  PAUSED. ' + AGENT_SDK_POOL_PAUSED_NOTE.replace(/^The Agent-SDK credit split /, 'The split ')); 
+        lines.push('  Your Agent-SDK spend is still recorded, so this view is accurate if it');
+        lines.push('  ever switches on.');
         lines.push(`  Recorded so far this month: ${formatCost(spend.agent)} (billing-grade).`);
       } else {
         lines.push(`  Spent this month: ${formatCost(spend.agent)} (billing-grade, ${spend.agentTurns} turns).`);
@@ -102,6 +105,14 @@ export function registerCredits(program) {
         lines.push('  (OAuth extra_usage balance not cached yet — enable sync to populate it;');
         lines.push('   the figures above are local billing-grade spend.)');
       }
+      // R-27: pre-purchased usage bundles cut the effective rate by up to 30%
+      // ($50->$45, $250->$200, $1000->$700) and local data cannot see which
+      // bundle a user holds, so any credits figure we print at list rates can
+      // overstate the real cost invisibly. Anthropic's own /usage carries the
+      // same limitation and says so.
+      lines.push('');
+      lines.push('  Figures are at standard API list rates; bundle discounts up to 30% and');
+      lines.push('  promos not reflected.');
       lines.push('');
       output(lines.join('\n'), o);
     });

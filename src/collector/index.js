@@ -147,19 +147,49 @@ function detectUsagePool(config) {
   return 'interactive';
 }
 
-function detectBillingBasis(usagePool, speedTier, modelId, config, todayStr = new Date().toISOString().slice(0, 10)) {
+// REWRITTEN 2026-08-24. Fable 5 stopped being a date cliff on 2026-07-20: it is
+// permanent and PLAN-CONDITIONAL. Max / Team Premium / Enterprise Premium get it
+// included, drawn from up to 50% of the weekly usage limit — subscription limits,
+// not a credits wallet. Pro / Team Standard bill usage credits from token #1.
+// Enterprise Standard bills credits only if the org enabled Fable.
+//
+// When no plan is configured we do NOT guess: billing_basis stays
+// 'subscription_limits' (the neutral default every non-Fable turn gets, so we
+// never fabricate a credits charge) and the record carries fable_billing:
+// 'unknown' so downstream surfaces can show both readings and say so.
+//
+// The agent_sdk branch is retained for records that were already stamped that
+// way, but the Agent-SDK pool split is PAUSED — SDK and `claude -p` usage draws
+// ordinary subscription limits today. See agent_sdk_pool in the rate sheet.
+function detectBillingBasis(usagePool, speedTier, modelId, config) {
   if (speedTier === 'fast') return 'fast_mode_usage_credits';
   if (usagePool === 'agent_sdk') return 'agent_sdk_credits';
-  // Interactive Fable 5 is removed from subscription inclusion on the June-23
-  // "Fable cliff" — from then it bills the usage-credits wallet from token #1,
-  // NOT subscription limits. Config `fable_cliff_date` overrides the pricing
-  // sheet's date (Anthropic may extend the window or restore inclusion).
-  const modelKey = normalizeModel(modelId);
-  if (modelKey && modelKey.startsWith('fable')) {
-    const cliff = (config && config.fable_cliff_date) || getLatestPricing().fable_cliff_date;
-    if (cliff && todayStr >= cliff) return 'usage_credits';
-  }
+  if (fableBillingFor(modelId, config) === 'usage_credits') return 'usage_credits';
   return 'subscription_limits';
+}
+
+// How Fable bills for this user, or null when the turn is not a Fable turn.
+// Returns 'included_weekly' | 'usage_credits' | 'org_conditional' | 'unknown'.
+function fableBillingFor(modelId, config) {
+  const modelKey = normalizeModel(modelId);
+  if (!modelKey || !modelKey.startsWith('fable')) return null;
+
+  const fable = getLatestPricing().fable || {};
+  const raw = (config && (config.plan || config.plan_tier)) || null;
+  if (!raw) return 'unknown';
+  const plan = String(raw).toLowerCase().replace(/[\s-]/g, '_');
+  const canonical = {
+    pro: 'pro', max5: 'max_5x', max_5x: 'max_5x', max5x: 'max_5x',
+    max20: 'max_20x', max_20x: 'max_20x', max20x: 'max_20x',
+    team: 'team_standard', team_standard: 'team_standard', team_std: 'team_standard',
+    team_premium: 'team_premium', team_prem: 'team_premium',
+    enterprise_standard: 'enterprise_standard', enterprise_premium: 'enterprise_premium',
+  }[plan] || plan;
+
+  if (canonical === 'enterprise_standard') return 'org_conditional';
+  if (Array.isArray(fable.included_plans) && fable.included_plans.includes(canonical)) return 'included_weekly';
+  if (Array.isArray(fable.credits_plans) && fable.credits_plans.includes(canonical)) return 'usage_credits';
+  return 'unknown';
 }
 
 // BUILD-022: resolve speed_tier, preferring the payload's billing-grade
@@ -268,8 +298,16 @@ function collect() {
     deltaOutput = Math.max(0, cumOutput - (prev.cumulative_output ?? 0));
     deltaCacheRead = Math.max(0, cumCacheRead - (prev.cumulative_cache_read ?? 0));
     deltaCacheWrite = Math.max(0, cumCacheWrite - (prev.cumulative_cache_write ?? 0));
+    // Compare LIKE FOR LIKE. `prev.cumulative_cost_usd` was written through
+    // round6(), so subtracting it from the raw payload value leaves a
+    // sub-microcent residue on an unchanged payload — enough to defeat the
+    // duplicate guard below, which then writes a row whose own cost rounds to
+    // $0. That produced 3,432 phantom rows in a 24,751-record local corpus
+    // (13.9%), every one of them carrying a cumulative identical to its
+    // predecessor, and zero counter-examples. They cost nothing but they
+    // inflated the denominator of every per-turn metric.
     deltaCost = cumCost != null && typeof prev.cumulative_cost_usd === 'number'
-      ? Math.max(0, cumCost - prev.cumulative_cost_usd)
+      ? Math.max(0, round6(cumCost) - prev.cumulative_cost_usd)
       : 0;
     turn = (prev.turn ?? 0) + 1;
 
@@ -326,6 +364,17 @@ function collect() {
     session_id: f.sessionId,
     turn,
     model: f.modelId,
+    // HONESTY FLAG (B2). `model` is the session's CONFIGURED model, taken from
+    // the payload's `model.id` — documented as "Current model identifier and
+    // display name". It is NOT the model that actually served the response.
+    // Anthropic's Cookbook is explicit that serving-model analytics must come
+    // from `usage.iterations` ("Analytics recorded against the requested model
+    // will be wrong whenever a fallback is used"), and the statusline payload
+    // carries no `iterations` field and no serving-model field of any kind
+    // (verified against the statusline docs, 2026-08-24). So a fallback-served
+    // turn is attributed here to the requested model, and we cannot see that it
+    // happened. Recording the provenance is the honest thing we CAN do.
+    model_source: 'session_setting',
     input_tokens: deltaInput,
     output_tokens: deltaOutput,
     cache_read_tokens: deltaCacheRead,
@@ -343,6 +392,9 @@ function collect() {
     speed_tier_source: speedTierSource, // BUILD-022: 'payload' (billing-grade) | 'inferred' (older CC fallback)
     usage_pool: usagePool,
     billing_basis: billingBasis,
+    // Plan-conditional Fable reading for this turn; null on non-Fable turns.
+    // 'unknown' means no plan is configured — surfaces must show both readings.
+    fable_billing: fableBillingFor(f.modelId, config),
     used_percentage: f.usedPercentage ?? null,
     // ── grouping / identity (no-migration discipline) ──
     project_hash: projectHash,

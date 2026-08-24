@@ -93,11 +93,11 @@
       <h2>Why are the JSONL logs wrong?</h2>
       <p>Claude Code writes JSONL entries during streaming, before the API response completes. Input tokens get a placeholder value of 0 or 1. When the real number arrives, nobody goes back to update the log. Output tokens exclude thinking/reasoning tokens, which are 60-70% of Opus output.</p>
       <p>This was independently verified by Magnus Gille, who found input tokens undercounted by 100-174x across multiple days of heavy use.</p>
-      <p>ccusage (43K weekly npm downloads), tokscale, and every other community tracker reads these broken logs. WTClaude is the first tool to use the accurate statusline data path.</p>
+      <p>Trackers that read the session logs inherit this drift. WTClaude reads the statusline data path instead.</p>
     </div>
 
     <div class="footer">
-      <p>MIT License &middot; <a href="https://github.com/wtclaude/wtclaude">GitHub</a></p>
+      <p>MIT License &middot; <a href="https://github.com/Beannation/wtclaude">GitHub</a></p>
     </div>
   </div>
 

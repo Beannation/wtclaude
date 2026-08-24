@@ -1,7 +1,7 @@
 {
   "name": "wtclaude",
-  "version": "0.2.3",
-  "description": "Billing-grade cost tracking for Claude Code — reads the statusline (the source behind your bill), not the session logs. Free and open source.",
+  "version": "0.3.0",
+  "description": "Billing-grade cost tracking for Claude Code \u2014 reads the statusline (the source behind your bill), not the session logs. Free and open source.",
   "license": "MIT",
   "type": "module",
   "bin": {
@@ -13,7 +13,9 @@
     "src/",
     "!**/*.test.js",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "docs/DATA-NOTES.md",
+    "CHANGELOG.md"
   ],
   "keywords": [
     "claude",
@@ -23,9 +25,17 @@
     "anthropic"
   ],
   "scripts": {
-    "test": "node --test src/**/*.test.js bin/*.test.js"
+    "test": "node --test \"src/**/*.test.js\" \"bin/**/*.test.js\""
   },
   "dependencies": {
     "commander": "^13.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Beannation/wtclaude.git"
+  },
+  "homepage": "https://wtclaude.com",
+  "bugs": {
+    "url": "https://github.com/Beannation/wtclaude/issues"
   }
 }

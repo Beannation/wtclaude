@@ -1,6 +1,6 @@
 import { getSessionsForDateRange, summarizeSessions } from '../utils/sessions.js';
 import { getLatestPricing, getModelPricing } from '../utils/pricing.js';
-import { expectedCost, formatCost } from '../utils/cost.js';
+import { priceTurn, formatCost } from '../utils/cost.js';
 import { localDate } from '../utils/time.js';
 
 export function registerWhatIf(program) {
@@ -78,10 +78,25 @@ function showModelComparison(sessions, targetModel, days) {
   // anchor made a model you ALREADY use look dramatically cheaper than your bill
   // (the very undercount the tool exists to expose). The baseline is now your
   // turns priced at the models you actually ran, so a no-op switch nets ~$0.
-  let baseline = 0, hypothetical = 0;
+  //
+  // A3 (2026-08-24): a turn we cannot price at first-party rates is EXCLUDED from
+  // both sides and counted, instead of silently contributing $0 to the baseline.
+  // Pricing it at $0 made the counterfactual look better than it is, and said so
+  // without ever telling the user a turn had gone missing. Unpriceable means: an
+  // unresolved model id, a partner-platform id (Bedrock and Google Cloud publish
+  // their own rates), or a family-fallback guess.
+  let baseline = 0, hypothetical = 0, priced = 0;
+  const unpriced = new Map();
   for (const t of allTurns) {
-    baseline += expectedCost(t.model, 'standard', t);
-    hypothetical += expectedCost(resolved, 'standard', t);
+    const actual = priceTurn(t.model, 'standard', t);
+    if (!actual.priceable) {
+      const label = `${t.model || 'unknown'} (${actual.reason})`;
+      unpriced.set(label, (unpriced.get(label) || 0) + 1);
+      continue;
+    }
+    baseline += actual.usd;
+    hypothetical += priceTurn(resolved, 'standard', t).usd;
+    priced++;
   }
 
   const diff = hypothetical - baseline;
@@ -93,5 +108,15 @@ function showModelComparison(sessions, targetModel, days) {
   console.log(`    Current models:  ${formatCost(baseline)}`);
   console.log(`    If all ${resolved}: ${formatCost(hypothetical)}`);
   console.log(`    Difference:      ${diff > 0 ? '+' : ''}${formatCost(diff)} (${pct}%)`);
+
+  if (unpriced.size > 0) {
+    const total = [...unpriced.values()].reduce((a, b) => a + b, 0);
+    console.log('');
+    console.log(`  ${total} turn${total === 1 ? '' : 's'} unpriced and excluded from both sides above`);
+    console.log(`  (${priced} priced). We do not have first-party rates we can stand behind`);
+    console.log('  for these, and counting them as $0 would quietly flatter the comparison:');
+    for (const [label, n] of unpriced) console.log(`    ${String(n).padStart(5)} x ${label}`);
+    console.log('  Their real cost is unaffected — it comes from the billing-grade anchor.');
+  }
   console.log('');
 }

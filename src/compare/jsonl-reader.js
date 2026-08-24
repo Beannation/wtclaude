@@ -2,40 +2,86 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join, basename } from 'node:path';
 import { homedir } from 'node:os';
 
-const CLAUDE_DIR = join(homedir(), '.claude', 'projects');
+// Where Claude Code keeps conversation transcripts.
+//
+// `CLAUDE_CONFIG_DIR` relocates the whole thing: the settings documentation says
+// that when it is set, "Claude Code then stores your settings, session history,
+// and plugins there instead". Hardcoding ~/.claude meant that for anyone who sets
+// it we read an empty directory and reported ZERO session-log usage — which, in a
+// comparison whose entire point is "your session-log tracker is undercounting",
+// renders as the most favourable possible result for us. Honour it.
+//
+// `CLAUDE_CODE_PROJECT_DIR_NAME` (v2.1.234) renames the per-project directory
+// *inside* `projects/`. It needs no handling here because we enumerate whatever
+// directories exist rather than deriving a name from the cwd — but it is the
+// reason we must keep enumerating instead of computing a path.
+function claudeRoot() {
+  return process.env.CLAUDE_CONFIG_DIR || join(homedir(), '.claude');
+}
+
+function projectsDir() {
+  return join(claudeRoot(), 'projects');
+}
+
+// Recursively collect transcript files.
+//
+// This used to read exactly one level — `projects/<dir>/*.jsonl`. Claude Code
+// nests transcripts well below that (subagent and workflow transcripts sit
+// several levels down), so on a real machine on 2026-08-24 the one-level walk
+// found 49 of 621 transcripts and 2.4M of 5.4M session-log INPUT tokens.
+//
+// The direction of that error matters: input-token undercount is the specific
+// claim our comparison exists to demonstrate, so reading 44% of the session-log
+// side made the gap look larger than it is, in our favour. A recursive walk is
+// also what real session-log trackers do, which is the only fair basis for a
+// comparison against them.
+const MAX_DEPTH = 12;   // generous; guards against a symlink loop
+
+function collectTranscripts(dir, depth = 0, acc = []) {
+  if (depth > MAX_DEPTH) return acc;
+  let entries;
+  try {
+    entries = readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return acc;
+  }
+  for (const entry of entries) {
+    const p = join(dir, entry.name);
+    if (entry.isDirectory()) collectTranscripts(p, depth + 1, acc);
+    else if (entry.name.endsWith('.jsonl')) acc.push(p);
+  }
+  return acc;
+}
+
+// Is there a transcript directory to read at all? "No transcript data available"
+// and "you used zero tokens" are completely different statements, and the old
+// silent `return []` collapsed them into the second one.
+export function transcriptsAvailable() {
+  try {
+    readdirSync(projectsDir());
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function transcriptRootForDisplay() {
+  return projectsDir();
+}
 
 export function readJsonlSessions(dateFilter) {
-  let projectDirs;
-  try {
-    projectDirs = readdirSync(CLAUDE_DIR, { withFileTypes: true })
-      .filter(d => d.isDirectory())
-      .map(d => join(CLAUDE_DIR, d.name));
-  } catch {
-    return [];
-  }
+  if (!transcriptsAvailable()) return [];
 
   const sessions = [];
-
-  for (const dir of projectDirs) {
-    let files;
-    try {
-      files = readdirSync(dir).filter(f => f.endsWith('.jsonl'));
-    } catch {
-      continue;
-    }
-
-    for (const file of files) {
-      const path = join(dir, file);
-      const entries = readJsonlFile(path, dateFilter);
-      if (entries.length > 0) {
-        sessions.push({
-          session_id: basename(file, '.jsonl'),
-          entries,
-        });
-      }
+  for (const path of collectTranscripts(projectsDir())) {
+    const entries = readJsonlFile(path, dateFilter);
+    if (entries.length > 0) {
+      sessions.push({
+        session_id: basename(path, '.jsonl'),
+        entries,
+      });
     }
   }
-
   return sessions;
 }
 
@@ -74,6 +120,10 @@ export function summarizeJsonl(sessions) {
   // and count each response once; without this one turn's tokens are summed
   // 2-3x (real data: 983 raw usage-entries today vs 402 unique responses), which
   // both inflated the estimate and masked the input-token undercount.
+  //
+  // The `seen` set spans ALL sessions deliberately: now that we walk the tree
+  // recursively, one response can legitimately appear in more than one file
+  // (a subagent transcript and its parent), and it must still be counted once.
   const seen = new Set();
 
   for (const session of sessions) {

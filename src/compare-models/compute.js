@@ -18,11 +18,15 @@
 //  • Cost only, not quality — we surface what the choice costs; we never judge which
 //    model is "better."
 
-import { expectedCost } from '../utils/cost.js';
+import { expectedCost, priceTurn } from '../utils/cost.js';
 
 // The three models compared, newest-generation keys (must match pricing config keys).
+// Opus 5 replaced Opus 4.8 here on 2026-08-24: Opus 5 launched 2026-07-24 and has
+// been Claude Code's default `opus` since v2.1.219, so it is the Opus most users
+// are actually running. Both price at $5/$25, so an Opus 4.8 user re-pricing to
+// Opus 5 nets ~$0 — which is the correct, honest result.
 export const COMPARE_MODELS = [
-  { key: 'opus-4-8', label: 'Opus 4.8' },
+  { key: 'opus-5', label: 'Opus 5' },
   { key: 'sonnet-5', label: 'Sonnet 5' },
   { key: 'fable-5', label: 'Fable 5' },
 ];
@@ -38,12 +42,24 @@ function sumTokens(turns) {
   return t;
 }
 
-// Re-price a set of turns across the three comparison models. `today` is injectable
-// so the Sonnet-5 Aug-31 step-up ($2/$10 -> $3/$15) resolves deterministically in
-// tests and correctly in production (it threads through getRates' schedule).
+// Re-price a set of turns across the three comparison models. `today` is
+// injectable so the result is deterministic in tests. (There is no dated rate
+// change to resolve any more: the Sonnet-5 step-up to $3/$15 was cancelled by
+// Anthropic on 2026-08-10 and removed from the rate sheet.)
 export function repriceSurface(turns, { today, days = 30 } = {}) {
-  const list = Array.isArray(turns) ? turns : [];
+  const all = Array.isArray(turns) ? turns : [];
   const monthFactor = days > 0 ? 30 / days : 1;
+
+  // Turns we cannot price at first-party rates are excluded from BOTH sides and
+  // counted, exactly as `whatif` does — an unresolved model, a partner-platform
+  // id (Bedrock and Google Cloud publish their own rates), or a family-fallback
+  // guess. Letting them through at $0 removed real spend from the baseline and
+  // made every switch look cheaper than it is.
+  const list = [], unpriced = [];
+  for (const t of all) {
+    if (priceTurn(t.model, 'standard', t, today).priceable) list.push(t);
+    else unpriced.push(t);
+  }
 
   // Baseline: the same turns priced at the models you ACTUALLY ran (token×rate).
   // The no-op reference — re-pricing to a model already in your mix nets ~$0.
@@ -68,6 +84,8 @@ export function repriceSurface(turns, { today, days = 30 } = {}) {
   return {
     present: list.length > 0,
     turn_count: list.length,
+    unpriced_turn_count: unpriced.length,
+    unpriced_models: [...new Set(unpriced.map(t => t.model).filter(Boolean))],
     tokens: sumTokens(list),
     baseline_window_usd: round(baselineWindow),
     baseline_monthly_usd: round(baselineWindow * monthFactor),

@@ -73,7 +73,7 @@ wtclaude limit        # your overall plan limit + reset countdowns
 wtclaude readiness    # are your credits enough? (a labeled forecast — ready if the pool split returns)
 ```
 
-`readiness` and `forecast` are **forecasts** — the cost math is billing-grade, the pool classification is a heuristic, so we label them as estimates rather than pretend they're your exact future bill.
+`readiness` and `forecast` are **forecasts** — the cost math is billing-grade, the pool classification is a heuristic, so we label them as estimates rather than pretend they're your exact future bill. Credits-denominated figures are shown at standard API list rates; bundle discounts up to 30% and promos not reflected.
 
 ## FAQ
 

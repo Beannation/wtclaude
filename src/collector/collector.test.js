@@ -108,42 +108,121 @@ function fablePayload(sessionId, { cost, input, output, cwd }) {
   return p;
 }
 
-test('collector labels interactive Fable usage_credits once the cliff has passed', () => {
+// A2 (2026-08-24): these three tests used to pin the "Fable cliff" — a config
+// date after which every Fable turn was stamped usage_credits. Fable has been
+// permanent and PLAN-CONDITIONAL since 2026-07-20, so the plan decides, not a
+// date. Rewritten to assert the plan-conditional rule.
+
+test('collector bills Fable to usage credits on a credits plan (Pro)', () => {
   const dir = setup('s');
   try {
     writeFileSync(join(dir, 'config.json'),
-      JSON.stringify({ edit_hash_salt: 's', fable_cliff_date: '2020-01-01' }));
-    runCollector(dir, fablePayload('fable-post', { cost: 0.05, input: 1000, output: 100, cwd: '/Users/x/p' }));
-    const rec = JSON.parse(readFileSync(join(dir, 'sessions', 'fable-post.ndjson'), 'utf8').trim());
+      JSON.stringify({ edit_hash_salt: 's', plan: 'pro' }));
+    runCollector(dir, fablePayload('fable-pro', { cost: 0.05, input: 1000, output: 100, cwd: '/Users/x/p' }));
+    const rec = JSON.parse(readFileSync(join(dir, 'sessions', 'fable-pro.ndjson'), 'utf8').trim());
     assert.equal(rec.model, 'claude-fable-5[1m]');
     assert.equal(rec.usage_pool, 'interactive');
     assert.equal(rec.billing_basis, 'usage_credits');
+    assert.equal(rec.fable_billing, 'usage_credits');
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
 });
 
-test('collector keeps subscription_limits for Fable during the included window', () => {
+test('collector keeps Fable on subscription limits for an included plan (Max)', () => {
   const dir = setup('s');
   try {
     writeFileSync(join(dir, 'config.json'),
-      JSON.stringify({ edit_hash_salt: 's', fable_cliff_date: '2099-01-01' }));
-    runCollector(dir, fablePayload('fable-pre', { cost: 0.05, input: 1000, output: 100, cwd: '/Users/x/p' }));
-    const rec = JSON.parse(readFileSync(join(dir, 'sessions', 'fable-pre.ndjson'), 'utf8').trim());
-    assert.equal(rec.billing_basis, 'subscription_limits');
+      JSON.stringify({ edit_hash_salt: 's', plan: 'max20' }));
+    runCollector(dir, fablePayload('fable-max', { cost: 0.05, input: 1000, output: 100, cwd: '/Users/x/p' }));
+    const rec = JSON.parse(readFileSync(join(dir, 'sessions', 'fable-max.ndjson'), 'utf8').trim());
+    assert.equal(rec.billing_basis, 'subscription_limits',
+      'included Fable draws the weekly limit — it is not a credits wallet');
+    assert.equal(rec.fable_billing, 'included_weekly');
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
 });
 
-test('collector never labels non-Fable models usage_credits, even past the cliff', () => {
+test('collector never fabricates a Fable credits charge when no plan is set', () => {
+  const dir = setup('s');
+  try {
+    writeFileSync(join(dir, 'config.json'), JSON.stringify({ edit_hash_salt: 's' }));
+    runCollector(dir, fablePayload('fable-noplan', { cost: 0.05, input: 1000, output: 100, cwd: '/Users/x/p' }));
+    const rec = JSON.parse(readFileSync(join(dir, 'sessions', 'fable-noplan.ndjson'), 'utf8').trim());
+    assert.equal(rec.billing_basis, 'subscription_limits', 'neutral default — never a guessed charge');
+    assert.equal(rec.fable_billing, 'unknown', 'and the unknown is recorded so surfaces can show both readings');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('collector never labels a non-Fable model usage_credits, on any plan', () => {
   const dir = setup('s');
   try {
     writeFileSync(join(dir, 'config.json'),
-      JSON.stringify({ edit_hash_salt: 's', fable_cliff_date: '2020-01-01' }));
-    runCollector(dir, payload('opus-post', { cost: 0.05, input: 1000, output: 100, cwd: '/Users/x/p' }));
-    const rec = JSON.parse(readFileSync(join(dir, 'sessions', 'opus-post.ndjson'), 'utf8').trim());
+      JSON.stringify({ edit_hash_salt: 's', plan: 'pro' }));
+    runCollector(dir, payload('opus-pro', { cost: 0.05, input: 1000, output: 100, cwd: '/Users/x/p' }));
+    const rec = JSON.parse(readFileSync(join(dir, 'sessions', 'opus-pro.ndjson'), 'utf8').trim());
     assert.equal(rec.billing_basis, 'subscription_limits');
+    assert.equal(rec.fable_billing, null);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+// ───────────────────────────────────────────────────────────────────────────
+// B5 REGRESSION — the duplicate guard must actually suppress duplicates.
+//
+// It compared the RAW payload cumulative against the stored one, which had been
+// written through round6(). On an unchanged payload that leaves a sub-microcent
+// residue, the guard sees a non-zero cost delta and writes a row whose own cost
+// rounds to $0. Measured in the real local corpus on 2026-08-24: 3,432 such rows
+// out of 24,751 (13.9%), every one carrying a cumulative identical to its
+// predecessor and zero counter-examples. They carry no money but they inflate the
+// denominator of every per-turn metric ($/turn, turns/day, $/active-minute).
+// ───────────────────────────────────────────────────────────────────────────
+test('an unchanged payload with sub-microcent cost precision writes NO second row', () => {
+  const dir = setup('s');
+  try {
+    writeFileSync(join(dir, 'config.json'), JSON.stringify({ edit_hash_salt: 's' }));
+    // A cumulative with more precision than round6 keeps — exactly the shape the
+    // live payload produces.
+    const p = payload('dup', { cost: 2.7441944999, input: 1000, output: 100, cwd: '/Users/x/p' });
+    runCollector(dir, p);
+    runCollector(dir, p);   // byte-identical repeat: must be suppressed
+    runCollector(dir, p);
+    const lines = readFileSync(join(dir, 'sessions', 'dup.ndjson'), 'utf8').trim().split('\n');
+    assert.equal(lines.length, 1, `expected 1 record, got ${lines.length} (phantom duplicate rows are back)`);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('a real cost movement after a duplicate still records', () => {
+  const dir = setup('s');
+  try {
+    writeFileSync(join(dir, 'config.json'), JSON.stringify({ edit_hash_salt: 's' }));
+    runCollector(dir, payload('mv', { cost: 1.0000004999, input: 1000, output: 100, cwd: '/Users/x/p' }));
+    runCollector(dir, payload('mv', { cost: 1.0000004999, input: 1000, output: 100, cwd: '/Users/x/p' }));
+    runCollector(dir, payload('mv', { cost: 2.50, input: 2000, output: 200, cwd: '/Users/x/p' }));
+    const lines = readFileSync(join(dir, 'sessions', 'mv.ndjson'), 'utf8').trim().split('\n');
+    assert.equal(lines.length, 2, 'the duplicate is suppressed but the real movement is kept');
+    const last = JSON.parse(lines[1]);
+    assert.ok(last.cost_usd > 1.4, `real delta must survive, got ${last.cost_usd}`);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('B2: every record records that the model stamp is the session setting, not the serving model', () => {
+  const dir = setup('s');
+  try {
+    writeFileSync(join(dir, 'config.json'), JSON.stringify({ edit_hash_salt: 's' }));
+    runCollector(dir, payload('src', { cost: 0.05, input: 1000, output: 100, cwd: '/Users/x/p' }));
+    const rec = JSON.parse(readFileSync(join(dir, 'sessions', 'src.ndjson'), 'utf8').trim());
+    assert.equal(rec.model_source, 'session_setting',
+      'the payload carries no serving-model field, so provenance must be recorded');
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

@@ -8,12 +8,14 @@ faq:
   - q: "Did the June 15 Claude billing change happen?"
     a: "No. Anthropic paused it on June 15 before it took effect. Agent SDK, claude -p, and third-party app usage still draw from your subscription's usage limits as before, and there's no separate credit to claim. Anthropic says it will give advance notice before any future change."
   - q: "Is Claude Fable 5 available?"
-    a: "No. It was suspended on June 12 under a US export-control directive, days after its June 9 launch. Other Claude models are unaffected. Whether or when it returns is unclear."
+    a: "Yes. It was suspended on June 12, 2026 under a US export-control directive, days after its June 9 launch, but Anthropic redeployed it on July 1, 2026. Since July 20, 2026 it has been permanent and plan-conditional: on Max, Team Premium and Enterprise Premium it's included up to 50% of your weekly usage limit; on Pro and Team Standard it draws usage credits from the first token; on Enterprise Standard, credits only if your org enables it. There's no cliff and no countdown."
   - q: "Could either change come back?"
-    a: "Possibly. Anthropic said it's reworking the Agent-SDK plan and will announce before anything takes effect; Fable's status depends on the export-control situation. We're watching both and will update."
+    a: "The Agent-SDK split is still paused — Anthropic said it's reworking the plan and will announce before anything takes effect. Fable already did come back: it was redeployed on July 1, 2026 and has been permanent and plan-conditional since July 20, 2026. We're still watching the split."
   - q: "Does WTClaude still work through all this?"
     a: "Yes. It tracks your real Claude Code usage in the terminal — billing-grade — regardless of how subscriptions or credits are structured. If a change does land, the relevant views are already built and ready."
 ---
+
+> **Update — August 24, 2026:** One of the two came back. Anthropic **redeployed Claude Fable 5 on July 1, 2026**, and since July 20 it has been permanent and plan-conditional: included up to 50% of your weekly usage limit on Max, Team Premium and Enterprise Premium; drawing usage credits from the first token on Pro and Team Standard; on Enterprise Standard, credits only if the org enables it. There's no cliff and no countdown. **The June-15 Agent-SDK credit-pool split is still paused** and has never taken effect. Everything below is the June record, unchanged.
 
 In the span of two weeks, two big changes to how you pay for and access Claude were announced. As of today, **neither one is in effect.** If you've felt a little whiplash trying to keep up, you're not imagining it — and there's a lesson in it worth more than either change would have been.
 
@@ -49,7 +51,7 @@ That number doesn't care which billing model is live this week. Whether your age
 
 We'll be straight with you, because that's the whole point of this project: we built for both of these changes. We shipped a dual-pool view for the June-15 split and a cost forecast for Fable's pricing. Then both got pulled out from under us, like everyone else.
 
-Here's why it didn't really matter. The core of WTClaude never depended on either change. It reads the statusline — [the same billing-grade source behind your bill](/blog/is-claude-code-cost-accurate) — so whatever Anthropic ships, pauses, or pulls next, you can still see your actual Claude Code usage, billing-grade, in your terminal, today. The dual-pool view is sitting ready if the split returns. The Fable support is ready if Fable comes back. And everything stays labeled for exactly what it is, including the parts that might change again.
+Here's why it didn't really matter. The core of WTClaude never depended on either change. It reads the statusline — [the same billing-grade source behind your bill](/blog/is-claude-code-cost-accurate) — so whatever Anthropic ships, pauses, or pulls next, you can still see your actual Claude Code usage, billing-grade, in your terminal, today. The dual-pool view is sitting ready if the split returns. Fable did come back — redeployed July 1, 2026 — and the Fable support is ready. And everything stays labeled for exactly what it is, including the parts that might change again.
 
 That's the posture we'd recommend to anyone right now: track what's real, and stay ready for what's next. You don't have to predict Anthropic's roadmap. You just have to be able to see your own numbers when the dust settles — which, lately, it keeps having to.
 
@@ -59,10 +61,10 @@ That's the posture we'd recommend to anyone right now: track what's real, and st
 No. Anthropic paused it on June 15 before it took effect. Agent SDK, `claude -p`, and third-party app usage still draw from your subscription's usage limits as before, and there's no separate credit to claim. Anthropic says it will give advance notice before any future change.
 
 **Is Claude Fable 5 available?**
-No. It was suspended on June 12 under a US export-control directive, days after its June 9 launch. Other Claude models are unaffected. Whether or when it returns is unclear.
+Yes. It was suspended on June 12, 2026 under a US export-control directive, days after its June 9 launch, but Anthropic redeployed it on July 1, 2026. Since July 20, 2026 it has been permanent and plan-conditional: on Max, Team Premium and Enterprise Premium it's included up to 50% of your weekly usage limit; on Pro and Team Standard it draws usage credits from the first token; on Enterprise Standard, credits only if your org enables it. There's no cliff and no countdown.
 
 **Could either change come back?**
-Possibly. Anthropic said it's reworking the Agent-SDK plan and will announce before anything takes effect; Fable's status depends on the export-control situation. We're watching both and will update.
+The Agent-SDK split is still paused — Anthropic said it's reworking the plan and will announce before anything takes effect. Fable already did come back: it was redeployed on July 1, 2026 and has been permanent and plan-conditional since July 20, 2026. We're still watching the split.
 
 **Does WTClaude still work through all this?**
 Yes. It tracks your real Claude Code usage in the terminal — billing-grade — regardless of how subscriptions or credits are structured. If a change does land, the relevant views are already built and ready.

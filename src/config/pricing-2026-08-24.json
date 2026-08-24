@@ -1,0 +1,167 @@
+{
+  "version": "2026-08-24",
+  "effective_date": "2026-08-24",
+  "note": "Full rebuild of the rate sheet against the live Anthropic platform pricing table (platform.claude.com/docs/en/about-claude/pricing), read 2026-08-24. THREE things changed materially versus pricing-2026-06-30.json. (1) The Sonnet 5 `scheduled` step-up to $3/$15 is GONE, not deferred: Anthropic cancelled it on 2026-08-10 and the pricing page now carries the note verbatim — 'The $2/$10 per million input/output token pricing for Claude Sonnet 5, announced at launch as introductory pricing through August 31, 2026, is now the standard price. The previously scheduled increase to $3/$15 per million input/output tokens on September 1, 2026 will not occur.' The old sheet would have silently stepped every Sonnet 5 estimate up to a dead price on 2026-08-31. (2) Every model on the pricing table now has its own explicit entry, so nothing resolves by family fallback and nothing resolves to null. Retired models keep their real historical rates instead of being mis-priced by the opus-* fallback (Opus 4.1 and Opus 4 were being priced at $5/$25 against a true $15/$75 — a 3x under-estimate on historical records) or priced at $0 (Sonnet 4, Haiku 3.5 resolved null). (3) The cache write multiplier is corrected from 0.25 to the documented 1.25x (5-minute) / 2x (1-hour) of base input — see the `cache` block. Rates here are per million tokens, standard first-party Claude API. Partner-operated platforms (Amazon Bedrock, Google Cloud) publish their own pricing and are NOT covered by this sheet.",
+  "source": {
+    "primary": "https://platform.claude.com/docs/en/about-claude/pricing",
+    "read_date": "2026-08-24",
+    "table_rows": 15,
+    "also_read": [
+      "https://platform.claude.com/docs/en/about-claude/model-deprecations",
+      "https://code.claude.com/docs/en/costs"
+    ]
+  },
+  "models": {
+    "opus-5": {
+      "input": 5.00,
+      "output": 25.00,
+      "fast_mode": { "input": 10.00, "output": 50.00 },
+      "cache_min_tokens": 512,
+      "released": "2026-07-24",
+      "retirement_not_before": "2027-07-24",
+      "note": "Claude Code's default `opus` since v2.1.219. Thinking is ON by default (effort `high`); `thinking: disabled` returns 400 at xhigh/max effort. 1M context at standard rates. Cache minimum is 512 tokens — small cache lines on this model are normal, not anomalies."
+    },
+    "opus-4-8": {
+      "input": 5.00,
+      "output": 25.00,
+      "fast_mode": { "input": 10.00, "output": 50.00 },
+      "retirement_not_before": "2027-05-28"
+    },
+    "opus-4-7": {
+      "input": 5.00,
+      "output": 25.00,
+      "retirement_not_before": "2027-04-16",
+      "note": "NO fast mode. `speed: \"fast\"` returns an error on Opus 4.7 — it does not fall back to standard. Promoted from an alias of opus-4-8 on 2026-08-24 precisely so it stops inheriting opus-4-8's fast_mode block."
+    },
+    "opus-4-6": {
+      "input": 5.00,
+      "output": 25.00,
+      "retirement_not_before": "2027-02-05",
+      "note": "NO fast mode. `speed: \"fast\"` runs at standard speed and is billed at standard rates. Promoted from an alias of opus-4-8 on 2026-08-24 for the same reason as opus-4-7."
+    },
+    "opus-4-5": {
+      "input": 5.00,
+      "output": 25.00,
+      "retirement_not_before": "2026-11-24",
+      "note": "Nearest retirement floor of any active model."
+    },
+    "opus-4-1": {
+      "input": 15.00,
+      "output": 75.00,
+      "retired": true,
+      "retired_date": "2026-08-05",
+      "note": "Retired 2026-08-05 on the first-party API; still served on Amazon Bedrock and Google Cloud. Rates kept so historical records price correctly — the opus-* family fallback used to cost these at $5/$25, a 3x under-estimate. Batch is $7.50/$37.50; Opus 4.1 has no fast mode."
+    },
+    "opus-4": {
+      "input": 15.00,
+      "output": 75.00,
+      "retired": true,
+      "note": "Retired on the first-party API; still served on Google Cloud. Historical pricing only."
+    },
+    "sonnet-5": {
+      "input": 2.00,
+      "output": 10.00,
+      "note": "$2/$10 is the STANDARD price. The increase to $3/$15 previously scheduled for 2026-09-01 was cancelled by Anthropic on 2026-08-10 and will not occur. Do not reintroduce a `scheduled` array here."
+    },
+    "sonnet-4-6": {
+      "input": 3.00,
+      "output": 15.00,
+      "retirement_not_before": "2027-02-17",
+      "note": "Last model on the previous tokenizer. Claude 4.7 and later produce roughly 30% more tokens for the same text."
+    },
+    "sonnet-4-5": {
+      "input": 3.00,
+      "output": 15.00,
+      "retirement_not_before": "2026-09-29"
+    },
+    "sonnet-4": {
+      "input": 3.00,
+      "output": 15.00,
+      "retired": true,
+      "note": "Retired on the first-party API; still served on Bedrock and Google Cloud. Previously resolved to null and priced at $0 in the secondary calc."
+    },
+    "haiku-4-5": {
+      "input": 1.00,
+      "output": 5.00,
+      "retirement_not_before": "2026-10-15"
+    },
+    "haiku-3-5": {
+      "input": 0.80,
+      "output": 4.00,
+      "retired": true,
+      "note": "Retired on the first-party API; still served on Bedrock and Google Cloud. Previously resolved to null and priced at $0 in the secondary calc."
+    },
+    "fable-5": {
+      "input": 10.00,
+      "output": 50.00,
+      "retirement_not_before": "2027-06-09",
+      "note": "Requires Claude Code 2.1.170 or later. Thinking cannot be disabled on Fable 5. Billing depends on the user's plan, not on a date — see the `fable` block."
+    },
+    "mythos-5": {
+      "input": 10.00,
+      "output": 50.00,
+      "cc_selectable": false,
+      "note": "On the public pricing table at limited availability, but not selectable in Claude Code, so it should never appear in local Claude Code data. Priced here so that if it ever does appear it costs correctly instead of resolving to null."
+    }
+  },
+  "family_fallback": {
+    "opus": "newest",
+    "note": "Last resort only, and it should now essentially never fire because every table row has an explicit entry. When it does fire it resolves to the NEWEST opus key by sort order, never to whichever key happens to come first in the object, and the caller is handed fallback: true so it can flag the turn."
+  },
+  "cache": {
+    "read_multiplier": 0.10,
+    "write_multiplier_5m": 1.25,
+    "write_multiplier_1h": 2.00,
+    "write_multiplier": 2.00,
+    "write_ttl_default": "1h",
+    "note": "CORRECTED 2026-08-24. The previous sheet carried write_multiplier: 0.25, which under-priced every cache write by 5x against the 5-minute rate and 8x against the 1-hour rate. Anthropic's pricing page states the multipliers relative to base input price: 5-minute cache write 1.25x, 1-hour cache write 2x, cache read (hit) 0.1x. Cache write tokens are a separate billed quantity, charged when content is first stored — they are not a premium layered on top of an input charge. `write_multiplier` is the effective default used when the payload cannot tell us the TTL, and it is set to the 1-hour rate because that is what Claude Code subscription sessions actually bill: the costs doc states subscription cache lifetime is 1 hour, and fitting 24 clean local sessions against their billing-grade cost anchors implies a multiplier of 2.10 (median), reconstructing 0.991 of the anchor at 2.0x versus 0.899 at 1.25x. On credits-billed usage the cache lifetime collapses to 5 minutes unless ENABLE_PROMPT_CACHING_1H=1 is set (default off), which moves the correct multiplier to 1.25x. We cannot see that crossing in local data, so this is a labeled default, not a measurement of any individual turn."
+  },
+  "modifiers": {
+    "batch_multiplier": 0.50,
+    "residency_us_multiplier": 1.10,
+    "residency_min_model": "4.6",
+    "residency_statusline_included_from": "2.1.239",
+    "long_context_premium": 0,
+    "note": "Documented so no surface maintains its own copy of these numbers. NONE of them are applied to the headline figure: the headline is the payload's own cost.total_cost_usd, which already has every applicable modifier baked in. Re-applying the 1.1x residency multiplier on top of the anchor would double-count. Batch (-50% both directions) is an API-surface concept and never appears in Claude Code data. Claude 4.6 and later include the full 1M context window at standard rates, so long context carries no premium; models before 4.6 return 400 on the inference_geo parameter."
+  },
+  "plans": {
+    "pro": { "price_monthly": 20, "price_monthly_annual_billing": 17, "label": "Pro", "fable_billing": "usage_credits" },
+    "max_5x": { "price_monthly": 100, "label": "Max 5x", "fable_billing": "included_to_50pct_weekly" },
+    "max_20x": { "price_monthly": 200, "label": "Max 20x", "fable_billing": "included_to_50pct_weekly" },
+    "team_standard": { "price_monthly": 25, "price_monthly_annual_billing": 20, "label": "Team Standard", "per_seat": true, "fable_billing": "usage_credits" },
+    "team_premium": { "price_monthly": 125, "price_monthly_annual_billing": 100, "label": "Team Premium", "per_seat": true, "fable_billing": "included_to_50pct_weekly" },
+    "note": "claude.com/pricing read 2026-08-24. Where two figures are given the lower one is the effective monthly rate when billed annually. The $25 and $125 figures are the monthly-billed variants of Team Standard and Team Premium, NOT a price increase. Enterprise is usage-based ($20 per seat plus usage at API rates) and is deliberately absent because no CLI surface consumes it. agent_sdk_credits_monthly has been REMOVED from every plan — see the agent_sdk_pool block."
+  },
+  "pools": {
+    "interactive": { "label": "Interactive (subscription limits)", "billing_basis": "subscription_limits" },
+    "agent_sdk": { "label": "Agent SDK (draws subscription limits — split paused)", "billing_basis": "subscription_limits" }
+  },
+  "agent_sdk_pool": {
+    "status": "paused",
+    "announced_activation_date": "2026-06-15",
+    "activated": false,
+    "primary": "https://support.claude.com/en/articles/15036540-use-the-claude-agent-sdk-with-your-claude-plan",
+    "note": "The June-15 Agent-SDK credit-pool split was announced and then PAUSED, and the pause still held when this sheet was written. Agent SDK usage, `claude -p`, and third-party integrations draw the subscription's ordinary usage limits today — there is no separate credit wallet. The former per-plan agent_sdk_credits_monthly figures are preserved for reference in agent_sdk_pool.paused_credit_table_for_reference and MUST NOT be presented as being in effect. If this reactivates without notice, that is a critical accuracy event for us.",
+    "paused_credit_table_for_reference": { "pro": 20, "max_5x": 100, "max_20x": 200 }
+  },
+  "fable": {
+    "model": "plan_conditional",
+    "permanent_since": "2026-07-20",
+    "historical_boundary_date": "2026-07-19",
+    "included_plans": ["max_5x", "max_20x", "team_premium", "enterprise_premium"],
+    "included_share_of_weekly_limit": 0.50,
+    "credits_plans": ["pro", "team_standard"],
+    "enterprise_standard": "usage credits only if the organisation enables it; never promo-eligible",
+    "promo_credit_expiry": "2026-09-17",
+    "promo_credit_expiry_note": "11:59 PM PT, regardless of when the credit was claimed. Claiming closed 2026-08-02. Promo credits are spent before other credits, including auto-reload, and that happens silently.",
+    "note": "Fable 5 became a PERMANENT, PLAN-CONDITIONAL offering on 2026-07-20 — it is not a date cliff any more. On Max, Team Premium and Enterprise Premium, Fable is included up to 50 percent of the weekly usage limit; that is a share OF the weekly limit, not an allowance on top of it, and it is not a credits wallet. On Pro and Team Standard, Fable bills usage credits from the first token. historical_boundary_date is retained only so records from before 2026-07-20 can be interpreted under the old mechanic; it is NOT a future event and must never be rendered as a countdown."
+  },
+  "credits": {
+    "expire": true,
+    "expiry_begins": "2026-09-10",
+    "expiry_window_months": 6,
+    "jurisdiction_scoped": true,
+    "note": "Usage credits DO expire. From 2026-09-10, in certain jurisdictions such as Japan, credits expire six months after purchase, with a 7-day email warning and visible expiry dates in the product. The exact jurisdiction set is not published, so 'credits don't expire' is not a safe sentence anywhere. Separately, pre-purchased usage bundles discount the effective rate by up to 30 percent ($50 to $45, $250 to $200, $1000 to $700), and local data cannot see which bundle a user holds — so every credits-denominated figure we print is at standard list rates and must say so."
+  },
+  "units": "USD per million tokens"
+}

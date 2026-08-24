@@ -48,7 +48,7 @@ This is finance's cliff as much as engineering's — it's a forecastable, claim-
 
 → **[Run the free spend audit](/business/audit)** — over-tiered and idle seats, model mix, and per-person usage, in your browser, nothing uploaded.
 
-This cliff is one piece of a busier-than-usual month for Claude pricing — see the [full July 2026 field guide](/blog/state-of-claude-pricing-july-2026) for the rest of what's moving.
+This cliff is one piece of a busy stretch for Claude pricing — see the [July 2026 field guide](/blog/state-of-claude-pricing-july-2026) for what was moving that month.
 
 ## FAQ
 
