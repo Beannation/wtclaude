@@ -1,6 +1,6 @@
 import { getSessionsForDateRange } from '../utils/sessions.js';
 import { poolSpend, getExtraUsage } from '../utils/agentpool.js';
-import { loadConfig, getPlanKey, getDualPoolActivationDate, isDualPoolActive, daysUntil } from '../utils/config.js';
+import { loadConfig, getPlanKey, getDualPoolActivationDate, isDualPoolActive, daysUntil, AGENT_SDK_POOL_PAUSED_NOTE } from '../utils/config.js';
 import { getLatestPricing } from '../utils/pricing.js';
 import { formatCost } from '../utils/cost.js';
 import { output } from './_summary.js';
@@ -63,10 +63,12 @@ export function registerCredits(program) {
       lines.push('  Agent-SDK credit pool');
       lines.push('  ---------------------');
       if (!active) {
-        const badge = countdown != null && countdown >= 0 ? `${countdown} day${countdown === 1 ? '' : 's'}` : 'soon';
-        lines.push(`  Coming soon — activates ${activation} (in ${badge}).`);
-        lines.push('  Your Agent-SDK spend is being recorded in the background now, so the');
-        lines.push('  balance/burn view is accurate the moment it switches on.');
+        // NOT "coming soon on a date" — it was announced for June 15 and paused,
+        // with no new date. Saying "activates <date>" would restate a schedule
+        // that Anthropic withdrew.
+        lines.push('  PAUSED. ' + AGENT_SDK_POOL_PAUSED_NOTE.replace(/^The Agent-SDK credit split /, 'The split ')); 
+        lines.push('  Your Agent-SDK spend is still recorded, so this view is accurate if it');
+        lines.push('  ever switches on.');
         lines.push(`  Recorded so far this month: ${formatCost(spend.agent)} (billing-grade).`);
       } else {
         lines.push(`  Spent this month: ${formatCost(spend.agent)} (billing-grade, ${spend.agentTurns} turns).`);

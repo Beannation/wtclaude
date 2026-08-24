@@ -71,8 +71,8 @@ export function registerReadiness(program) {
 
       const lines = ['\n  June-14 Readiness Report  (estimate-labeled)', '  ' + '='.repeat(44)];
       lines.push('');
-      if (countdown != null && countdown >= 0) lines.push(`  Billing split ${activation} — ${countdown} day${countdown === 1 ? '' : 's'} away.`);
-      else lines.push(`  Billing split ${activation} is now active.`);
+      if (active) lines.push(`  Billing split ${activation} is active.`);
+      else lines.push('  Billing split: PAUSED (announced for ' + activation + ', never took effect).');
       lines.push(`  Turns recorded to date: ${turns.length}`);
       lines.push('');
       lines.push('  Are we recording the right data? (captured day-one, no backfill)');

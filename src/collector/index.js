@@ -147,19 +147,49 @@ function detectUsagePool(config) {
   return 'interactive';
 }
 
-function detectBillingBasis(usagePool, speedTier, modelId, config, todayStr = new Date().toISOString().slice(0, 10)) {
+// REWRITTEN 2026-08-24. Fable 5 stopped being a date cliff on 2026-07-20: it is
+// permanent and PLAN-CONDITIONAL. Max / Team Premium / Enterprise Premium get it
+// included, drawn from up to 50% of the weekly usage limit — subscription limits,
+// not a credits wallet. Pro / Team Standard bill usage credits from token #1.
+// Enterprise Standard bills credits only if the org enabled Fable.
+//
+// When no plan is configured we do NOT guess: billing_basis stays
+// 'subscription_limits' (the neutral default every non-Fable turn gets, so we
+// never fabricate a credits charge) and the record carries fable_billing:
+// 'unknown' so downstream surfaces can show both readings and say so.
+//
+// The agent_sdk branch is retained for records that were already stamped that
+// way, but the Agent-SDK pool split is PAUSED — SDK and `claude -p` usage draws
+// ordinary subscription limits today. See agent_sdk_pool in the rate sheet.
+function detectBillingBasis(usagePool, speedTier, modelId, config) {
   if (speedTier === 'fast') return 'fast_mode_usage_credits';
   if (usagePool === 'agent_sdk') return 'agent_sdk_credits';
-  // Interactive Fable 5 is removed from subscription inclusion on the June-23
-  // "Fable cliff" — from then it bills the usage-credits wallet from token #1,
-  // NOT subscription limits. Config `fable_cliff_date` overrides the pricing
-  // sheet's date (Anthropic may extend the window or restore inclusion).
-  const modelKey = normalizeModel(modelId);
-  if (modelKey && modelKey.startsWith('fable')) {
-    const cliff = (config && config.fable_cliff_date) || getLatestPricing().fable_cliff_date;
-    if (cliff && todayStr >= cliff) return 'usage_credits';
-  }
+  if (fableBillingFor(modelId, config) === 'usage_credits') return 'usage_credits';
   return 'subscription_limits';
+}
+
+// How Fable bills for this user, or null when the turn is not a Fable turn.
+// Returns 'included_weekly' | 'usage_credits' | 'org_conditional' | 'unknown'.
+function fableBillingFor(modelId, config) {
+  const modelKey = normalizeModel(modelId);
+  if (!modelKey || !modelKey.startsWith('fable')) return null;
+
+  const fable = getLatestPricing().fable || {};
+  const raw = (config && (config.plan || config.plan_tier)) || null;
+  if (!raw) return 'unknown';
+  const plan = String(raw).toLowerCase().replace(/[\s-]/g, '_');
+  const canonical = {
+    pro: 'pro', max5: 'max_5x', max_5x: 'max_5x', max5x: 'max_5x',
+    max20: 'max_20x', max_20x: 'max_20x', max20x: 'max_20x',
+    team: 'team_standard', team_standard: 'team_standard', team_std: 'team_standard',
+    team_premium: 'team_premium', team_prem: 'team_premium',
+    enterprise_standard: 'enterprise_standard', enterprise_premium: 'enterprise_premium',
+  }[plan] || plan;
+
+  if (canonical === 'enterprise_standard') return 'org_conditional';
+  if (Array.isArray(fable.included_plans) && fable.included_plans.includes(canonical)) return 'included_weekly';
+  if (Array.isArray(fable.credits_plans) && fable.credits_plans.includes(canonical)) return 'usage_credits';
+  return 'unknown';
 }
 
 // BUILD-022: resolve speed_tier, preferring the payload's billing-grade
@@ -343,6 +373,9 @@ function collect() {
     speed_tier_source: speedTierSource, // BUILD-022: 'payload' (billing-grade) | 'inferred' (older CC fallback)
     usage_pool: usagePool,
     billing_basis: billingBasis,
+    // Plan-conditional Fable reading for this turn; null on non-Fable turns.
+    // 'unknown' means no plan is configured — surfaces must show both readings.
+    fable_billing: fableBillingFor(f.modelId, config),
     used_percentage: f.usedPercentage ?? null,
     // ── grouping / identity (no-migration discipline) ──
     project_hash: projectHash,
