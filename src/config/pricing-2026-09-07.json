@@ -162,12 +162,15 @@
     "max_5x": {
       "price_monthly": 100,
       "label": "Max 5x",
-      "fable_billing": "included_to_50pct_weekly"
+      "fable_billing": "included_to_50pct_weekly",
+      "price_monthly_verified": true
     },
     "max_20x": {
       "price_monthly": 200,
       "label": "Max 20x",
-      "fable_billing": "included_to_50pct_weekly"
+      "fable_billing": "included_to_50pct_weekly",
+      "price_monthly_verified": false,
+      "price_monthly_note": "NOT VERIFIED. Carried forward from earlier sheets and NOT confirmed against an Anthropic primary on 2026-09-07 — the third release in a row this figure has been carried without same-day confirmation. claude.com/pricing shows the Max card as 'From $100 Per month' with 'Choose 5x or 20x more usage than Pro' and does not publish a separate 20x price; the Max Help Center article names the 5x and 20x tiers but carries no prices at all. $100 for max_5x IS on the page and is verified. Do not print the $200 figure in user-facing copy without re-reading a primary that actually states it."
     },
     "team_standard": {
       "price_monthly": 25,
@@ -183,7 +186,7 @@
       "per_seat": true,
       "fable_billing": "included_to_50pct_weekly"
     },
-    "note": "claude.com/pricing read 2026-08-24. Where two figures are given the lower one is the effective monthly rate when billed annually. The $25 and $125 figures are the monthly-billed variants of Team Standard and Team Premium, NOT a price increase. Enterprise is usage-based ($20 per seat plus usage at API rates) and is deliberately absent because no CLI surface consumes it. agent_sdk_credits_monthly has been REMOVED from every plan — see the agent_sdk_pool block."
+    "note": "claude.com/pricing read 2026-08-24. Where two figures are given the lower one is the effective monthly rate when billed annually. The $25 and $125 figures are the monthly-billed variants of Team Standard and Team Premium, NOT a price increase. Enterprise is usage-based ($20 per seat plus usage at API rates) and is deliberately absent because no CLI surface consumes it. agent_sdk_credits_monthly has been REMOVED from every plan — see the agent_sdk_pool block. RE-READ 2026-09-07: Pro ($17 annual / $20 monthly), Team Standard ($20 annual / $25 monthly), Team Premium ($100 annual / $125 monthly) and Enterprise ($20/seat + usage at API rates) all confirmed verbatim on claude.com/pricing. Max 5x's $100 is confirmed ('From $100 Per month'); max_20x's $200 is NOT — see that entry's price_monthly_note."
   },
   "pools": {
     "interactive": {
@@ -224,7 +227,7 @@
     ],
     "enterprise_standard": "usage credits only if the organisation enables it; never promo-eligible",
     "promo_credit_expiry": "2026-09-17",
-    "promo_credit_expiry_note": "11:59 PM PT, regardless of when the credit was claimed. Claiming closed 2026-08-02. Promo credits are spent before other credits, including auto-reload, and that happens silently. PROVENANCE: this date is carried forward from pricing-2026-08-24.json and was NOT re-verified against an Anthropic primary on 2026-09-07 — see `promo_credit_expiry_verified`. Do not render it as a settled deadline in user-facing copy without a same-day re-read; a dated Anthropic promo page has been edited hours before its own deadline before.",
+    "promo_credit_expiry_note": "11:59 PM PT, regardless of when the credit was claimed. VERIFIED against an Anthropic primary on 2026-09-07: Help Center 15862783 states verbatim 'These new promotional credits expire on September 17, 2026 at 11:59 PM PT, 60 days after the promotion begins' and 'you can claim your promotional credits through August 2, 2026 at 11:59 PM PT'. Promo credits are spent before other credits, including auto-reload, and that happens silently — the article's wording is 'Your free promotional credits are spent first, then your other credits, including auto-reload if you have it turned on.' SCOPE, and this is the part that is easy to get wrong: these credits are FABLE 5 ONLY. Help Center 15424964: the one-time credit 'applied to the Fable 5 change only, and there's no equivalent credit for Fable 5.1.' Eligibility was Pro and Team standard seats held as of 2026-07-19. A Fable 5.1 user has no promotional credits and must never be shown a countdown to this date as though they did. This is the ONE part of the `fable` block that is model-scoped rather than family-scoped.",
     "note": "FAMILY-SCOPED, not model-scoped (reworded 2026-09-07). Fable became a PERMANENT, PLAN-CONDITIONAL offering on 2026-07-20 — it is not a date cliff any more. The mechanic attaches to Fable as a family, not to any one Fable model: claude.com/pricing states the plan rows generically as 'Fable', so Claude Fable 5.1 inherits exactly the same mechanic Fable 5 has, and any future Fable inherits it too. On Max, Team Premium and Enterprise Premium, Fable is included up to 50 percent of the weekly usage limit; that is a share OF the weekly limit, not an allowance on top of it, and it is not a credits wallet. On Pro and Team Standard, Fable bills usage credits from the first token. historical_boundary_date is retained only so records from before 2026-07-20 can be interpreted under the old mechanic; it is NOT a future event and must never be rendered as a countdown.",
     "scope": "family",
     "models_covered": [
@@ -232,15 +235,21 @@
       "fable-5-1"
     ],
     "plan_rows_read_date": "2026-09-07",
-    "promo_credit_expiry_verified": "2026-08-24"
+    "promo_credit_expiry_verified": "2026-09-07",
+    "promo_credit_scope": [
+      "fable-5"
+    ],
+    "promo_credit_claiming_closed": "2026-08-02",
+    "historical_boundary_note": "2026-07-19 is when the PREVIOUS mechanic ended — the promotion that let Pro and Team-standard users spend up to 50% of the weekly subscription limit on Fable 5 at no extra cost. Help Center 15424964, read 2026-09-07: 'That promotion ended on July 19, 2026 at 11:59:59 PM PT, and it applied to Fable 5 only. Claude Fable 5.1 was never part of it.' Do not confuse this date with promo_credit_expiry — they are different mechanics that happen to sit two months apart.",
+    "plan_rows_note": "B2, settled 2026-09-07. claude.com/pricing's 'Models and usage' table collapses Team into a SINGLE column reading 'No' for Fable. That is a page simplification, NOT a change in Team Fable access: the same page's plan card still sells two Team seat types (Standard $20/$25, Premium $100/$125), and Help Center 15424964 states the split explicitly — Fable is included on 'Max plans, premium seats on Team plans, and premium seats on legacy seat-based Enterprise plans', while on 'Pro plans, Team standard seats and Enterprise standard seats' it runs on usage credits. included_plans and credits_plans below are therefore CORRECT as encoded and were deliberately left unchanged. The same article states 'Fable 5 and Fable 5.1 work the same way on your plan', which is the primary-sourced basis for this block being family-scoped."
   },
   "credits": {
     "expire": true,
     "expiry_begins": "2026-09-10",
     "expiry_window_months": 6,
     "jurisdiction_scoped": true,
-    "note": "Usage credits DO expire. From 2026-09-10, in certain jurisdictions such as Japan, credits expire six months after purchase, with a 7-day email warning and visible expiry dates in the product. The exact jurisdiction set is not published, so 'credits don't expire' is not a safe sentence anywhere. Separately, pre-purchased usage bundles discount the effective rate by up to 30 percent ($50 to $45, $250 to $200, $1000 to $700), and local data cannot see which bundle a user holds — so every credits-denominated figure we print is at standard list rates and must say so. PROVENANCE: the 2026-09-10 date is carried forward from pricing-2026-08-24.json and was NOT re-verified against an Anthropic primary on 2026-09-07 — see `expiry_begins_verified`.",
-    "expiry_begins_verified": "2026-08-24"
+    "note": "Usage credits DO expire. VERIFIED against an Anthropic primary on 2026-09-07: Help Center 12429409 states verbatim 'In most cases, usage credits do not expire. However, in certain jurisdictions such as Japan, usage credits expire six months after purchase starting September 10, 2026.' A 7-day email warning is sent and expiry dates are visible on the Usage page. The exact jurisdiction set is not published — Japan is given as an example, not as the complete list — so 'credits don't expire' is not a safe sentence anywhere. Separately, pre-purchased usage bundles discount the effective rate by up to 30 percent ($50 to $45, $250 to $200, $1000 to $700), and local data cannot see which bundle a user holds — so every credits-denominated figure we print is at standard list rates and must say so.",
+    "expiry_begins_verified": "2026-09-07"
   },
   "units": "USD per million tokens"
 }

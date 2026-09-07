@@ -102,7 +102,12 @@ export function registerFable(program) {
             cache_read: rr.tokens.cacheRead, cache_write: rr.tokens.cacheWrite,
           },
           included_share_of_weekly_limit: 0.5,
-          promo_credits: { ...promo, days_until_expiry: daysToPromoExpiry },
+          promo_credits: {
+            expiry_date: promo.expiry_date, claiming_closed: promo.claiming_closed,
+            expiry_note: promo.expiry_note, scope: promo.scope,
+            applies_to_this_window: promo.appliesTo(Object.keys(rr.models)),
+            days_until_expiry: daysToPromoExpiry,
+          },
           fable_models_in_window: rr.models,
           pricing_assumption: fableRateAssumption(rr.models),
           pricing_assumption_by_model: fableRateTable(rr.models),
@@ -139,7 +144,7 @@ export function registerFable(program) {
         lines.push('  No Fable turns in the look-back window, so there is nothing to');
         lines.push('  measure yet. Select it with /model fable (Claude Code 2.1.170+).');
         lines.push('');
-        pushPromo(lines, promo, daysToPromoExpiry);
+        pushPromo(lines, promo, daysToPromoExpiry, Object.keys(rr.models));
         output(lines.join('\n'), o);
         return;
       }
@@ -190,7 +195,7 @@ export function registerFable(program) {
       }
 
       lines.push('');
-      pushPromo(lines, promo, daysToPromoExpiry);
+      pushPromo(lines, promo, daysToPromoExpiry, Object.keys(rr.models));
       output(lines.join('\n'), o);
     });
 }
@@ -199,11 +204,24 @@ export function registerFable(program) {
 // regardless of claim date, and they are spent ahead of other credits silently.
 // We do NOT say anything about credits consumed or refunded during the Fable
 // mis-gating episode — that has never had an Anthropic-primary source.
-function pushPromo(lines, promo, daysToExpiry) {
+function pushPromo(lines, promo, daysToExpiry, modelKeys) {
+  const applies = promo.appliesTo ? promo.appliesTo(modelKeys) : true;
   lines.push('  Fable promotional credits');
+  if (!applies) {
+    // SCOPED 2026-09-07. The promotional credits were Fable 5 only — Anthropic
+    // states plainly that there is no equivalent credit for Fable 5.1 — so a
+    // window containing only Fable 5.1 usage must not be shown a countdown to
+    // an expiry the user has nothing riding on.
+    lines.push('    Not applicable to your usage. The promotional credits covered');
+    lines.push('    Fable 5 only; there is no equivalent credit for Fable 5.1, and');
+    lines.push('    your Fable usage in this window is Fable 5.1.');
+    lines.push('');
+    return;
+  }
   lines.push(`    Claiming closed ${promo.claiming_closed}. Credits expire ${promo.expiry_date} at 11:59 PM PT,`);
   lines.push('    regardless of when they were claimed' + (daysToExpiry != null && daysToExpiry >= 0
     ? ` — ${daysToExpiry} day${daysToExpiry === 1 ? '' : 's'} from today.` : '.'));
+  lines.push('    They cover Fable 5 only — there is no equivalent credit for Fable 5.1.');
   lines.push('    They are spent before your other credits, including auto-reload, and');
   lines.push('    that happens silently.');
   lines.push('');

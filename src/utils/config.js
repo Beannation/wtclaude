@@ -136,12 +136,34 @@ export function getFableBilling(planKey = getPlanKey()) {
 // NOT stated here and never to be stated: that credits were consumed or refunded
 // during the Fable mis-gating episode. That has never had an Anthropic-primary
 // source; it is a third-party report only.
+// Fable promotional credits — the ONE model-scoped fact inside the otherwise
+// family-scoped `fable` block.
+//
+// SCOPED 2026-09-07. These credits are FABLE 5 ONLY. Help Center 15424964, read
+// that day: the one-time credit "applied to the Fable 5 change only, and there's
+// no equivalent credit for Fable 5.1", and the earlier 50%-inclusion promotion
+// "applied to Fable 5 only. Claude Fable 5.1 was never part of it." Eligibility
+// was Pro and Team standard seats held as of 2026-07-19.
+//
+// So a user whose Fable usage is entirely Fable 5.1 has no promotional credits
+// and must not be shown a countdown to their expiry as though they did.
+// `applies_to` lets the caller decide; `scope` carries the model list.
 export function getFablePromoCredits() {
   const f = getLatestPricing().fable || {};
+  const scope = Array.isArray(f.promo_credit_scope) ? f.promo_credit_scope : ['fable-5'];
   return {
     expiry_date: f.promo_credit_expiry || '2026-09-17',
     expiry_note: f.promo_credit_expiry_note || null,
-    claiming_closed: '2026-08-02',
+    claiming_closed: f.promo_credit_claiming_closed || '2026-08-02',
+    scope,
+    // True when at least one model in the window could carry these credits.
+    // With no models supplied we return true: a user with no Fable turns at all
+    // may still hold claimed credits, and hiding the expiry from them would be
+    // the more harmful error of the two.
+    appliesTo(modelKeys) {
+      if (!Array.isArray(modelKeys) || modelKeys.length === 0) return true;
+      return modelKeys.some(k => scope.includes(k));
+    },
   };
 }
 

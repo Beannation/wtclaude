@@ -375,3 +375,58 @@ test('A2: an unrecognised fable id stays null — no fable family fallback, ever
     assert.equal(priced.reason, 'unresolved-model');
   }
 });
+
+// ───────────────────────────────────────────────────────────────────────────
+// B2 / B6 / F12 — facts verified against Anthropic primaries on 2026-09-07.
+// These pin the SHEET's encoding of them so a later edit cannot quietly
+// contradict a fact somebody actually went and read.
+// ───────────────────────────────────────────────────────────────────────────
+
+test('B2: the Team seat split stays encoded — the pricing page collapses it, the Help Center does not', () => {
+  // claude.com/pricing's models table shows ONE Team column reading "No" for
+  // Fable. Help Center 15424964 states the split explicitly: included on
+  // "premium seats on Team plans", usage credits on "Team standard seats".
+  // The sheet must keep both, and the plan prices prove the seat types exist.
+  const p = getLatestPricing();
+  assert.ok(p.fable.included_plans.includes('team_premium'), 'Team Premium must stay in included_plans');
+  assert.ok(p.fable.credits_plans.includes('team_standard'), 'Team Standard must stay in credits_plans');
+  assert.equal(p.plans.team_standard.price_monthly_annual_billing, 20);
+  assert.equal(p.plans.team_premium.price_monthly_annual_billing, 100);
+});
+
+test('F12: promotional credits are FABLE 5 ONLY and the sheet says so', () => {
+  // Help Center 15424964: the credit "applied to the Fable 5 change only, and
+  // there's no equivalent credit for Fable 5.1." Scoping this wrong would show
+  // a Fable 5.1 user a countdown to an expiry they have nothing riding on.
+  const f = getLatestPricing().fable;
+  assert.deepEqual(f.promo_credit_scope, ['fable-5']);
+  assert.ok(!f.promo_credit_scope.includes('fable-5-1'), 'Fable 5.1 was never part of the promotion');
+  // Dates verified same-day against Help Center 15862783.
+  assert.equal(f.promo_credit_expiry, '2026-09-17');
+  assert.equal(f.promo_credit_claiming_closed, '2026-08-02');
+  assert.equal(f.promo_credit_expiry_verified, '2026-09-07');
+  // And the 50%-inclusion promotion's end date, which is a DIFFERENT mechanic.
+  assert.equal(f.historical_boundary_date, '2026-07-19');
+});
+
+test('F12: the credit-expiry date is verified, and jurisdiction scope stays hedged', () => {
+  const c = getLatestPricing().credits;
+  assert.equal(c.expire, true);
+  assert.equal(c.expiry_begins, '2026-09-10');
+  assert.equal(c.expiry_window_months, 6);
+  assert.equal(c.jurisdiction_scoped, true);
+  assert.equal(c.expiry_begins_verified, '2026-09-07');
+});
+
+test('B6: max_20x $200 is flagged UNVERIFIED in the sheet, not asserted', () => {
+  // claude.com/pricing shows the Max card as "From $100" and publishes no
+  // separate 20x price; the Max Help Center article names the tiers and carries
+  // no prices. Carrying the figure is fine; asserting it as verified is not.
+  const plans = getLatestPricing().plans;
+  assert.equal(plans.max_20x.price_monthly_verified, false,
+    'max_20x price must stay flagged unverified until a primary actually states it');
+  assert.ok(plans.max_20x.price_monthly_note.includes('NOT VERIFIED'));
+  // max_5x's $100 IS on the page.
+  assert.equal(plans.max_5x.price_monthly, 100);
+  assert.equal(plans.max_5x.price_monthly_verified, true);
+});

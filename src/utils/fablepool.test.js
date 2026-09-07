@@ -173,3 +173,17 @@ test('A5: an unrecognised Fable id still counts toward the pool, by design', () 
   assert.equal(rr.sum, 7);
   assert.deepEqual(rr.models, { 'fable-6': 1 }, 'the unknown model is recorded by name');
 });
+
+
+test('F12: promo credits do not apply to a Fable-5.1-only window', async () => {
+  const { getFablePromoCredits } = await import('./config.js');
+  const promo = getFablePromoCredits();
+  assert.deepEqual(promo.scope, ['fable-5']);
+  assert.equal(promo.appliesTo(['fable-5-1']), false, 'Fable 5.1 was never part of the promotion');
+  assert.equal(promo.appliesTo(['fable-5']), true);
+  assert.equal(promo.appliesTo(['fable-5-1', 'fable-5']), true, 'a mixed window still has Fable 5 credits');
+  // No models at all => show it. A user with no Fable turns this window may
+  // still hold claimed credits, and hiding the expiry is the worse error.
+  assert.equal(promo.appliesTo([]), true);
+  assert.equal(promo.appliesTo(undefined), true);
+});
