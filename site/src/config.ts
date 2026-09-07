@@ -88,22 +88,33 @@ export const SHOW_DRAFT_NOTES = false;
 /**
  * FABLE MASTER GATE — the single "Fable is live" flip (PM, June 14, 2026).
  *
+ * FAMILY-SCOPED as of 2026-09-07. This gate covers Claude Fable as a MODEL FAMILY, not
+ * any one Fable model, so Claude Fable 5.1 (shipped 2026-09-01, and Claude Code's default
+ * Fable model since v2.1.257) is covered by this same flag with no second flag needed —
+ * and so is whatever Fable comes next. Anthropic states the plan mechanic generically as
+ * "Fable", and its Help Center says plainly that "Fable 5 and Fable 5.1 work the same way
+ * on your plan", so one family-scoped gate is the correct shape here.
+ *
  * Claude Fable 5 (and Mythos 5) was suspended worldwide on June 12, 2026 under a US
  * export-control directive, then RESTORED July 1, 2026 (REL-GTM). Every Fable-facing
  * surface keys off this ONE flag so it all restores in a single edit. While
  * FABLE_AVAILABLE is true (today):
- *   - the /features "Tracks Claude Fable 5" card shows its live copy (no "Unavailable")
+ *   - the /features "Tracks Claude Fable" card shows its live copy (no "Unavailable")
  *   - the /developers Fable line shows its live "tracks Fable" copy
  * If Fable is ever re-suspended, flip back to false (+ redeploy): the /features card and
  * /developers line fall back to FABLE_SUSPENDED_NOTE (reworded neutral, kept defined
  * below) — no strings deleted.
  *
- * The home Fable banner was REMOVED on 2026-08-24 (Peter): Fable 5's pricing has been
+ * NOTE the flag is deliberately all-or-nothing across the family. If Anthropic ever
+ * suspends one Fable model and not another, this gate cannot express that and must be
+ * split at that point — do not stretch it to mean "some Fable is available".
+ *
+ * The home Fable banner was REMOVED on 2026-08-24 (Peter): Fable's pricing has been
  * permanent and plan-conditional since 2026-07-20, so there is no longer a dated change
  * for a banner to announce. FABLE_CLIFF_DATE, SHOW_FABLE_BANNER, FABLE_BANNER and
  * FABLE_BANNER_POST_CLIFF went with it — every one of them encoded the retired
  * allowance-then-cliff model.
- * (The two older Fable blog posts carry their own dated update boxes — not flag-gated;
+ * (The older Fable blog posts carry their own dated update boxes — not flag-gated;
  * those are dated historical records, left as-is.)
  */
 export const FABLE_AVAILABLE = true;
@@ -112,9 +123,12 @@ export const FABLE_AVAILABLE = true;
  * Neutral fallback note, reused by the /features card + /developers line IF Fable is ever
  * re-suspended (FABLE_AVAILABLE=false). Kept defined for that future case; not shown while
  * Fable is available. Reworded so nothing reads as a current suspension. GTM may refine.
+ *
+ * FAMILY-SCOPED 2026-09-07: says "Claude Fable" rather than "Claude Fable 5", so it stays
+ * true whichever Fable model a reader is running.
  */
 export const FABLE_SUSPENDED_NOTE =
-  'Claude Fable 5 tracking pauses if Fable itself is unavailable, and resumes automatically when it returns.';
+  'Claude Fable tracking pauses if Fable itself is unavailable, and resumes automatically when it returns.';
 
 /**
  * Guardian pricing — locked + publishable (GTM-030 / PM-GTM-034). SMB pricing

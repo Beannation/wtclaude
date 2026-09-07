@@ -137,9 +137,10 @@ const jsonLd = softwareApplication(new URL(Astro.url.pathname, Astro.site).href)
       <div class="mx-auto max-w-3xl text-center">
         <h2 class="font-head text-3xl sm:text-4xl">Three models now. One honest way to choose.</h2>
         <p class="mt-5 text-base leading-relaxed text-ink/75">
-          Sonnet 5 is the Claude Code default. Fable 5 is permanent, and how it bills depends on
-          your plan. Opus 5 is there for the heavy lifting. WTClaude prices all three from your own
-          real usage — so you choose on what it actually costs you, not the rate card.
+          Sonnet 5 is the Claude Code default. Fable 5.1 is the default Fable model, and how Fable
+          bills depends on your plan. Opus 5 is there for the heavy lifting. WTClaude prices all
+          three from your own real usage — so you choose on what it actually costs you, not the
+          rate card.
         </p>
       </div>
 
@@ -156,14 +157,15 @@ const jsonLd = softwareApplication(new URL(Astro.url.pathname, Astro.site).href)
         </article>
 
         <article class="flex flex-col rounded-2xl border border-amber/30 bg-card p-7 shadow-sm ring-1 ring-amber/5">
-          <h3 class="font-head text-lg">Fable 5, priced by your plan</h3>
+          <h3 class="font-head text-lg">Fable, priced by your plan</h3>
           <p class="mt-3 text-sm leading-relaxed text-ink/70">
             Permanent since July 20, 2026, and billed by plan, not by date: on Max, Team Premium and
             Enterprise Premium it’s included up to 50% of your weekly usage limit; on Pro and Team
-            Standard it’s usage credits at $10/$50 from the first token. WTClaude reads its
-            billing-grade cost in your terminal and forecasts what your pace would cost in credits —
-            a labeled estimate at standard API list rates; bundle discounts up to 30% and promos not
-            reflected.
+            Standard it’s usage credits at $10/$50 from the first token. Fable 5.1 and Fable 5 share
+            those rates and differ on cached input — $0.25 against $1 per million tokens. WTClaude
+            reads the billing-grade cost of each in your terminal and forecasts what your pace would
+            cost in credits — a labeled estimate at standard API list rates; bundle discounts up to
+            30% and promos not reflected.
           </p>
         </article>
 
@@ -171,7 +173,7 @@ const jsonLd = softwareApplication(new URL(Astro.url.pathname, Astro.site).href)
           <h3 class="font-head text-lg">Compare all three</h3>
           <p class="mt-3 text-sm leading-relaxed text-ink/70">
             <code class="rounded bg-ink/6 px-1 py-[1px] font-mono text-[0.92em] text-ink/80">wtclaude compare-models</code>
-            re-prices your recorded usage across Opus 5, Sonnet 5, and Fable 5 — what would this
+            re-prices your recorded usage across Opus 5, Sonnet 5, and Fable 5.1 — what would this
             month cost on each? Split by surface (Code billing-grade, Cowork a labeled estimate, Chat
             excluded). In the CLI, the dashboard, and the companion.
           </p>

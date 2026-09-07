@@ -75,11 +75,20 @@ export default function CompareModels() {
         <h2 className="text-2xl font-bold text-[var(--text-strong)]">Compare Models</h2>
         <HonestyBadge tier="estimate" />
       </div>
+      {/* FIXED 2026-09-07: these three names were hard-coded and read "Opus 4.8 /
+          Sonnet 5 / Fable 5" — stale since the 0.3.0 Opus 5 swap, so the live
+          dashboard named a model it does not price. Derived from COMPARE_MODELS
+          now, exactly as the CLI header is, so the label cannot drift from the
+          set being compared. */}
       <p className="text-[var(--muted)] max-w-3xl">
         Re-prices your recorded usage across{' '}
-        <span className="text-[var(--text-strong)]">Opus 4.8</span>,{' '}
-        <span className="text-[var(--text-strong)]">Sonnet 5</span> and{' '}
-        <span className="text-[var(--text-strong)]">Fable 5</span> — holding your token counts fixed
+        {COMPARE_MODELS.map((m, i) => (
+          <span key={m.key}>
+            <span className="text-[var(--text-strong)]">{m.label}</span>
+            {i < COMPARE_MODELS.length - 2 ? ', ' : i === COMPARE_MODELS.length - 2 ? ' and ' : ''}
+          </span>
+        ))}
+        {' '}— holding your token counts fixed
         and applying each model's rate. The delta is measured against your actual model mix, so
         re-pricing a model you already run nets about $0.
       </p>

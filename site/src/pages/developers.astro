@@ -111,8 +111,8 @@ const jsonLd = softwareApplication(new URL(Astro.url.pathname, Astro.site).href)
            renders instead — no copy deleted. */
         FABLE_AVAILABLE ? (
           <p class="mx-auto mt-8 max-w-3xl text-center text-sm leading-relaxed text-ink/70">
-            <strong class="font-semibold text-ink">Claude Fable 5 tracking:</strong> WTClaude tracks it
-            billing-grade in your terminal, and
+            <strong class="font-semibold text-ink">Claude Fable tracking:</strong> WTClaude tracks Fable
+            5.1 and Fable 5 billing-grade in your terminal, and
             <code class="rounded bg-ink/5 px-1 py-0.5 font-mono text-[13px]">wtclaude fable</code>
             forecasts what your pace would cost as usage credits on the plans that meter it (a labeled
             estimate at standard API list rates; bundle discounts up to 30% and promos not reflected —
@@ -120,7 +120,7 @@ const jsonLd = softwareApplication(new URL(Astro.url.pathname, Astro.site).href)
           </p>
         ) : (
           <p class="mx-auto mt-8 max-w-3xl text-center text-sm leading-relaxed text-ink/70">
-            <strong class="font-semibold text-ink">Claude Fable 5 tracking:</strong> WTClaude reads Fable 5
+            <strong class="font-semibold text-ink">Claude Fable tracking:</strong> WTClaude reads Fable
             billing-grade in your terminal with
             <code class="rounded bg-ink/5 px-1 py-0.5 font-mono text-[13px]">wtclaude fable</code>.
             {' '}{FABLE_SUSPENDED_NOTE}
@@ -136,9 +136,9 @@ const jsonLd = softwareApplication(new URL(Astro.url.pathname, Astro.site).href)
       <div class="mx-auto max-w-3xl text-center">
         <h2 class="font-head text-3xl sm:text-4xl">Three models now. One honest way to choose.</h2>
         <p class="mt-5 text-base leading-relaxed text-ink/75">
-          Sonnet 5 is the new Claude Code default. Fable 5 is permanent. Opus 5 is there for the
-          heavy lifting. WTClaude prices all three from your own real usage — so you choose on what
-          it actually costs you, not the rate card.
+          Sonnet 5 is the new Claude Code default. Fable 5.1 is the default Fable model. Opus 5 is
+          there for the heavy lifting. WTClaude prices all three from your own real usage — so you
+          choose on what it actually costs you, not the rate card.
         </p>
       </div>
 
@@ -155,14 +155,15 @@ const jsonLd = softwareApplication(new URL(Astro.url.pathname, Astro.site).href)
         </article>
 
         <article class="flex flex-col rounded-2xl border border-amber/30 bg-card p-7 shadow-sm ring-1 ring-amber/5">
-          <h3 class="font-head text-lg">Fable 5, priced by your plan</h3>
+          <h3 class="font-head text-lg">Fable, priced by your plan</h3>
           <p class="mt-3 text-sm leading-relaxed text-ink/70">
             Permanent, and it depends on your plan — not on a date. On Max, Team Premium, and
             Enterprise Premium it’s included up to 50% of your weekly usage limit; on Pro and Team
-            Standard it bills as usage credits at $10/$50 from the first token. WTClaude reads its
-            billing-grade cost in your terminal and forecasts what your pace would cost in credits —
-            a labeled estimate, at standard API list rates; bundle discounts up to 30% and promos not
-            reflected.
+            Standard it bills as usage credits at $10/$50 from the first token. Fable 5.1 and Fable 5
+            share those base rates and differ on cached input — $0.25 against $1 per million tokens.
+            WTClaude reads the billing-grade cost of each in your terminal and forecasts what your
+            pace would cost in credits — a labeled estimate, at standard API list rates; bundle
+            discounts up to 30% and promos not reflected.
           </p>
         </article>
 
@@ -170,7 +171,7 @@ const jsonLd = softwareApplication(new URL(Astro.url.pathname, Astro.site).href)
           <h3 class="font-head text-lg">Compare all three</h3>
           <p class="mt-3 text-sm leading-relaxed text-ink/70">
             <code class="rounded bg-ink/5 px-1 py-0.5 font-mono text-[13px]">wtclaude compare-models</code>
-            re-prices your recorded usage across Opus 5, Sonnet 5, and Fable 5 — what would this
+            re-prices your recorded usage across Opus 5, Sonnet 5, and Fable 5.1 — what would this
             month cost on each? Split by surface (Code billing-grade, Cowork a labeled estimate, Chat
             excluded). In the CLI, the dashboard, and the companion.
           </p>
