@@ -5,9 +5,11 @@ import { getLatestPricing, getRates } from '../utils/pricing.js';
 //
 // The honest wedge (scope + build prompt):
 //  • Cost is grounded in BILLING-GRADE mechanics: your real per-turn cache-read count
-//    (from the transcript), the model's real input rate, and the EXACT 10% cache-read
-//    multiplier. Dead weight is re-read at cache-read rates on every turn after the
-//    first — that's the real mechanism (NOT a "cache hit rate" story).
+//    (from the transcript), the model's real input rate, and its exact cache-read
+//    multiplier (PER-MODEL since 2026-09-07: 0.025x on Fable 5.1 / Mythos 5.1,
+//    0.1x on every other model). Dead weight is re-read at cache-read rates on
+//    every turn after the first — that's the real mechanism (NOT a "cache hit
+//    rate" story).
 //  • The only ESTIMATE is the token SIZE of each item's prose (labeled everywhere).
 //    So the dollar is an estimate of MAGNITUDE built on billing-grade mechanics —
 //    not a crude chars/3.7 guess paraded as exact.
@@ -16,9 +18,16 @@ import { getLatestPricing, getRates } from '../utils/pricing.js';
 //    response) stays REVIEW, not condemned.
 export function computeWaste({ items = [], usedIds = new Set(), turns = 0, days = 30, model, today } = {}) {
   const pricing = getLatestPricing();
-  const cacheReadMultiplier = pricing.cache.read_multiplier;
   const rates = model ? getRates(model, 'standard', today) : null;
   const inputRate = rates ? rates.input : (pricing.models['sonnet-5']?.input ?? 2);
+  // PER-MODEL cache-read multiplier (2026-09-07 sheet): 0.025x on Fable 5.1 /
+  // Mythos 5.1, 0.1x everywhere else. Dead weight is re-read at the CACHE-READ
+  // rate on every turn, so this multiplier is the whole dollar figure — using
+  // the sheet-wide default on a Fable 5.1 session would overstate that user's
+  // dead weight 4x. The default only applies when no model was supplied.
+  const cacheReadMultiplier = rates
+    ? rates.cache_read_multiplier
+    : (pricing.cache.read_multiplier ?? 0.10);
 
   const used = usedIds instanceof Set ? usedIds : new Set(usedIds);
   const scored = items.map(it => {

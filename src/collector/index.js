@@ -147,8 +147,9 @@ function detectUsagePool(config) {
   return 'interactive';
 }
 
-// REWRITTEN 2026-08-24. Fable 5 stopped being a date cliff on 2026-07-20: it is
-// permanent and PLAN-CONDITIONAL. Max / Team Premium / Enterprise Premium get it
+// REWRITTEN 2026-08-24, family-scoped 2026-09-07. Fable stopped being a date
+// cliff on 2026-07-20: it is permanent and PLAN-CONDITIONAL, for every Fable
+// model including Fable 5.1. Max / Team Premium / Enterprise Premium get it
 // included, drawn from up to 50% of the weekly usage limit — subscription limits,
 // not a credits wallet. Pro / Team Standard bill usage credits from token #1.
 // Enterprise Standard bills credits only if the org enabled Fable.

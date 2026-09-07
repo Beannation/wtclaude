@@ -1,4 +1,4 @@
-import { getRates, cacheWriteMultiplier, getLatestPricing } from './pricing.js';
+import { getRates, cacheWriteMultiplier } from './pricing.js';
 
 // SECONDARY cost calculation (token x rate). Per build-spec §1 non-negotiable #1,
 // the billing-grade HEADLINE cost is the payload's cost.total_cost_usd, captured
@@ -14,6 +14,14 @@ import { getRates, cacheWriteMultiplier, getLatestPricing } from './pricing.js';
 // small premium on top of an input charge. The sheet previously used 0.25x,
 // under-pricing every cache write 5-8x.
 //
+// CACHE READS (2026-09-07): the read multiplier is PER-MODEL, taken off the
+// resolved rates rather than the sheet-wide default. Fable 5.1 and Mythos 5.1
+// price cache hits at 0.025x base input; every other model is 0.1x. Fable 5 and
+// Fable 5.1 have identical $10/$50 base rates and differ only here, so using the
+// global multiplier on a Fable 5.1 turn over-prices its cache reads 4x — the
+// single largest silent-accuracy risk in this calc, since cache reads dominate
+// agentic sessions.
+//
 // Returns { usd, priceable, reason }. `priceable: false` means the number is NOT
 // safe to present as our estimate for this turn — the model is unresolved, or is
 // served by a partner platform whose rates we do not publish. The turn's real
@@ -24,12 +32,15 @@ export function priceTurn(model, speedTier, tokens, today) {
     return { usd: 0, priceable: false, reason: 'unresolved-model' };
   }
   const t = tokens || {};
-  const cache = getLatestPricing().cache || {};
   const writeMult = cacheWriteMultiplier(t.cache_ttl);
+  // PER-MODEL cache-read multiplier (2026-09-07 sheet). getRates() already
+  // resolved the entry, so this is the resolved model's own multiplier, not the
+  // sheet-wide default: 0.025x on Fable 5.1 / Mythos 5.1, 0.1x everywhere else.
+  const readMult = rates.cache_read_multiplier;
   const usd =
     (t.input_tokens || 0) / 1_000_000 * rates.input +
     (t.output_tokens || 0) / 1_000_000 * rates.output +
-    (t.cache_read_tokens || 0) / 1_000_000 * rates.input * (cache.read_multiplier ?? 0.10) +
+    (t.cache_read_tokens || 0) / 1_000_000 * rates.input * readMult +
     (t.cache_write_tokens || 0) / 1_000_000 * rates.input * writeMult;
 
   if (rates.provider) return { usd, priceable: false, reason: `partner-platform:${rates.provider}` };

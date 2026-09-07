@@ -70,7 +70,16 @@ const BANNED = [
   },
   {
     pattern: /fable\s+cliff|["'“]cliff["'”]|the cliff\b/i,
-    why: 'Fable 5 is permanent and plan-conditional since 2026-07-20. There is no cliff; a date cannot answer the question.',
+    why: 'Fable is permanent and plan-conditional since 2026-07-20. There is no cliff; a date cannot answer the question.',
+  },
+  {
+    // WIDENED 2026-09-07. The rule above only caught the WORD "cliff". Both
+    // CAVEATS arrays shipped in 0.3.0 with a countdown that never used it —
+    // "included up to 50% of your weekly limit through ~July 19 ... then usage
+    // credits" — so the gate passed on a false statement about a plan mechanic.
+    // This catches the SHAPE: Fable inclusion bounded by a date.
+    pattern: /fable[^.]{0,120}?\b(through|until|till|up\s+to)\s+(~\s*)?(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s*-?\s*\d{1,2}|included[^.]{0,80}?\b(through|until)\s+(~\s*)?(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/i,
+    why: 'Fable inclusion is PLAN-conditional, not date-bounded, since 2026-07-20. The rate sheet\'s `fable` block: the historical boundary date "is NOT a future event and must never be rendered as a countdown."',
   },
   {
     pattern: /(june-?15|billing split)[^.]{0,40}\b(is now active|now live|has activated)/i,

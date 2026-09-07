@@ -10,13 +10,15 @@ function turn(model) {
 function findModel(surface, key) { return surface.models.find(m => m.key === key); }
 
 test('3-model re-pricing reconciles to a hand-calc (1M in + 1M out)', () => {
-  // Sonnet 5 = $2/$10, Opus 5 = $5/$25, Fable 5 = $10/$50 (live pricing table,
-  // read 2026-08-24). Opus 5 replaced Opus 4.8 in the comparison set; both are
-  // $5/$25, so the hand-calc is unchanged.
+  // Sonnet 5 = $2/$10, Opus 5 = $5/$25, Fable 5.1 = $10/$50 (live pricing table,
+  // read 2026-09-07). Opus 5 replaced Opus 4.8 in the comparison set and Fable
+  // 5.1 replaced Fable 5; Fable 5 and 5.1 share $10/$50 base rates, so this
+  // no-cache hand-calc is unchanged by the swap. The two diverge only on cached
+  // input — pinned separately below.
   const s = repriceSurface([turn('sonnet-5')], { today: '2026-07-15', days: 30 });
-  assert.equal(round(findModel(s, 'sonnet-5').window_usd), 12); // 2 + 10
-  assert.equal(round(findModel(s, 'opus-5').window_usd), 30);   // 5 + 25
-  assert.equal(round(findModel(s, 'fable-5').window_usd), 60);  // 10 + 50
+  assert.equal(round(findModel(s, 'sonnet-5').window_usd), 12);   // 2 + 10
+  assert.equal(round(findModel(s, 'opus-5').window_usd), 30);     // 5 + 25
+  assert.equal(round(findModel(s, 'fable-5-1').window_usd), 60);  // 10 + 50
 });
 
 test('a no-op switch (re-pricing a model you already run) nets ~$0', () => {
@@ -53,7 +55,7 @@ test('per-surface split renders: Code billing-grade, Cowork estimate, Chat exclu
   assert.equal(cmp.surfaces.chat.present, false);
   // Each present surface carries all three models.
   assert.equal(cmp.surfaces.code.models.length, 3);
-  assert.deepEqual(cmp.models.map(m => m.key), ['opus-5', 'sonnet-5', 'fable-5']);
+  assert.deepEqual(cmp.models.map(m => m.key), ['opus-5', 'sonnet-5', 'fable-5-1']);
 });
 
 test('the total inherits the estimate (lowest) label and stays present with Code data', () => {
@@ -85,7 +87,16 @@ test('caveats are honest: no first/only, Fable framed as allowance not free, qua
   const blob = CAVEATS.join(' ').toLowerCase();
   assert.ok(!/\bfirst\b|\bonly\b/.test(blob), 'no first/only');
   assert.ok(!/\bfree\b/.test(blob), 'Fable never described as free');
-  assert.ok(blob.includes('50%') && blob.includes('july 19'), 'Fable allowance mechanic stated');
+  // CORRECTED 2026-09-07. This line used to assert the caveat contained
+  // "july 19" — i.e. the test was PINNING a countdown that had been false since
+  // 2026-07-20, so the wrong copy could never be caught by the suite. It now
+  // asserts the plan-conditional mechanic AND that no month-date countdown has
+  // come back.
+  assert.ok(blob.includes('50%'), 'Fable allowance mechanic stated');
+  assert.ok(blob.includes('plan-conditional'), 'Fable framed as plan-conditional, not date-bounded');
+  assert.ok(
+    !/\b(through|until)\s+~?\s*(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/.test(blob),
+    'no date countdown on Fable inclusion — it is plan-conditional, not date-bounded');
   assert.ok(blob.includes('not the same task') , 'tokenizer/recorded-usage caveat present');
   assert.ok(blob.includes('quality'), 'cost-not-quality caveat present');
 });

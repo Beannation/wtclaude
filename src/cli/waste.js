@@ -58,7 +58,11 @@ export function registerWaste(program) {
       lines.push('');
 
       lines.push('  How this actually costs you (the real mechanism):');
-      lines.push('    • re-read every turn — unused prose rides your cached context at 10% of');
+      // The cache-read multiplier is PER-MODEL as of the 2026-09-07 rate sheet
+      // (0.025x on Fable 5.1 / Mythos 5.1, 0.1x elsewhere), so render the rate
+      // that was actually resolved for this user's model rather than a
+      // hard-coded 10% that is wrong for a Fable 5.1 session.
+      lines.push(`    • re-read every turn — unused prose rides your cached context at ${+(r.cache_read_multiplier * 100).toFixed(1)}% of`);
       lines.push(`      the input rate on every subsequent turn (${turns} turns tracked).`);
       lines.push('    • window bloat — it crowds the context window, forcing earlier compaction.');
       lines.push('    • worse tool selection — more never-used options, more chances to misfire.');

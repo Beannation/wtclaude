@@ -108,7 +108,7 @@ export function getModelEntry(modelId) {
   }
 
   // Family fallback, last resort. Every row of the live pricing table has an
-  // explicit entry as of the 2026-08-24 sheet, so this should essentially never
+  // explicit entry as of the 2026-09-07 sheet, so this should essentially never
   // fire — but if Anthropic ships an opus we haven't added yet, resolve to the
   // NEWEST opus key (sort order), never to whichever key happens to be first in
   // the object. With retired entries in the sheet, "first" would have meant
@@ -126,7 +126,7 @@ export function getModelEntry(modelId) {
 // newest scheduled entry whose `effective_date` <= today wins; before any
 // scheduled date the base rate holds.
 //
-// No model uses `scheduled` as of the 2026-08-24 sheet — Sonnet 5's step-up was
+// No model uses `scheduled` as of the 2026-09-07 sheet — Sonnet 5's step-up was
 // cancelled by Anthropic on 2026-08-10 and removed here. The mechanism is kept
 // because it is the only correct way to encode a genuinely announced future
 // rate change (the loader sorts by FILENAME, so a future-dated file would
@@ -155,7 +155,18 @@ export function getRates(modelId, speedTier = 'standard', today = new Date().toI
   const resolved = getModelEntry(modelId);
   if (!resolved) return null;
   const { entry } = resolved;
-  const meta = { key: resolved.key, fallback: resolved.fallback, provider: resolved.provider, priceable: resolved.priceable };
+  const meta = {
+    key: resolved.key,
+    fallback: resolved.fallback,
+    provider: resolved.provider,
+    priceable: resolved.priceable,
+    // Carried on the rates so a caller that has already resolved the model does
+    // not resolve it a second time — and, more importantly, so no caller can
+    // reach for the global multiplier by habit and silently 4x a Fable 5.1
+    // cache read. Per-model override first, sheet default second.
+    cache_read_multiplier:
+      entry.cache?.read_multiplier ?? (getLatestPricing().cache?.read_multiplier ?? 0.10),
+  };
   if (speedTier === 'fast' && entry.fast_mode) {
     const fast = effectiveRates(entry.fast_mode, today);
     return { input: fast.input, output: fast.output, ...meta };
@@ -168,11 +179,37 @@ export function getRates(modelId, speedTier = 'standard', today = new Date().toI
 // to base input: 1.25x for the 5-minute cache, 2x for the 1-hour cache. When the
 // payload cannot tell us which TTL was in play we use the sheet's default, which
 // is the 1-hour rate — that is what Claude Code subscription sessions bill.
+//
+// Cache WRITES have no per-model override: the live table shows 1.25x / 2x of
+// base input for every row, including the 5.1s. Cache READS do — see below.
 export function cacheWriteMultiplier(ttl) {
   const cache = getLatestPricing().cache || {};
   if (ttl === '5m') return cache.write_multiplier_5m ?? cache.write_multiplier ?? 1.25;
   if (ttl === '1h') return cache.write_multiplier_1h ?? cache.write_multiplier ?? 2.00;
   return cache.write_multiplier ?? cache.write_multiplier_1h ?? 2.00;
+}
+
+// The cache-READ multiplier for a model. PER-MODEL as of the 2026-09-07 sheet.
+//
+// Resolution order: the model entry's own `cache.read_multiplier`, then the
+// sheet's global `cache.read_multiplier` as the default.
+//
+// Anthropic's pricing page, footnote 1: "Cache hits and refreshes on Claude
+// Fable 5.1 and Claude Mythos 5.1 are priced at 0.025x the base input price. All
+// other models use the standard 0.1x multiplier." Fable 5 and Fable 5.1 share a
+// $10 base input and differ ONLY here — $1 vs $0.25 per MTok — so a single
+// global multiplier cannot express both. Applying the global 0.1x to Fable 5.1
+// over-prices every one of its cache reads by 4x, and cache reads dominate
+// agentic sessions. It fails silently: nothing throws, the number is just wrong.
+//
+// An unresolvable model falls back to the global default. That is deliberate and
+// safe: a turn we cannot resolve is already flagged unpriceable by priceTurn(),
+// so this value never reaches a presented figure on its own.
+export function cacheReadMultiplier(modelId) {
+  const pricing = getLatestPricing();
+  const globalMult = pricing.cache?.read_multiplier ?? 0.10;
+  const resolved = getModelEntry(modelId);
+  return resolved?.entry?.cache?.read_multiplier ?? globalMult;
 }
 
 // Back-compat shim for existing CLI code. Robust: resolves via alias/family,

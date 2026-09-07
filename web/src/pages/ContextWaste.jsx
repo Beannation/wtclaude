@@ -45,7 +45,8 @@ export default function ContextWaste() {
       </div>
       <p className="text-[var(--muted)] max-w-3xl">
         Always-loaded skills, MCP tools and memory files that you never invoke still get re-read on
-        every turn after the first, billed at the cache-read rate (10% of the input rate). This tile
+        every turn after the first, billed at your model's cache-read rate — a fraction of its input
+        rate, shown below for the model you actually ran. This tile
         surfaces what that dead weight costs — and flags each item for{' '}
         <span className="text-[var(--text-strong)]">review</span>, never removal.
       </p>

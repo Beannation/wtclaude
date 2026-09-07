@@ -1,12 +1,13 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // Browser port of the CLI dead-weight computation (src/waste/compute.js). The
 // CLI reads pricing from disk via node:fs; here the rates + the exact cache-read
-// mechanics are mirrored from config/pricing-2026-06-30.json. Keep in lock-step
+// mechanics are mirrored from config/pricing-2026-09-07.json. Keep in lock-step
 // with the CLI so the dashboard tile can never drift.
 //
 // The honest wedge (identical to the CLI):
 //  • Cost is grounded in BILLING-GRADE mechanics: your real per-turn cache-read
-//    count, the model's real input rate, and the EXACT 10% cache-read multiplier.
+//    count, the model's real input rate, and its exact cache-read multiplier
+//    (per-model since 2026-09-07: 0.025x on Fable 5.1, 0.1x on everything else).
 //    Dead weight is re-read at cache-read rates on every turn after the first —
 //    that's the real mechanism (NOT a "cache hit rate" story). It also bloats the
 //    context window and degrades tool selection.
@@ -17,19 +18,38 @@
 //    incident response) stays REVIEW, not condemned.
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Mirror of the input rates in src/config/pricing-2026-08-24.json. Pinned to the
+// Mirror of the input rates in src/config/pricing-2026-09-07.json. Pinned to the
 // shipped sheet by src/compare-models/web-parity.test.js — if that test fails,
 // this table is stale; regenerate it rather than editing the test.
+//
+// DEFAULT cache-read multiplier. As of 2026-09-07 this is per-model: Fable 5.1
+// and Mythos 5.1 price cache hits at 0.025x base input, every other model at
+// 0.1x (Anthropic pricing page, footnote 1). Dead weight is re-read at the
+// CACHE-READ rate on every turn, so this multiplier IS the dollar figure on this
+// tile — applying 0.1x to a Fable 5.1 session overstates that user's dead weight
+// by 4x. Resolution order: CACHE_READ_MULTIPLIER_BY_MODEL, then this default.
 const CACHE_READ_MULTIPLIER = 0.1;
 // Default input rate when no model is supplied — Sonnet 5's rate, matching the
 // CLI fallback (pricing.models['sonnet-5'].input).
 const DEFAULT_INPUT_RATE = 2.0;
+
+// Per-model cache-read overrides. Only models that DIFFER from the default
+// appear here, mirroring the rate sheet's own shape (a model with no `cache`
+// block inherits the global multiplier).
+export const CACHE_READ_MULTIPLIER_BY_MODEL = {
+  'fable-5-1': 0.025,
+  'mythos-5-1': 0.025,
+};
 
 // COMPLETED 2026-08-24. This table previously held five models and, crucially,
 // no `opus-5`. Opus 5 has been Claude Code's default `opus` since v2.1.219, so
 // every Opus 5 user fell through to DEFAULT_INPUT_RATE — Sonnet's $2 against a
 // real $5, a 2.5x under-estimate of their context-waste cost, on the dashboard
 // tile whose entire job is to size that cost.
+//
+// EXTENDED 2026-09-07 with fable-5-1 / mythos-5-1. Same failure shape: Fable 5.1
+// is Claude Code's default Fable model, so without these rows every Fable 5.1
+// user would fall through to Sonnet's $2 against a real $10.
 export const INPUT_RATE_BY_MODEL = {
   'opus-5': 5.0,
   'opus-4-8': 5.0,
@@ -44,7 +64,9 @@ export const INPUT_RATE_BY_MODEL = {
   'sonnet-4': 3.0,
   'haiku-4-5': 1.0,
   'haiku-3-5': 0.8,
+  'fable-5-1': 10.0,
   'fable-5': 10.0,
+  'mythos-5-1': 10.0,
   'mythos-5': 10.0,
 };
 
@@ -60,6 +82,11 @@ function round(n) {
 export function computeWaste({ items = [], usedIds = new Set(), turns = 0, days = 30, model } = {}) {
   const inputRate =
     (model && INPUT_RATE_BY_MODEL[model]) != null ? INPUT_RATE_BY_MODEL[model] : DEFAULT_INPUT_RATE;
+  // Per-model cache-read multiplier, default when the model does not override it.
+  const cacheReadMultiplier =
+    (model && CACHE_READ_MULTIPLIER_BY_MODEL[model]) != null
+      ? CACHE_READ_MULTIPLIER_BY_MODEL[model]
+      : CACHE_READ_MULTIPLIER;
 
   const used = usedIds instanceof Set ? usedIds : new Set(usedIds);
   const scored = items.map((it) => {
@@ -83,7 +110,7 @@ export function computeWaste({ items = [], usedIds = new Set(), turns = 0, days 
   const dead = scored.filter((s) => !s.used);
   const deadTokens = dead.reduce((a, s) => a + (s.tokens || 0), 0);
   // Re-read at cache-read rates on every turn AFTER the first — the real mechanism.
-  const perTurnUsd = (deadTokens / 1_000_000) * inputRate * CACHE_READ_MULTIPLIER;
+  const perTurnUsd = (deadTokens / 1_000_000) * inputRate * cacheReadMultiplier;
   const windowUsd = perTurnUsd * turns;
   const monthlyUsd = days > 0 ? windowUsd * (30 / days) : windowUsd;
 
@@ -95,7 +122,7 @@ export function computeWaste({ items = [], usedIds = new Set(), turns = 0, days 
     dead_count: dead.length,
     dead_tokens: deadTokens,
     input_rate: inputRate,
-    cache_read_multiplier: CACHE_READ_MULTIPLIER,
+    cache_read_multiplier: cacheReadMultiplier,
     model: model || null,
     per_turn_usd: round(perTurnUsd),
     window_usd: round(windowUsd),
@@ -120,7 +147,7 @@ export function computeWaste({ items = [], usedIds = new Set(), turns = 0, days 
 export const WASTE_MECHANISMS = [
   {
     title: 'Re-read every turn',
-    body: 'Always-loaded items you never invoke are re-sent on every turn after the first, billed at the cache-read rate (10% of the input rate). Small per turn, compounding across a month.',
+    body: "Always-loaded items you never invoke are re-sent on every turn after the first, billed at your model's cache-read rate — a fraction of its input rate. Small per turn, compounding across a month.",
   },
   {
     title: 'Context-window bloat',

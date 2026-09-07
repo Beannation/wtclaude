@@ -5,7 +5,7 @@ import { getSessionsForDateRange, summarizeSessions } from '../utils/sessions.js
 import { readJsonlSessions, summarizeJsonl } from '../compare/jsonl-reader.js';
 import { formatComparisonTable } from '../utils/format.js';
 import { computeTurnCost } from '../utils/cost.js';
-import { getModelPricing, getLatestPricing } from '../utils/pricing.js';
+import { getModelPricing, getLatestPricing, cacheReadMultiplier } from '../utils/pricing.js';
 import { generateComparisonCard, generateComparisonHtml } from '../compare/card-generator.js';
 import { localDate } from '../utils/time.js';
 import { setupComplete, coldStartMessage } from '../utils/firstrun.js';
@@ -128,11 +128,17 @@ function friendlyFsReason(err) {
   }
 }
 
+// Price the JSONL side of the comparison. Deliberately pinned to sonnet-4-6:
+// this is the "what the session logs would have told you" figure, not a claim
+// about the user's real model. The cache-read multiplier is resolved for that
+// same pinned model rather than read off the sheet-wide default, so this stays
+// correct if a per-model override is ever added for it (2026-09-07 schema).
 function estimateJsonlCost(jsonl) {
   const pricing = getModelPricing('sonnet-4-6');
   const cache = getLatestPricing().cache;
+  const readMult = cacheReadMultiplier('sonnet-4-6');
   return (jsonl.input_tokens / 1_000_000) * pricing.input +
          (jsonl.output_tokens / 1_000_000) * pricing.output +
-         (jsonl.cache_read_tokens / 1_000_000) * pricing.input * cache.read_multiplier +
+         (jsonl.cache_read_tokens / 1_000_000) * pricing.input * readMult +
          (jsonl.cache_write_tokens / 1_000_000) * pricing.input * cache.write_multiplier;
 }

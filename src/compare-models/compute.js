@@ -25,10 +25,18 @@ import { expectedCost, priceTurn } from '../utils/cost.js';
 // been Claude Code's default `opus` since v2.1.219, so it is the Opus most users
 // are actually running. Both price at $5/$25, so an Opus 4.8 user re-pricing to
 // Opus 5 nets ~$0 — which is the correct, honest result.
+//
+// Fable 5.1 replaced Fable 5 here on 2026-09-07, for the same reason: it has been
+// Claude Code's default Fable model since v2.1.257 (2026-09-01). The two share
+// $10/$50 base rates and differ only in cache reads — $0.25 vs $1 per MTok — so a
+// Fable 5 user re-pricing to Fable 5.1 sees a real, cache-driven saving rather
+// than a wash. Fable 5 is dropped from the COMPARISON only: it stays fully priced
+// in the rate sheet so historical turns still cost correctly, and it remains
+// Active on the Claude API (retirement not sooner than 2027-06-09).
 export const COMPARE_MODELS = [
   { key: 'opus-5', label: 'Opus 5' },
   { key: 'sonnet-5', label: 'Sonnet 5' },
-  { key: 'fable-5', label: 'Fable 5' },
+  { key: 'fable-5-1', label: 'Fable 5.1' },
 ];
 
 function sumTokens(turns) {
@@ -123,9 +131,18 @@ export function computeComparison({ codeTurns = [], coworkTurns = [], today, day
 
 // Honesty caveats carried on every surface (handback §C rails). No "first/only";
 // Fable is framed as an allowance cap (never "free"); every projection is labeled.
+//
+// CORRECTED 2026-09-07. The Fable caveat carried a countdown — "included ... through
+// ~July 19 (extended from July 7 → July 12 → July 19), then usage credits" — which
+// was already false when 0.3.0 shipped: Fable became permanent and plan-conditional
+// on 2026-07-20, and the rate sheet's own `fable` block says the historical boundary
+// date "is NOT a future event and must never be rendered as a countdown." The
+// honesty gate missed it because the string never used the word "cliff"; the gate
+// has been widened to catch the countdown shape itself.
 export const CAVEATS = [
   'Re-prices your recorded usage — not the same task run on each model. A different model emits different token counts for identical work (Sonnet 5’s tokenizer runs ~1.0–1.35× heavier than Opus), so holding tokens fixed understates the true gap. Every projected number is a labeled estimate.',
-  'Fable’s row is priced as usage credits at $10/$50. Fable is included up to 50% of your weekly limit through ~July 19 (extended from July 7 → July 12 → July 19), then usage credits — run `wtclaude fable` for the forecast.',
+  'Fable’s row is priced at $10/$50 list. Fable is plan-conditional, not date-limited: included up to 50% of the weekly usage limit on Max, Team Premium and Enterprise Premium, and billed as usage credits on Pro and Team Standard — run `wtclaude fable` for your plan’s reading. Credits figures are at standard API list rates; bundle discounts up to 30% and promos not reflected.',
+  'Fable 5.1 and Fable 5 have identical $10/$50 base rates; their cached-input rates differ. A cache read costs $0.25/MTok on Fable 5.1 against $1/MTok on Fable 5, so on a cache-heavy session that gap is most of the difference between the two rows.',
   'Cost, not quality — we surface what the choice costs you; we don’t judge which model is better.',
   'Code is billing-grade (your anchored terminal tokens). Cowork is a labeled estimate (audit-log tokens × rate). Chat is excluded (no local cost data).',
 ];

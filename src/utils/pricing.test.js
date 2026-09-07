@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeModel, parseModelId, getModelEntry, getRates, getLatestPricing, cacheWriteMultiplier } from './pricing.js';
-import { expectedCost } from './cost.js';
+import { normalizeModel, parseModelId, getModelEntry, getRates, getLatestPricing, cacheWriteMultiplier, cacheReadMultiplier } from './pricing.js';
+import { expectedCost, priceTurn } from './cost.js';
 
 // FABLE-001 PART 2 — rate resolution for the live-captured Fable id.
 // The June-9 capture recorded the literal payload string `claude-fable-5[1m]`.
@@ -214,13 +214,25 @@ test('A4: cache write multipliers are the documented 1.25x (5m) / 2x (1h), not 0
 });
 
 test('A4: per-model cache prices match the live table exactly', () => {
-  // The live table publishes cache prices per model. They are exactly 1.25x /
-  // 2x / 0.1x of base input for every row, which is why we hold multipliers
-  // rather than a second hand-maintained price column — but the equality is
-  // asserted here so a drift in either direction fails loudly.
+  // The live table publishes cache prices per model. Cache WRITES are exactly
+  // 1.25x / 2x of base input for every row, which is why we hold a multiplier
+  // rather than a second hand-maintained price column. Cache READS are 0.1x for
+  // every row EXCEPT Fable 5.1 and Mythos 5.1, which are 0.025x — so the read
+  // column is asserted against the model's own resolved multiplier, not the
+  // sheet-wide default.
+  //
+  // UPDATED 2026-09-07: this list previously hard-coded seven model ids and
+  // multiplied every one by the GLOBAL cache.read_multiplier. That is why
+  // landing the per-model override did not break it — none of the seven
+  // override anything. An explicit list cannot guard a field it never reaches,
+  // so the whole-sheet sweep below is now the real guard and this table is the
+  // hand-checked spot-check against the published figures.
   const expect = [
     // [id,               5m write, 1h write, cache hit]
-    ['claude-fable-5',      12.50,     20,      1.00],
+    ['claude-fable-5-1',    12.50,     20,      0.25],   // 0.025x — the new row
+    ['claude-mythos-5-1',   12.50,     20,      0.25],   // 0.025x
+    ['claude-fable-5',      12.50,     20,      1.00],   // 0.1x, same base rate
+    ['claude-mythos-5',     12.50,     20,      1.00],   // 0.1x
     ['claude-opus-5',        6.25,     10,      0.50],
     ['claude-sonnet-5',      2.50,      4,      0.20],
     ['claude-sonnet-4-6',    3.75,      6,      0.30],
@@ -230,9 +242,136 @@ test('A4: per-model cache prices match the live table exactly', () => {
   ];
   const cache = getLatestPricing().cache;
   for (const [id, w5m, w1h, hit] of expect) {
-    const base = getRates(id, 'standard', '2026-08-24').input;
+    const rates = getRates(id, 'standard', '2026-09-07');
+    const base = rates.input;
     assert.ok(Math.abs(base * cache.write_multiplier_5m - w5m) < 1e-9, `${id} 5m cache write`);
     assert.ok(Math.abs(base * cache.write_multiplier_1h - w1h) < 1e-9, `${id} 1h cache write`);
-    assert.ok(Math.abs(base * cache.read_multiplier - hit) < 1e-9, `${id} cache hit`);
+    assert.ok(Math.abs(base * rates.cache_read_multiplier - hit) < 1e-9, `${id} cache hit`);
+    assert.ok(Math.abs(base * cacheReadMultiplier(id) - hit) < 1e-9, `${id} cache hit via cacheReadMultiplier()`);
+  }
+});
+
+// ───────────────────────────────────────────────────────────────────────────
+// PER-MODEL CACHE-READ MULTIPLIER (2026-09-07). Anthropic pricing footnote 1:
+// "Cache hits and refreshes on Claude Fable 5.1 and Claude Mythos 5.1 are priced
+// at 0.025x the base input price. All other models use the standard 0.1x
+// multiplier."
+//
+// This is the single largest silent-accuracy risk in the 0.3.1 release: Fable 5
+// and Fable 5.1 have identical $10/$50 base rates and differ ONLY here, so a
+// global multiplier prices one of them wrong by 4x with nothing to notice.
+// ───────────────────────────────────────────────────────────────────────────
+
+test('every model in the sheet resolves the cache-read multiplier the sheet declares', () => {
+  // The whole-sheet sweep. Unlike the explicit table above, this reaches every
+  // row, so a future model that overrides the multiplier cannot be added to the
+  // sheet without its override being honoured by the resolver.
+  const sheet = getLatestPricing();
+  const globalMult = sheet.cache.read_multiplier;
+  for (const [key, entry] of Object.entries(sheet.models)) {
+    const declared = entry.cache?.read_multiplier ?? globalMult;
+    assert.equal(cacheReadMultiplier(`claude-${key}`), declared,
+      `${key}: resolver returned the wrong cache-read multiplier`);
+    assert.equal(getRates(`claude-${key}`, 'standard', '2026-09-07').cache_read_multiplier, declared,
+      `${key}: getRates carried the wrong cache-read multiplier`);
+    // And the resolved multiplier must actually reach the cost calc.
+    const usd = expectedCost(`claude-${key}`, 'standard', { cache_read_tokens: 1_000_000 });
+    assert.ok(Math.abs(usd - entry.input * declared) < 1e-9,
+      `${key}: expectedCost did not apply the resolved cache-read multiplier`);
+  }
+});
+
+test('fable-5-1 cache reads cost $0.25/MTok, not the $1 the global multiplier would give', () => {
+  const usd = expectedCost('claude-fable-5-1', 'standard', { cache_read_tokens: 1_000_000 });
+  assert.ok(Math.abs(usd - 0.25) < 1e-9, `expected $0.25/MTok, got $${usd}`);
+  // The wrong answer, named explicitly so the failure message is unambiguous.
+  assert.ok(Math.abs(usd - 1.00) > 1e-9, 'fable-5-1 is being priced at the global 0.1x — 4x too high');
+  assert.equal(cacheReadMultiplier('claude-fable-5-1'), 0.025);
+  // And through the live payload shapes, not just the bare id.
+  for (const id of ['claude-fable-5-1[1m]', 'claude-fable-5-1-20260901']) {
+    assert.ok(Math.abs(expectedCost(id, 'standard', { cache_read_tokens: 1_000_000 }) - 0.25) < 1e-9, id);
+  }
+});
+
+test('DIVERGENCE: identical tokens cost 4x more cache-read on fable-5 than fable-5-1', () => {
+  // The two rows are otherwise identical ($10 in / $50 out), so this ratio is
+  // purely the cache-read multiplier and nothing else can move it.
+  const tokens = { cache_read_tokens: 12_500_000 };
+  const five = expectedCost('claude-fable-5', 'standard', tokens);
+  const fiveOne = expectedCost('claude-fable-5-1', 'standard', tokens);
+  assert.ok(Math.abs(five - 12.50) < 1e-9, `fable-5 should be $12.50, got $${five}`);
+  assert.ok(Math.abs(fiveOne - 3.125) < 1e-9, `fable-5-1 should be $3.125, got $${fiveOne}`);
+  assert.ok(Math.abs(five / fiveOne - 4) < 1e-9, `expected exactly 4x, got ${five / fiveOne}x`);
+
+  // Base rates really are identical — so nothing but the cache multiplier can
+  // account for the gap. Uncached input and output must net exactly zero.
+  const plain = { input_tokens: 1_000_000, output_tokens: 1_000_000 };
+  assert.equal(
+    expectedCost('claude-fable-5', 'standard', plain),
+    expectedCost('claude-fable-5-1', 'standard', plain),
+    'fable-5 and fable-5-1 must have identical non-cache pricing');
+});
+
+test('mythos-5-1 overrides but mythos-5 does not — the footnote names only the 5.1 pair', () => {
+  assert.equal(cacheReadMultiplier('claude-mythos-5-1'), 0.025);
+  assert.equal(cacheReadMultiplier('claude-mythos-5'), 0.10);
+  assert.equal(cacheReadMultiplier('claude-fable-5'), 0.10);
+});
+
+test('the global multiplier stays 0.1 and still applies to every non-overriding model', () => {
+  // The override must not have been implemented by moving the default.
+  const sheet = getLatestPricing();
+  assert.equal(sheet.cache.read_multiplier, 0.10);
+  const overriding = Object.entries(sheet.models)
+    .filter(([, m]) => m.cache?.read_multiplier !== undefined).map(([k]) => k).sort();
+  assert.deepEqual(overriding, ['fable-5-1', 'mythos-5-1'],
+    'the set of models overriding the cache-read multiplier changed — verify against the pricing table before accepting');
+});
+
+test('an unresolvable model falls back to the global multiplier rather than throwing', () => {
+  // Such a turn is already flagged unpriceable by priceTurn(), so this value
+  // never reaches a presented figure on its own — but it must not crash.
+  assert.equal(cacheReadMultiplier('claude-fable-99'), 0.10);
+  assert.equal(cacheReadMultiplier(null), 0.10);
+  assert.equal(cacheReadMultiplier(''), 0.10);
+});
+
+// A2: parseModelId must not mangle the `-1` in `fable-5-1`. The date-suffix
+// strip is `-\d{8}$` — eight digits — so it should leave a single trailing digit
+// alone. That is true until it isn't, so it is pinned here rather than assumed.
+test('A2: claude-fable-5-1 survives every live id shape without losing its -1', () => {
+  const cases = [
+    ['claude-fable-5-1',                   null,        'fable-5-1', true],
+    ['claude-fable-5-1[1m]',               null,        'fable-5-1', true],
+    ['vertex_ai/claude-fable-5-1',         'vertex_ai', 'fable-5-1', false],
+    ['anthropic.claude-fable-5-1-20260901','bedrock',   'fable-5-1', false],
+    ['bedrock/anthropic.claude-fable-5-1', 'bedrock',   'fable-5-1', false],
+    ['claude-fable-5-1-20260901',          null,        'fable-5-1', true],
+    ['claude-mythos-5-1',                  null,        'mythos-5-1', true],
+  ];
+  for (const [id, provider, key, priceable] of cases) {
+    const parsed = parseModelId(id);
+    assert.equal(parsed.key, key, `parseModelId("${id}").key`);
+    assert.equal(parsed.provider, provider, `parseModelId("${id}").provider`);
+    const resolved = getModelEntry(id);
+    assert.ok(resolved, `${id} must resolve — an unresolved default Fable model prices at nothing`);
+    assert.equal(resolved.key, key);
+    assert.equal(resolved.fallback, false, `${id} must resolve exactly, never by family fallback`);
+    assert.equal(resolved.priceable, priceable, `${id} priceable`);
+    // The override must survive every shape, including the partner-served ones.
+    assert.equal(cacheReadMultiplier(id), 0.025, `${id} lost its 0.025x cache multiplier`);
+  }
+});
+
+test('A2: an unrecognised fable id stays null — no fable family fallback, ever', () => {
+  // A fable fallback would silently price the NEXT Fable at whichever Fable
+  // happened to sort last, and the two live Fables differ 4x on cache reads.
+  // Returning null keeps the turn flagged instead of quietly mis-pricing it.
+  for (const id of ['claude-fable-99', 'claude-fable-6', 'claude-fable-5-2', 'claude-mythos-6']) {
+    assert.equal(getModelEntry(id), null, `${id} must not resolve`);
+    assert.equal(getRates(id), null, `${id} must not price`);
+    const priced = priceTurn(id, 'standard', { cache_read_tokens: 1_000_000 });
+    assert.equal(priced.priceable, false, `${id} must be flagged unpriceable`);
+    assert.equal(priced.reason, 'unresolved-model');
   }
 });

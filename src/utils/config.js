@@ -61,9 +61,12 @@ export const AGENT_SDK_POOL_PAUSED_NOTE =
   + 'and third-party usage still draw your subscription\'s ordinary usage limits, not a '
   + 'separate credit pool.';
 
-// ── Fable 5: PLAN-CONDITIONAL, not a date cliff ──────────────────────────────
+// ── Fable: PLAN-CONDITIONAL, not a date cliff ───────────────────────────────
 //
-// REWRITTEN 2026-08-24. Fable 5 became a permanent, plan-conditional offering on
+// FAMILY-SCOPED 2026-09-07: the plan mechanic below attaches to Fable as a
+// family, not to any one Fable model, so Fable 5.1 inherits it unchanged.
+//
+// REWRITTEN 2026-08-24. Fable became a permanent, plan-conditional offering on
 // 2026-07-20 (Help Center: "Claude Fable 5 on your plan"). Everything below used
 // to be built on a moving "Fable cliff" date — a date after which all Fable use
 // billed usage credits. That model is simply the wrong SHAPE now:
@@ -78,7 +81,8 @@ export const AGENT_SDK_POOL_PAUSED_NOTE =
 // 2026-07-20 were produced under the previous mechanic and must be read that way.
 // It is NOT a future event and must never be rendered as a countdown.
 //
-// Fable 5 in Claude Code requires CC 2.1.170 or later.
+// Fable in Claude Code requires CC 2.1.170 or later; Fable 5.1 specifically has
+// been the default Fable model since CC 2.1.257 (2026-09-01).
 
 // Neutral availability gate. Replaces the June-2026 export-control suspension
 // switch, whose text described a suspension that ended when Anthropic redeployed
@@ -94,7 +98,7 @@ export function isFableAvailable() {
 export function getFableUnavailableNote() {
   const c = loadConfig();
   return c.fable_unavailable_note
-    || 'Claude Fable 5 is marked unavailable in your local config, so the forecast is paused.';
+    || 'Claude Fable is marked unavailable in your local config, so the forecast is paused.';
 }
 
 // The boundary between the old date-based mechanic and the current

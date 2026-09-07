@@ -3,19 +3,27 @@ import { formatCost } from '../utils/cost.js';
 import { localDate } from '../utils/time.js';
 import { output } from './_summary.js';
 import { SCHEMA_VERSION } from '../utils/schema.js';
-import { computeComparison } from '../compare-models/compute.js';
+import { computeComparison, COMPARE_MODELS } from '../compare-models/compute.js';
 import { readCoworkTurns } from '../compare-models/cowork-reader.js';
 
 // `wtclaude compare-models` — re-price the user's real, recorded usage across
-// Opus 4.8 / Sonnet 5 / Fable 5, split by surface (Code billing-grade, Cowork
+// the three comparison models, split by surface (Code billing-grade, Cowork
 // labeled estimate, Chat excluded). A free Phase-0 accuracy feature; a SEPARATE
 // command from `whatif` and `fable`. All three surfaces (CLI, dashboard tile,
 // companion card) read the SAME computeComparison() so they can't drift.
+//
+// FIXED 2026-09-07: the description and the header hard-coded "Opus 4.8 vs
+// Sonnet 5 vs Fable 5". The comparison set moved to Opus 5 on 2026-08-24 and to
+// Fable 5.1 on 2026-09-07, so the two most-read strings in this command had been
+// naming a model the code does not compare. They are derived from COMPARE_MODELS
+// now — the label can no longer drift from the set being priced.
+const MODEL_LABELS = COMPARE_MODELS.map(m => m.label);
+const MODEL_LIST = MODEL_LABELS.slice(0, -1).join(', ') + ', and ' + MODEL_LABELS[MODEL_LABELS.length - 1];
 
 export function registerCompareModels(program) {
   program
     .command('compare-models')
-    .description('Re-price your recorded usage across Opus 4.8, Sonnet 5, and Fable 5 — per-surface split (labeled estimate)')
+    .description(`Re-price your recorded usage across ${MODEL_LIST} — per-surface split (labeled estimate)`)
     .option('--json', 'Output machine-readable JSON')
     .option('--days <n>', 'Look-back window for the re-pricing', '30')
     .action((opts) => {
@@ -37,7 +45,7 @@ export function registerCompareModels(program) {
       }
 
       const lines = [];
-      lines.push('\n  Compare models — Opus 4.8 vs Sonnet 5 vs Fable 5  (estimate)');
+      lines.push(`\n  Compare models — ${MODEL_LABELS.join(' vs ')}  (estimate)`);
       lines.push('  ' + '='.repeat(60));
       lines.push('');
 
