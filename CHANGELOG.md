@@ -1,5 +1,86 @@
 # Changelog
 
+## 0.3.1 — 2026-09-07
+
+Claude Fable 5.1 support, and the schema change it forced: **cache-read pricing
+is now per model**.
+
+### The load-bearing change
+
+Anthropic's pricing page carries this footnote on the model table:
+
+> Cache hits and refreshes on Claude Fable 5.1 and Claude Mythos 5.1 are priced
+> at 0.025x the base input price. All other models use the standard 0.1x
+> multiplier.
+
+Fable 5 and Fable 5.1 have **identical** $10/$50 base rates. The single thing
+that separates them is the price of a cache read — $1.00/MTok against
+$0.25/MTok. One global multiplier cannot express both, so the rate sheet now
+carries a per-model `cache.read_multiplier` that overrides the global default,
+resolved as **model override → global default**.
+
+Left alone, this would have been the quietest kind of wrong: every Fable 5.1
+cache read priced 4× too high, in the surface where cache reads dominate the
+bill, with nothing throwing and no figure looking obviously off.
+
+### Prices and models
+
+- **Claude Fable 5.1 (`claude-fable-5-1`) added.** It has been Claude Code's
+  **default** Fable model since v2.1.257 (2026-09-01) — not an opt-in — so these
+  rows have been arriving in local data without users choosing them. In 0.3.0
+  the id resolved to nothing.
+- **Claude Mythos 5.1 added**, priced and marked not-selectable in Claude Code,
+  the same treatment Mythos 5 gets.
+- **Claude Fable 5 is unchanged and still fully priced.** It remains Active on
+  the Claude API (retirement not sooner than 2027-06-09). It is dropped from the
+  three-model comparison, not from the product: historical Fable 5 turns still
+  cost correctly.
+- Rates re-read from the live pricing table on 2026-09-07 (17 rows). Every rate
+  carried forward from the 2026-08-24 sheet was verified unchanged.
+- **Sonnet 5 is still $2/$10.** The September 1 increase definitively did not
+  occur; the cancellation note is still on the pricing page, re-read that day.
+
+### What this fixes in your numbers
+
+- A Fable 5.1 turn used to resolve to no rate at all. Your **headline cost was
+  always right** — it comes from the billing-grade anchor, not from our rate
+  table — but `compare-models` dropped those turns from both sides of the
+  comparison **and from the baseline**, and only `--json` said so.
+- `compare-models` now prints when turns were excluded, which model they were,
+  and that your real charge is unaffected. That warning covers any unrecognised
+  model, not just this one.
+- `wtclaude fable` used to state a flat "$1 cached" rate. On Fable 5.1 that
+  overstated cached input 4×. The rate line is now resolved from the rate sheet
+  per model, and a window containing both Fable models shows both.
+- `wtclaude waste` and the dashboard's context-waste tile price dead weight at
+  the **cache-read** rate, so both were overstating a Fable 5.1 user's dead
+  weight 4×. Both now resolve the multiplier per model.
+
+### Corrections to things we were saying
+
+- **The Fable caveat carried a countdown that had been false since July.** Both
+  the CLI and the dashboard said Fable was included "through ~July 19" / "through
+  July 7", then billed usage credits. Fable has been permanent and
+  plan-conditional since 2026-07-20 — the plan you are on answers the question,
+  not the date. Corrected in both, and the honesty gate now catches the shape of
+  a Fable date countdown, not merely the word "cliff", which is how this got
+  through. A test that *asserted* the false countdown is inverted into a guard.
+- **`compare-models` still described "Opus 4.8 vs Sonnet 5 vs Fable 5"** in its
+  help text and header, stale since the 0.3.0 Opus 5 swap. Both strings are
+  derived from the comparison set now and cannot drift from it again.
+- Fable copy throughout is **family-scoped**: the plan mechanic attaches to
+  Fable, not to one Fable model, so Fable 5.1 inherits it and so will the next.
+
+### Notes
+
+- Fable 5.1 turns recorded on Claude Code **2.1.257–2.1.259** carry an unusually
+  high share of uncached input: prompt caching did not cover context attached
+  after tool results, and it was re-sent uncached on every tool-call turn
+  (fixed in 2.1.260). Those turns were billed as recorded, so the cost is right;
+  the token *mix* is not representative. See `docs/DATA-NOTES.md`.
+- The `rate_limits.spend_limit` and `prompt_cache` fields added in 2.1.252 are
+  **ignored** by the collector, not captured and not a crash.
+
 ## 0.3.0 — 2026-08-24
 
 Model and price accuracy pass. Rates are rebuilt from the live Anthropic pricing

@@ -116,3 +116,50 @@ test('compare-models excludes partner-platform turns from both sides and counts 
   assert.deepEqual(s.unpriced_models, ['vertex_ai/claude-sonnet-5']);
   assert.equal(round(s.baseline_window_usd), 12, 'baseline is the one priceable turn, not two');
 });
+
+// ───────────────────────────────────────────────────────────────────────────
+// B1 (2026-09-07). Tracing a `claude-fable-5-1` turn through shipped 0.3.0
+// showed the honest exclusion was invisible where it mattered: the comparison
+// dropped the turn from both sides AND from the baseline, reported that only in
+// `--json`, and printed a table that silently omitted the user's most expensive
+// turn. The DATA carried it all along — these pin that it keeps doing so, and
+// cli/compare-models.js now renders it.
+// ───────────────────────────────────────────────────────────────────────────
+
+test('B1: an unresolvable model is excluded from the baseline and reported, not hidden', () => {
+  const s = repriceSurface(
+    [turn('opus-5'), turn('claude-fable-9-9')],
+    { today: '2026-09-07', days: 30 });
+  assert.equal(s.turn_count, 1, 'only the priceable turn is compared');
+  assert.equal(s.unpriced_turn_count, 1, 'the exclusion must be counted, never silent');
+  assert.deepEqual(s.unpriced_models, ['claude-fable-9-9'], 'and the model named');
+  // The baseline excludes it too — that is the honest choice (a $0 turn would
+  // remove real spend from the baseline and make every switch look cheaper),
+  // but it is exactly why the count has to be rendered to the user.
+  assert.equal(round(s.baseline_window_usd), 30, 'baseline is the one priceable turn');
+});
+
+test('B1: a Fable 5.1 turn is now fully priceable — the 0.3.0 exclusion is closed', () => {
+  const s = repriceSurface([turn('claude-fable-5-1')], { today: '2026-09-07', days: 30 });
+  assert.equal(s.unpriced_turn_count, 0, 'fable-5-1 must no longer be excluded');
+  assert.equal(s.turn_count, 1);
+  assert.equal(round(findModel(s, 'fable-5-1').window_usd), 60);
+  // And through the live payload shape the collector actually records.
+  const live = repriceSurface([turn('claude-fable-5-1[1m]')], { today: '2026-09-07', days: 30 });
+  assert.equal(live.unpriced_turn_count, 0);
+});
+
+test('B1: the comparison surfaces Fable 5.1 cheaper than Fable 5 on cache-heavy usage', () => {
+  // Same turn, 8M cache reads and little else — the shape of an agentic session.
+  // This is the arithmetic we are allowed to state: a cache read costs a quarter
+  // on 5.1 of what it costs on 5. It is NOT a claim about anyone's savings.
+  const cacheHeavy = {
+    model: 'opus-5', input_tokens: 0, output_tokens: 0,
+    cache_read_tokens: 8_000_000, cache_write_tokens: 0,
+  };
+  const s = repriceSurface([cacheHeavy], { today: '2026-09-07', days: 30 });
+  const f51 = findModel(s, 'fable-5-1');
+  assert.ok(f51, 'fable-5-1 is in the comparison set');
+  // 8M cache reads x $10/MTok x 0.025 = $2.00 on Fable 5.1.
+  assert.equal(round(f51.window_usd), 2);
+});

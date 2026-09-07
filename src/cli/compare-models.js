@@ -98,5 +98,30 @@ function renderSurface(lines, s) {
     lines.push(`    ${m.label.padEnd(9)} ${formatCost(m.monthly_usd).padStart(11)}/mo   (${delta} vs your mix)`);
   }
   lines.push(`    ${'Your mix'.padEnd(9)} ${formatCost(s.baseline_monthly_usd).padStart(11)}/mo   (baseline — what you actually run)`);
+
+  // ADDED 2026-09-07 (B1). computeComparison has always EXCLUDED turns it cannot
+  // price at first-party rates from both sides, and has always returned
+  // `unpriced_turn_count` / `unpriced_models` saying so — but only the --json
+  // output carried it. The human-readable table did not, so a user running an
+  // unrecognised model saw a baseline that silently omitted those turns with
+  // nothing to indicate it.
+  //
+  // Found by tracing a `claude-fable-5-1` turn through shipped 0.3.0: the turn
+  // resolved to null, was dropped from the comparison, and the table showed a
+  // baseline of $20.00/mo that excluded the user's single most expensive turn.
+  // Adding Fable 5.1 to the rate sheet fixes that specific case; printing this
+  // line fixes the class, for the next model we have not added yet.
+  if (s.unpriced_turn_count > 0) {
+    const n = s.unpriced_turn_count;
+    lines.push('');
+    lines.push(`    ⚠ ${n} turn${n === 1 ? '' : 's'} excluded from this comparison — and from the`);
+    lines.push('      baseline, so the figures above do not cover all your usage.');
+    for (const m of s.unpriced_models) lines.push(`        · ${m}`);
+    lines.push('      Either the model is not in this version\'s rate sheet, or it was');
+    lines.push('      served by a partner platform that publishes its own rates. The');
+    lines.push('      cost you were actually charged is unaffected — it comes from the');
+    lines.push('      billing-grade anchor, and `wtclaude today` still counts it.');
+    lines.push('      If the model is new, upgrade: `npm i -g wtclaude@latest`.');
+  }
   lines.push('');
 }

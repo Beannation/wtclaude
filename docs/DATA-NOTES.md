@@ -1,6 +1,6 @@
 # Data notes — what WTClaude knows, what it estimates, and what it cannot see
 
-Last reviewed **2026-08-24**. Every fact below is traceable to an Anthropic
+Last reviewed **2026-09-07**. Every fact below is traceable to an Anthropic
 primary read on the date shown, or is explicitly labelled as our own measurement.
 Where Anthropic has not stated something, this file says so rather than guessing.
 
@@ -159,6 +159,11 @@ not stated whether Claude Code sends it, so the exposure is real but unquantifie
 Sources: platform.claude.com/cookbook/fable-5-fallback-billing-guide and
 code.claude.com/docs/en/statusline, both read 2026-08-24.
 
+Since 2026-09-07 this cuts one layer finer: Fable 5.1 and Fable 5 are separate
+rate-sheet entries with a 4× difference in cache-read price, so "attributed by
+session model setting" now carries a price consequence within the Fable family,
+not only across families.
+
 ### The `compare` gap is not a like-for-like token comparison
 
 `wtclaude compare` puts our input-token figure next to the session logs' and
@@ -189,10 +194,43 @@ That is fixed; the ratio it produces is now smaller and more defensible.
 | :-- | :-- |
 | 5-minute cache write | 1.25× |
 | 1-hour cache write | 2× |
-| Cache read (hit) | 0.1× |
+| Cache read (hit) | 0.1× — **except 0.025× on Fable 5.1 and Mythos 5.1** |
 
 Cache-write tokens are their own billed quantity, charged when content is first
 stored — not a premium layered on top of an input charge.
+
+### Cache reads are priced per model (2026-09-07)
+
+The cache-read multiplier stopped being one global number when Fable 5.1
+shipped. Anthropic's pricing page states it as a footnote on the model table:
+
+> Cache hits and refreshes on Claude Fable 5.1 and Claude Mythos 5.1 are priced
+> at 0.025x the base input price. All other models use the standard 0.1x
+> multiplier.
+
+So on a **$10/MTok base input**, which Fable 5 and Fable 5.1 share exactly:
+
+| Model | Base input | Cache read | Multiplier |
+| :-- | --: | --: | --: |
+| Claude Fable 5.1 | $10 / MTok | **$0.25 / MTok** | 0.025× |
+| Claude Fable 5 | $10 / MTok | **$1.00 / MTok** | 0.1× |
+
+The two models are otherwise identically priced. A cache read costs **a quarter**
+on Fable 5.1 of what it costs on Fable 5 — that arithmetic is ours to state; any
+broader savings figure is Anthropic's own indexed-cost claim and is attributed as
+such, never presented as something measured from your data.
+
+The rate sheet holds this as a per-model `cache.read_multiplier` that overrides
+the global default, and the resolution order is **model override → global
+default**. A model with no override inherits 0.1×, which is correct for every
+other row. Applying the global multiplier to a Fable 5.1 turn over-prices its
+cache reads by 4× — and because cache reads dominate agentic sessions, that is
+the largest silent error available in this codebase. It is pinned by tests on
+the sheet, the resolver, the browser comparison mirror and the browser
+context-waste mirror.
+
+Source: platform.claude.com/docs/en/about-claude/pricing, model pricing table
+footnote 1 and §Prompt caching, read 2026-09-07.
 
 Where a payload does not tell us which TTL was in play, we use the **1-hour** rate.
 Two independent reasons: Anthropic's costs doc states that subscription cache
@@ -285,6 +323,10 @@ already stored straddle those changes.
 | 2.1.228 / 2.1.233 | Auto mode becomes default (mac/Linux/WSL / native Windows) | Classifier fires under every Agent tool call |
 | 2.1.234 | `CLAUDE_CODE_PROJECT_DIR_NAME` makes the transcript directory configurable | Affects any reader that assumes a path |
 | 2.1.239 | Data-residency premium enters `/cost` and the statusline | Before this, residency workspaces under-reported ~10% |
+| 2.1.243 | `modelPricing` managed setting | On an organisation that pins contracted rates, `/cost`, the statusline and telemetry report **contracted** cost, not list price. Our anchor is whatever that figure says, so on a managed org it is not a list-price number. |
+| 2.1.252 | `rate_limits.spend_limit` status line field; per-session prompt-cache line in `/cost` plus a `prompt_cache` object for status line scripts | Both are **ignored**, not captured and not a crash. `rate_limits` is extracted whole but flattened to four named columns (`five_hour`/`seven_day` percentage and reset), so `spend_limit` is dropped; `payload.prompt_cache` is never read. Verified by running the collector against a 2.1.260-shaped payload: exit 0, record written, no breadcrumb. Records from 2.1.252 onward therefore carry neither field. |
+| 2.1.257 | **Claude Fable 5.1 added and made the default Fable model** | `claude-fable-5-1` rows begin appearing without the user opting in. Records from before wtclaude 0.3.1 had no rate-sheet entry for it. |
+| 2.1.260 | Prompt caching on Fable 5.1 fixed — context attached after tool results was being re-sent as uncached input on every tool-call turn | Fable 5.1 turns recorded on 2.1.257–2.1.259 carry genuinely higher uncached input and lower cache reads than the same work would produce today. The cost anchor is correct for what was actually billed; the token *mix* is not representative. |
 
 The collector records `cc_version` on every turn, so these boundaries are
 answerable per record rather than guessed at in aggregate.
