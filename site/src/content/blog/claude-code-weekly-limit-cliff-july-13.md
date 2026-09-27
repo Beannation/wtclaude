@@ -1,21 +1,23 @@
 ---
 title: "Claude Code's +50% Weekly Limits Didn't Expire in July — They Were Extended Again. Here's What Changes."
-description: "The temporary 50% boost to Claude Code weekly limits was set to end July 13, 2026, then ~July 19 — Anthropic extended it again, most recently through August 31, 2026 at 11:59 PM PT, unless it extends again. It's a usage change, not a price change. Here's who it affects and how to know where you stand."
+description: "The temporary 50% boost to Claude Code weekly limits was set to end July 13, 2026, then ~July 19 — Anthropic extended it again, and it ran through September 13, 2026; since September 14, weekly limits in Claude Code are 25% higher than before the promotion. It's a usage change, not a price change. Here's who it affects and how to know where you stand."
 pubDate: 2026-06-19
 author: "Peter Bean"
 readingTime: "6 min read"
 faq:
   - q: "When do Claude Code's higher weekly limits end?"
-    a: "The +50% weekly-limit boost was set to expire July 13, 2026 at 6 PM PDT, then ~July 19; Anthropic extended it again, most recently through August 31, 2026 at 11:59 PM PT (Help Center article 15910845), unless it extends again. It covers weekly limits only — 5-hour limits are unaffected — and Claude Code only. The permanent May changes (doubled 5-hour caps, peak-hour removal) don't carry an expiry. Check `/usage` for the ceiling in effect right now."
+    a: "The +50% weekly-limit boost was set to expire July 13, 2026 at 6 PM PDT, then ~July 19; Anthropic extended it again, and it ran from May 13 through September 13, 2026 (Help Center article 15910845). Starting September 14, 2026, weekly limits in Claude Code are 25% higher than they were before the promotion, on Pro, Max, Team, and seat-based Enterprise plans. The boost covered weekly limits only — 5-hour usage limits were not affected by the promotion — and Claude Code only. The permanent May changes (doubled 5-hour caps, peak-hour removal) don't carry an expiry. Check `/usage` for the ceiling in effect right now."
   - q: "Is this a price increase?"
     a: "No. Subscription prices aren't changing. This is a usage-limit change — how much you can do per week — not what you pay."
   - q: "How much will my weekly limit drop?"
-    a: "If the boost lapses to the prior level, it's roughly a third less than the boosted ceiling you've had since May. The exact number depends on your plan; check `/usage` for your current ceiling."
+    a: "The boost ended on September 13, 2026, but weekly limits did not return to the prior level: since September 14, 2026, weekly limits in Claude Code are 25% higher than they were before the promotion. The exact number depends on your plan; check `/usage` for your current ceiling."
   - q: "Could the boost be extended?"
-    a: "It already has been, more than once — from July 13 to ~July 19, and again through August 31, 2026 at 11:59 PM PT. Anthropic hasn't said what happens after the current end date. Recent changes have been fluid. Treat the date as one to watch. We're monitoring it."
+    a: "It was, more than once — from July 13 to ~July 19, and again after that, until the promotion ended on September 13, 2026. Starting September 14, 2026, weekly limits in Claude Code are 25% higher than they were before the promotion."
   - q: "How do I see where I stand?"
     a: "`/usage` inside a session shows your current ceiling. WTClaude's `wtclaude limit` shows it continuously with reset countdowns, reading Anthropic's own rate-limit data — so it reflects whatever the limit is, before or after the boost expires."
 ---
+
+> **Update, September 27, 2026:** The boost has ended, and it did not end on August 31 as the August 24 note below said it was scheduled to. Anthropic's Help Center (article 15910845) now states that the promotion ran from **May 13 through September 13, 2026**, and that **starting September 14, 2026, weekly limits in Claude Code are 25% higher than they were before the promotion**, on Pro, Max, Team, and seat-based Enterprise plans. 5-hour usage limits were not affected by the promotion. The dates below are kept as a record of what was announced at the time; check `/usage` for the ceiling in effect right now.
 
 > **Update, August 24, 2026:** The boost did not lapse in July. Anthropic extended it again; it is now scheduled to run through **August 31, 2026 at 11:59 PM PT** (Anthropic Help Center article 15910845), unless it extends again. It applies to **weekly limits only** — 5-hour limits are unaffected — and to Claude Code only, on Pro, Max, Team, and legacy seat-based Enterprise plans. The July dates below are kept as a record of what was announced at the time; check `/usage` for the ceiling in effect right now.
 
@@ -65,16 +67,16 @@ That's the whole idea behind tracking honestly: you can't control the ceiling, b
 ## FAQ
 
 **When do Claude Code's higher weekly limits end?**
-The +50% weekly-limit boost was set to expire July 13, 2026 at 6 PM PDT, then ~July 19; Anthropic extended it again, most recently through August 31, 2026 at 11:59 PM PT (Help Center article 15910845), unless it extends again. It covers weekly limits only — 5-hour limits are unaffected — and Claude Code only. The permanent May changes (doubled 5-hour caps, peak-hour removal) don't carry an expiry. Check `/usage` for the ceiling in effect right now.
+The +50% weekly-limit boost was set to expire July 13, 2026 at 6 PM PDT, then ~July 19; Anthropic extended it again, and it ran from May 13 through September 13, 2026 (Help Center article 15910845). Starting September 14, 2026, weekly limits in Claude Code are 25% higher than they were before the promotion, on Pro, Max, Team, and seat-based Enterprise plans. The boost covered weekly limits only — 5-hour usage limits were not affected by the promotion — and Claude Code only. The permanent May changes (doubled 5-hour caps, peak-hour removal) don't carry an expiry. Check `/usage` for the ceiling in effect right now.
 
 **Is this a price increase?**
 No. Subscription prices aren't changing. This is a usage-limit change — how much you can do per week — not what you pay.
 
 **How much will my weekly limit drop?**
-If the boost lapses to the prior level, it's roughly a third less than the boosted ceiling you've had since May. The exact number depends on your plan; check `/usage` for your current ceiling.
+The boost ended on September 13, 2026, but weekly limits did not return to the prior level: since September 14, 2026, weekly limits in Claude Code are 25% higher than they were before the promotion. The exact number depends on your plan; check `/usage` for your current ceiling.
 
 **Could the boost be extended?**
-It already has been, more than once — from July 13 to ~July 19, and again through August 31, 2026 at 11:59 PM PT. Anthropic hasn't said what happens after the current end date. Recent changes have been fluid. Treat the date as one to watch. We're monitoring it.
+It was, more than once — from July 13 to ~July 19, and again after that, until the promotion ended on September 13, 2026. Starting September 14, 2026, weekly limits in Claude Code are 25% higher than they were before the promotion.
 
 **How do I see where I stand?**
 `/usage` inside a session shows your current ceiling. WTClaude's `wtclaude limit` shows it continuously with reset countdowns, reading Anthropic's own rate-limit data — so it reflects whatever the limit is, before or after the boost expires.

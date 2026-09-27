@@ -57,7 +57,8 @@ const groups: Group[] = [
         status: 'available',
         body: 'Each figure is tagged billing-grade, inferred, or estimate. We never show an estimate as if it were exact.',
       },
-      // REL-GTM §3 line items (verbatim). compare-models + Sonnet 5 tracking are live now;
+      // REL-GTM §3 line items (verbatim). compare-models + Opus 5.5 / Sonnet 5 tracking are live
+      // (Opus 5.5 item added 2026-09-27, PMO wording — Claude Code's default since v2.1.280);
       // the Fable forecast item is gated on FABLE_AVAILABLE (falls back to the neutral note).
       // Fable copy is FAMILY-scoped as of 2026-09-07 so Fable 5.1 — Claude Code's default
       // Fable model since v2.1.257 — is covered without a second flag or a second card.
@@ -65,12 +66,17 @@ const groups: Group[] = [
         name: '`compare-models` (new)',
         status: 'available',
         badge: 'billing-grade',
-        body: 'Opus 5 vs Sonnet 5 vs Fable 5.1, re-priced from your own billing-grade usage. Per-surface split; every projection labeled estimate.',
+        body: 'Opus 5.5 vs Sonnet 5 vs Fable 5.1, re-priced from your own billing-grade usage. Per-surface split; every projection labeled estimate.',
+      },
+      {
+        name: 'Opus 5.5 tracking',
+        status: 'available',
+        body: 'Prices Claude Code’s default model correctly ($4/$20, cache reads $0.20 per million) off the model’s own tokens — no unknown-model gaps.',
       },
       {
         name: 'Sonnet 5 tracking',
         status: 'available',
-        body: 'Prices the new Claude Code default correctly ($2/$10 — the $3/$15 increase once scheduled for September 1, 2026 was cancelled) off the model’s own tokens — no unknown-model gaps.',
+        body: 'Prices Sonnet 5 correctly ($2/$10 — the $3/$15 increase once scheduled for September 1, 2026 was cancelled) off the model’s own tokens — no unknown-model gaps.',
       },
       {
         name: 'Fable forecast',

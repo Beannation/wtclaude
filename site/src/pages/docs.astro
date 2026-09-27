@@ -7,10 +7,11 @@ import { faqPage, breadcrumbs } from '../lib/schema';
 
 const title = 'WTClaude docs — install & CLI reference';
 const description =
-  'Install WTClaude in 60 seconds and track your real Claude Code usage. Quick start, the full CLI command reference (v0.3.0), and FAQ.';
+  'Install WTClaude in 60 seconds and track your real Claude Code usage. Quick start, the full CLI command reference (v0.3.1), and FAQ.';
 
 // CLI reference — organized by what you're doing. Every description + flag was
-// verified against the shipped `wtclaude --help` (v0.3.0). Run
+// verified against the shipped `wtclaude --help` (v0.3.1 — command set and flags
+// diffed against 0.3.0 on 2026-09-27: identical; only two descriptions changed). Run
 // `wtclaude <command> --help` for the authoritative flag list on your install.
 
 // The Agent-SDK credit cluster (forecast / credits / readiness) was built for the
@@ -102,7 +103,7 @@ const sections = [
       {
         name: 'compare-models',
         badge: 'estimate' as const,
-        desc: '**new** — re-prices your recorded usage across **Opus 5**, **Sonnet 5**, and **Fable 5.1**: what would this month cost on each? Split by surface (Code billing-grade · Cowork a labeled estimate · Chat excluded). It re-prices your *recorded* usage, not the same task run on each model. Free. `--days <n>`, `--json`.',
+        desc: '**new** — re-prices your recorded usage across **Opus 5.5**, **Sonnet 5**, and **Fable 5.1**: what would this month cost on each? Split by surface (Code billing-grade · Cowork a labeled estimate · Chat excluded). It re-prices your *recorded* usage, not the same task run on each model. Free. `--days <n>`, `--json`.',
       },
       {
         name: 'whatif',
@@ -116,7 +117,7 @@ const sections = [
       },
       ...forecastingExtra,
     ],
-    note: '**Sonnet 5** is the new Claude Code default (`claude-sonnet-5`). WTClaude prices it correctly — $2/$10, off the model’s own reported tokens, with no unknown-model gaps. The increase to $3/$15 once scheduled for September 1, 2026 was cancelled, so $2/$10 is the standard price.',
+    note: '**Opus 5.5** is Claude Code’s default model since v2.1.280 (`claude-opus-5-5`). WTClaude prices it correctly — $4/$20, with cache reads at $0.20 per million, off the model’s own reported tokens, with no unknown-model gaps. **Sonnet 5** stays at $2/$10 — the increase to $3/$15 once scheduled for September 1, 2026 was cancelled.',
   },
   {
     title: 'Insights',
@@ -277,11 +278,12 @@ const mdToHtml = (s: string) =>
         Requirements: macOS or Linux, Node, and the <strong class="text-ink/80">Claude Code CLI in your terminal</strong>. Free, MIT-licensed.
       </p>
       <p class="mt-3 rounded-lg border border-ink/10 bg-amber-light/30 px-4 py-3 text-sm leading-relaxed text-ink/70">
-        <strong class="font-semibold text-ink">New in v0.3.1:</strong> Claude Fable 5.1 is priced,
-        including its cache reads at $0.25 per million tokens — a quarter of Fable 5’s, on the same
-        base rates.
+        <strong class="font-semibold text-ink">New in v0.3.1:</strong> Claude Opus 5.5 — Claude Code’s
+        default model — is priced at $4/$20, with cache reads at $0.20 per million tokens; Claude
+        Fable 5.1 is priced, including its cache reads at $0.25 per million tokens — a quarter of
+        Fable 5’s, on the same base rates.
         <code class="rounded bg-ink/5 px-1 py-0.5 font-mono text-[13px]">wtclaude compare-models</code> prices your usage across
-        Opus 5 · Sonnet 5 · Fable 5.1, and
+        Opus 5.5 · Sonnet 5 · Fable 5.1, and
         <code class="rounded bg-ink/5 px-1 py-0.5 font-mono text-[13px]">wtclaude waste</code> finds the context you’re paying for
         but never using.
       </p>
@@ -295,7 +297,7 @@ const mdToHtml = (s: string) =>
     <section class="mt-16">
       <h2 class="font-head text-2xl">CLI reference</h2>
       <p class="mt-2 text-sm leading-relaxed text-warm">
-        Everything the shipped CLI (v0.3.0) runs — run
+        Everything the shipped CLI (v0.3.1) runs — run
         <code class="rounded bg-ink/5 px-1 py-0.5 font-mono text-[13px]">wtclaude &lt;command&gt; --help</code> for the full flags on
         your install. <strong class="font-medium text-ink/75">Billing-grade</strong> = terminal Code, Anthropic-computed (not a
         guarantee of your invoice); everything else is a labeled estimate.

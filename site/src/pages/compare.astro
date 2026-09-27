@@ -146,12 +146,13 @@ const td = 'border-t border-ink/10 px-4 py-3 text-sm align-top';
             <td class={`${td} text-ink/70`}>In-CLI command</td>
           </tr>
 
-          {/* Models priced — makes the page show Sonnet 5 before the §4 freshness line runs
-              (so that line isn't hypocritical). WTClaude prices Sonnet 5 at $2/$10 — Anthropic
-              cancelled the increase to $3/$15 that had been scheduled for September 1. */}
+          {/* Models priced — makes the page show Opus 5.5 before the §4 freshness line runs
+              (so that line isn't hypocritical). WTClaude prices Opus 5.5 at $4/$20 (cache reads
+              $0.20/MTok) and Sonnet 5 at $2/$10 — Anthropic cancelled the increase to $3/$15 that
+              had been scheduled for September 1. Updated 2026-09-27 (PMO wording). */}
           <tr>
             <th scope="row" class={`${td} font-semibold text-ink`}>Models priced</th>
-            <td class={`${td} text-ink/80`}>Opus 5 · Sonnet 5 ($2/$10) · Fable 5.1</td>
+            <td class={`${td} text-ink/80`}>Opus 5.5 ($4/$20) · Sonnet 5 ($2/$10) · Fable 5.1</td>
             <td class={`${td} text-ink/70`}>Log-derived</td>
             <td class={`${td} text-ink/70`}>Log-derived</td>
             <td class={`${td} text-ink/70`}>Log-derived</td>
@@ -194,13 +195,14 @@ const td = 'border-t border-ink/10 px-4 py-3 text-sm align-top';
       </table>
     </div>
 
-    <!-- Sonnet-5 freshness sharpen (REL-GTM §4, verbatim). Gated on our own table showing
-         Sonnet 5 — satisfied by the "Models priced" row above. Factual staleness, not a jab. -->
+    <!-- Opus-5.5 freshness sharpen (REL-GTM §4 claim shape, facts updated per PMO 2026-09-27).
+         Gated on our own table showing Opus 5.5 — satisfied by the "Models priced" row above —
+         and on wtclaude@0.3.1 being live on npm. Factual staleness, not a jab. -->
     <p class="mt-8 max-w-3xl text-base leading-relaxed text-ink/80">
-      Sonnet 5 became the default Claude Code model on June 30. A cost tracker that doesn’t price
-      claude-sonnet-5 is mis-costing the majority of current sessions — the model most of your work
-      now runs on. WTClaude prices it correctly ($2/$10 — Anthropic cancelled the increase to
-      $3/$15 that had been scheduled for September 1), off the model’s own reported tokens.
+      Opus 5.5 became Claude Code’s default model on September 22. A cost tracker that doesn’t
+      price claude-opus-5-5 is mis-costing the majority of current sessions — the model most of
+      your work now runs on. WTClaude prices it correctly ($4/$20, with cache reads at $0.20 per
+      million), off the model’s own reported tokens.
     </p>
 
     <!-- The OAuth structural-edge block (SMB copy v1.12 §4, verbatim) — proof beside the comparison.

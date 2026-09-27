@@ -208,3 +208,101 @@ test('honesty gate: the rate sheet never ships a live scheduled step-up unguarde
   const scheduled = Object.entries(sheet.models).filter(([, m]) => Array.isArray(m.scheduled)).map(([k]) => k);
   assert.deepEqual(scheduled, [], `${newest} carries a scheduled rate change on: ${scheduled.join(', ')}`);
 });
+
+// ───────────────────────────────────────────────────────────────────────────
+// SITE SCOPE (BUILD-017 Job 2, 2026-09-27). The site is a current-facing surface
+// the CLI gate never scanned. Two rules only, deliberately — NOT the whole
+// BANNED list: the Sonnet step-up rule above matches the PMO's own true copy
+// ("the $3/$15 increase once scheduled for September 1, 2026 was cancelled"),
+// and widening every rule to prose would fail on correct sentences.
+//
+// Scanned: site/src pages, components, layouts and lib, plus each blog post's
+// FRONTMATTER description and FAQ answers — both are current-facing (the
+// description is the /blog card, meta and JSON-LD; the FAQ is FAQPage JSON-LD).
+// NOT scanned: blog bodies, update boxes included — they are dated history.
+// HTML comments are scanned because nested ones ship in page source; JSX
+// `{/* */}` comments and .astro frontmatter `//` comments never ship.
+// ───────────────────────────────────────────────────────────────────────────
+
+// The compare set as it stood before 0.3.1 ("Opus 5, Sonnet 5, and Fable …",
+// "Opus 5 · Sonnet 5 …"): once 0.3.1 is live the set is Opus 5.5 / Sonnet 5 /
+// Fable 5.1, and a current-facing list naming Opus 5 is stale.
+const OLD_COMPARE_SET = /\bopus\s*5\b(?!\.5|-5)[^.\n]{0,12}sonnet\s*5\b[^.\n]{0,24}fable/i;
+
+function stripAstroNonShipping(src) {
+  let out = src.replace(/\{\/\*[\s\S]*?\*\/\}/g, '');              // JSX comments
+  const fm = out.match(/^---\n([\s\S]*?)\n---/);
+  if (fm) {
+    const cleaned = fm[1].replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    out = out.replace(fm[1], cleaned);
+  }
+  return out;
+}
+
+function siteFiles(dir = join(ROOT, 'site', 'src'), acc = []) {
+  for (const name of readdirSync(dir)) {
+    const p = join(dir, name);
+    if (statSync(p).isDirectory()) {
+      if (name === 'content') continue;                              // blog handled below
+      siteFiles(p, acc); continue;
+    }
+    if (/\.(astro|ts|js|mjs)$/.test(name)) acc.push(p);
+  }
+  return acc;
+}
+
+// Frontmatter description + FAQ answers of every blog post. Titles are exempt:
+// titles never change (a dated post's title is part of its record).
+function blogFrontmatterStrings() {
+  const dir = join(ROOT, 'site', 'src', 'content', 'blog');
+  const out = [];
+  for (const name of readdirSync(dir).filter(n => n.endsWith('.md'))) {
+    const fm = readFileSync(join(dir, name), 'utf8').match(/^---\n([\s\S]*?)\n---/);
+    if (!fm) continue;
+    for (const line of fm[1].split('\n')) {
+      const m = line.match(/^\s*(description|a):\s*(.*)$/);
+      if (m) out.push({ where: `site/src/content/blog/${name} (${m[1] === 'a' ? 'FAQ answer' : 'description'})`, text: m[2] });
+    }
+  }
+  return out;
+}
+
+// Exact, reasoned exemptions — keyed on the surface AND the matched text, so a
+// new occurrence anywhere (or a second one on the same surface) still fails.
+const SITE_EXEMPT = [
+  {
+    where: 'site/src/content/blog/state-of-claude-pricing-july-2026.md (description)',
+    match: 'Sonnet 5 as the new default',
+    why: 'The description opens "A dated record of Claude pricing as it stood on July 8, 2026 —" and lists this as a topic of that snapshot; its own promise ("the update at the top carries the current facts") is kept true by the 2026-09-27 box. Scoped history, not a claim about today.',
+  },
+];
+
+test('honesty gate (site): no current-facing page, FAQ or description calls Sonnet 5 the default, or names the old compare set', () => {
+  const hits = [];
+  const check = (where, text) => {
+    for (const [rule, re] of [['Sonnet-5-is-the-default', SONNET_DEFAULT], ['old compare set (Opus 5 · Sonnet 5 · Fable)', OLD_COMPARE_SET]]) {
+      const all = [...text.matchAll(new RegExp(re.source, 'gi'))];
+      for (const m of all) {
+        if (SITE_EXEMPT.some(e => e.where === where && e.match === m[0])) continue;
+        hits.push(`${where}: ${rule} on "${m[0]}"`);
+      }
+    }
+  };
+  for (const file of siteFiles()) {
+    const raw = readFileSync(file, 'utf8');
+    check(relative(ROOT, file), file.endsWith('.astro') ? stripAstroNonShipping(raw) : stripComments(raw));
+  }
+  for (const { where, text } of blogFrontmatterStrings()) check(where, text);
+  assert.deepEqual(hits, [], `\n  Site honesty gate failed:\n    ${hits.join('\n    ')}\n`);
+});
+
+test('honesty gate (site) self-test: the scope can fail — a planted stale line is caught', () => {
+  assert.ok(OLD_COMPARE_SET.test('re-prices your recorded usage across Opus 5, Sonnet 5, and Fable 5.1'));
+  assert.ok(OLD_COMPARE_SET.test('Opus 5 · Sonnet 5 ($2/$10) · Fable 5.1'));
+  assert.ok(!OLD_COMPARE_SET.test('Opus 5.5 ($4/$20) · Sonnet 5 ($2/$10) · Fable 5.1'));
+  assert.ok(!OLD_COMPARE_SET.test('across Opus 5.5, Sonnet 5, and Fable 5.1'));
+  assert.ok(SONNET_DEFAULT.test(stripAstroNonShipping('---\nconst a = 1;\n---\n<p>Sonnet 5 is the new Claude Code default.</p>')));
+  assert.ok(!SONNET_DEFAULT.test(stripAstroNonShipping('---\n// Sonnet 5 is the new default\n---\n<p>{/* Sonnet 5 is the default */}ok</p>')),
+    'non-shipping comments are exempt');
+  assert.ok(SONNET_DEFAULT.test('<!-- Sonnet 5 is the default -->'), 'HTML comments ship, so they are scanned');
+});

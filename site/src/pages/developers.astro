@@ -130,27 +130,25 @@ const jsonLd = softwareApplication(new URL(Astro.url.pathname, Astro.site).href)
     </div>
   </section>
 
-  <!-- THREE-MODEL CHOICE (REL-GTM §2, verbatim) -->
+  <!-- THREE-MODEL CHOICE (REL-GTM §2; Opus 5.5 wording per PMO kickoff 2026-09-27) -->
   <section class="bg-surface pb-20">
     <div class="mx-auto max-w-6xl px-5">
       <div class="mx-auto max-w-3xl text-center">
         <h2 class="font-head text-3xl sm:text-4xl">Three models now. One honest way to choose.</h2>
         <p class="mt-5 text-base leading-relaxed text-ink/75">
-          Sonnet 5 is the new Claude Code default. Fable 5.1 is the default Fable model. Opus 5 is
-          there for the heavy lifting. WTClaude prices all three from your own real usage — so you
-          choose on what it actually costs you, not the rate card.
+          Opus 5.5 is the Claude Code default. Fable 5.1 is the default Fable model. Sonnet 5 has
+          the lowest input and output rates of the three. WTClaude prices all three from your own
+          real usage — so you choose on what it actually costs you, not the rate card.
         </p>
       </div>
 
       <div class="mt-12 grid gap-6 md:grid-cols-3">
         <article class="flex flex-col rounded-2xl border border-ink/10 bg-card p-7 shadow-sm">
-          <h3 class="font-head text-lg">Sonnet 5, priced right</h3>
+          <h3 class="font-head text-lg">Opus 5.5, priced right</h3>
           <p class="mt-3 text-sm leading-relaxed text-ink/70">
-            The new default (in Claude Code v2.1.197 and on Free/Pro). We price it at $2/$10 —
-            the standard price, permanently; the increase to $3/$15 once scheduled for September 1,
-            2026 was cancelled — off the model’s own reported tokens, so nothing goes untracked.
-            Cheaper per token than Opus, though its tokenizer runs a bit heavier, so we show you the
-            real number, not the sticker.
+            The default in Claude Code since v2.1.280 (September 22, 2026), on every paid plan. We
+            price it at $4/$20, with cache reads at $0.20 per million, off the model’s own reported
+            tokens, so nothing goes untracked — and we show you the real number, not the sticker.
           </p>
         </article>
 
@@ -171,7 +169,7 @@ const jsonLd = softwareApplication(new URL(Astro.url.pathname, Astro.site).href)
           <h3 class="font-head text-lg">Compare all three</h3>
           <p class="mt-3 text-sm leading-relaxed text-ink/70">
             <code class="rounded bg-ink/5 px-1 py-0.5 font-mono text-[13px]">wtclaude compare-models</code>
-            re-prices your recorded usage across Opus 5, Sonnet 5, and Fable 5.1 — what would this
+            re-prices your recorded usage across Opus 5.5, Sonnet 5, and Fable 5.1 — what would this
             month cost on each? Split by surface (Code billing-grade, Cowork a labeled estimate, Chat
             excluded). In the CLI, the dashboard, and the companion.
           </p>
