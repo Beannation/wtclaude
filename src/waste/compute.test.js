@@ -81,3 +81,60 @@ test('estimateTokens is word-aware, not chars/3.7, and non-negative', () => {
 });
 
 function round(n) { return Math.round(n * 1e6) / 1e6; }
+
+// ───────────────────────────────────────────────────────────────────────────
+// THE FAMILY-FALLBACK CLASS (BUILD-017, 2026-09-27). computeWaste() used to take
+// getRates() at face value, so when Opus 5.5 shipped and `claude-opus-5-5` fell
+// to the opus family fallback, an Opus 5.5 user's dead weight was priced at Opus
+// 5's $0.50 cache read (true: $0.20, 2.5x) and the rate labelled billing-grade.
+// Decision: a guessed rate WITHHOLDS the figure. The next Opus lands here on day
+// one, so the guard is on the class, not the row.
+// ───────────────────────────────────────────────────────────────────────────
+
+test('opus-5-5 dead weight is priced at its own $0.20/MTok cache read, not Opus 5\'s $0.50', () => {
+  const r = computeWaste({ items: [item('dead', 1_000_000)], usedIds: new Set(), turns: 1, days: 30,
+    model: 'claude-opus-5-5[1m]', today: '2026-09-27' });
+  assert.equal(r.priced, true);
+  assert.equal(r.model, 'opus-5-5');
+  assert.equal(r.input_rate, 4);
+  assert.equal(r.cache_read_multiplier, 0.05);
+  assert.equal(round(r.per_turn_usd), 0.2);
+  assert.equal(r.labels.input_rate, 'billing-grade');
+});
+
+test('a family-fallback model WITHHOLDS the dollar figure — never a guess presented as ours', () => {
+  const r = computeWaste({ items: [item('used', 100), item('dead', 1_000_000)], usedIds: new Set(['used']),
+    turns: 50, days: 30, model: 'claude-opus-9-20270101', today: '2026-09-27' });
+  assert.equal(r.priced, false);
+  assert.equal(r.unpriced_reason, 'family-fallback:opus-5-5');
+  for (const k of ['per_turn_usd', 'window_usd', 'monthly_usd', 'input_rate', 'cache_read_multiplier']) {
+    assert.equal(r[k], null, `${k} must be withheld`);
+  }
+  assert.equal(r.labels.monthly_usd, 'withheld');
+  assert.equal(r.labels.input_rate, 'unavailable', 'a guessed rate is never labelled billing-grade');
+  assert.equal(r.labels.cache_read_multiplier, 'unavailable');
+  // The rate-independent parts still stand.
+  assert.equal(r.dead_count, 1);
+  assert.equal(r.dead_tokens, 1_000_000);
+  assert.equal(r.labels.turns, 'billing-grade');
+});
+
+test('partner-platform, unknown and missing models withhold too, each with its reason', () => {
+  const run = model => computeWaste({ items: [item('dead', 1000)], usedIds: new Set(), turns: 10, days: 30, model, today: '2026-09-27' });
+  assert.equal(run('vertex_ai/claude-opus-5-5').unpriced_reason, 'partner-platform:vertex_ai');
+  assert.equal(run('claude-sonnet-9').unpriced_reason, 'unresolved-model');
+  assert.equal(run(undefined).unpriced_reason, 'no-model');
+  for (const m of ['vertex_ai/claude-opus-5-5', 'claude-sonnet-9', undefined]) {
+    assert.equal(run(m).monthly_usd, null, `${m}: withheld`);
+    assert.notEqual(run(m).labels.input_rate, 'billing-grade', `${m}: never billing-grade`);
+  }
+});
+
+test('with nothing to re-read, the figure is a true $0 even when the rate is withheld', () => {
+  // No dead tokens, or no turns: $0 on any rate, so stating it is not a guess.
+  const noTurns = computeWaste({ items: [item('dead', 1000)], usedIds: new Set(), turns: 0, days: 30, model: 'claude-opus-9' });
+  assert.equal(noTurns.monthly_usd, 0);
+  const allUsed = computeWaste({ items: [item('a', 1000)], usedIds: new Set(['a']), turns: 10, days: 30 });
+  assert.equal(allUsed.monthly_usd, 0);
+  assert.equal(allUsed.labels.monthly_usd, 'estimate');
+});

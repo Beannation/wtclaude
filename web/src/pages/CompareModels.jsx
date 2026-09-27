@@ -2,41 +2,42 @@ import { useDashboard } from '../lib/useDashboard';
 import { useApp } from '../context/AppContext';
 import { formatCost, formatTokens } from '../lib/format';
 import {
-  computeComparison, COMPARE_MODELS, CAVEATS, COMPARE_HONESTY_LINE,
+  computeComparison, codeTurnsFromSessions, COMPARE_MODELS, CAVEATS, COMPARE_HONESTY_LINE,
 } from '../lib/compareModels';
 import HonestyBadge from '../components/HonestyBadge';
 import EmptyState from '../components/EmptyState';
 import CopyCommand from '../components/CopyCommand';
 import { LinkPrompt } from './Overview';
 
-// Build the billing-grade "Code (terminal)" re-priceable turns from the synced
-// dashboard payload. The payload carries session-level aggregate tokens plus
-// per-session models_used turn counts (per-turn detail is not synced), so we
-// attribute each session's tokens across its models by turn-share — the same
-// honest attribution derive.costByModel uses. Each per-model bucket becomes ONE
-// re-priceable "turn" tagged with the model the user ACTUALLY ran, so the
-// baseline prices at the real mix and a no-op switch nets ~$0.
-function codeTurnsFromSessions(sessions) {
-  const turns = [];
-  for (const s of sessions || []) {
-    const models = s.models_used || {};
-    const totalTurns = Object.values(models).reduce((a, b) => a + b, 0) || 1;
-    const inTok = Number(s.total_input_tokens || 0);
-    const outTok = Number(s.total_output_tokens || 0);
-    const cr = Number(s.total_cache_read || 0);
-    const cw = Number(s.total_cache_write || 0);
-    for (const [model, count] of Object.entries(models)) {
-      const share = count / totalTurns;
-      turns.push({
-        model,
-        input_tokens: inTok * share,
-        output_tokens: outTok * share,
-        cache_read_tokens: cr * share,
-        cache_write_tokens: cw * share,
-      });
-    }
-  }
-  return turns;
+// ADDED 2026-09-27. Turns this dashboard cannot price at first-party rates — a
+// model its rate table does not know, a partner-platform id, or a family-fallback
+// guess — are excluded from both sides of the comparison (mirror of the CLI).
+// Before this, the browser priced them silently: every Opus 5.5 slice went into
+// "your mix" at Opus 5's rates with nothing on the page to say so. Excluding
+// without saying so would be the same error in a different shape, so the tile
+// names what it left out — and when EVERYTHING was left out, it says that rather
+// than "no usage".
+export function ExclusionNotice({ surface }) {
+  const n = surface.unpriced_turn_count || 0;
+  if (n === 0) return null;
+  const slices = `model-slice${n === 1 ? '' : 's'}`;
+  return (
+    <div className="mt-4 rounded-lg border border-[var(--amber)] px-4 py-3 text-xs text-[var(--muted)] space-y-1">
+      <p className="text-[var(--amber)] font-medium">
+        {surface.present
+          ? `${n} ${slices} excluded from this comparison — and from your mix, so the figures above don't cover all your usage.`
+          : `${n === 1 ? 'The one model-slice in this window was' : `All ${n} ${slices} in this window were`} excluded, so there is nothing to compare yet — this is not the same as having no usage.`}
+      </p>
+      {surface.unpriced_models && surface.unpriced_models.length > 0 && (
+        <p className="font-mono">{surface.unpriced_models.join(' · ')}</p>
+      )}
+      <p>
+        Either the model isn't in this dashboard's rate table yet, or it was served by a partner platform that
+        publishes its own rates. What you were actually charged is unaffected — it comes from the billing-grade
+        anchor.
+      </p>
+    </div>
+  );
 }
 
 function deltaColor(usd) {
@@ -136,11 +137,12 @@ export default function CompareModels() {
                 </table>
               </div>
             </>
-          ) : (
+          ) : code.unpriced_turn_count > 0 ? null : (
             <p className="text-[var(--muted)] text-sm mt-2">
               No recorded terminal usage in this window yet.
             </p>
           )}
+          <ExclusionNotice surface={code} />
         </div>
 
         {/* COWORK — labeled estimate, honest placeholder (no synced per-surface data) */}

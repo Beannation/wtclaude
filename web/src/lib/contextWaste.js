@@ -1,13 +1,14 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // Browser port of the CLI dead-weight computation (src/waste/compute.js). The
 // CLI reads pricing from disk via node:fs; here the rates + the exact cache-read
-// mechanics are mirrored from config/pricing-2026-09-07.json. Keep in lock-step
+// mechanics are mirrored from config/pricing-2026-09-27.json. Keep in lock-step
 // with the CLI so the dashboard tile can never drift.
 //
 // The honest wedge (identical to the CLI):
 //  • Cost is grounded in BILLING-GRADE mechanics: your real per-turn cache-read
 //    count, the model's real input rate, and its exact cache-read multiplier
-//    (per-model since 2026-09-07: 0.025x on Fable 5.1, 0.1x on everything else).
+//    (per-model: 0.025x on Fable 5.1 / Mythos 5.1, 0.05x on Opus 5.5, 0.1x on
+//    everything else).
 //    Dead weight is re-read at cache-read rates on every turn after the first —
 //    that's the real mechanism (NOT a "cache hit rate" story). It also bloats the
 //    context window and degrades tool selection.
@@ -18,31 +19,39 @@
 //    incident response) stays REVIEW, not condemned.
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Mirror of the input rates in src/config/pricing-2026-09-07.json. Pinned to the
+import { resolveModel } from './compareModels.js';
+
+// Mirror of the input rates in src/config/pricing-2026-09-27.json. Pinned to the
 // shipped sheet by src/compare-models/web-parity.test.js — if that test fails,
 // this table is stale; regenerate it rather than editing the test.
 //
-// DEFAULT cache-read multiplier. As of 2026-09-07 this is per-model: Fable 5.1
-// and Mythos 5.1 price cache hits at 0.025x base input, every other model at
-// 0.1x (Anthropic pricing page, footnote 1). Dead weight is re-read at the
-// CACHE-READ rate on every turn, so this multiplier IS the dollar figure on this
-// tile — applying 0.1x to a Fable 5.1 session overstates that user's dead weight
-// by 4x. Resolution order: CACHE_READ_MULTIPLIER_BY_MODEL, then this default.
+// DEFAULT cache-read multiplier. Per-model since 2026-09-07 and three-valued
+// since 2026-09-27: Fable 5.1 and Mythos 5.1 price cache hits at 0.025x base
+// input, Opus 5.5 at 0.05x, every other model at 0.1x (Anthropic pricing page,
+// §Prompt caching). Dead weight is re-read at the CACHE-READ rate on every turn,
+// so this multiplier IS the dollar figure on this tile — applying 0.1x to a
+// Fable 5.1 session overstates that user's dead weight 4x, an Opus 5.5 session's
+// 2x. Resolution order: CACHE_READ_MULTIPLIER_BY_MODEL, then this default.
 const CACHE_READ_MULTIPLIER = 0.1;
-// Default input rate when no model is supplied — Sonnet 5's rate, matching the
-// CLI fallback (pricing.models['sonnet-5'].input).
-const DEFAULT_INPUT_RATE = 2.0;
+
+// REMOVED 2026-09-27: DEFAULT_INPUT_RATE (Sonnet 5's $2). A model this table did
+// not know was priced at Sonnet's rate and the rate labelled "billing-grade".
+// For Opus 5.5 the dollar figure landed on the true $0.20/MTok by coincidence
+// ($2 x 0.1 = $4 x 0.05) while the tile named a wrong input rate and a wrong
+// multiplier as billing-grade. An unknown model now withholds the figure —
+// exactly as the CLI's computeWaste() does.
 
 // Per-model cache-read overrides. Only models that DIFFER from the default
 // appear here, mirroring the rate sheet's own shape (a model with no `cache`
 // block inherits the global multiplier).
 export const CACHE_READ_MULTIPLIER_BY_MODEL = {
+  'opus-5-5': 0.05,
   'fable-5-1': 0.025,
   'mythos-5-1': 0.025,
 };
 
 // COMPLETED 2026-08-24. This table previously held five models and, crucially,
-// no `opus-5`. Opus 5 has been Claude Code's default `opus` since v2.1.219, so
+// no `opus-5`. Opus 5 was Claude Code's default `opus` from v2.1.219 (until v2.1.280), so
 // every Opus 5 user fell through to DEFAULT_INPUT_RATE — Sonnet's $2 against a
 // real $5, a 2.5x under-estimate of their context-waste cost, on the dashboard
 // tile whose entire job is to size that cost.
@@ -50,7 +59,12 @@ export const CACHE_READ_MULTIPLIER_BY_MODEL = {
 // EXTENDED 2026-09-07 with fable-5-1 / mythos-5-1. Same failure shape: Fable 5.1
 // is Claude Code's default Fable model, so without these rows every Fable 5.1
 // user would fall through to Sonnet's $2 against a real $10.
+//
+// EXTENDED 2026-09-27 with opus-5-5 — Claude Code's default model on every paid
+// plan since v2.1.280. Without it, every Opus 5.5 user fell through to the
+// Sonnet default and the tile labelled that guess billing-grade.
 export const INPUT_RATE_BY_MODEL = {
+  'opus-5-5': 4.0,
   'opus-5': 5.0,
   'opus-4-8': 5.0,
   'opus-4-7': 5.0,
@@ -74,19 +88,37 @@ function round(n) {
   return Math.round(n * 1e6) / 1e6;
 }
 
+function nullableRound(n) {
+  return n === null ? null : round(n);
+}
+
 // Pure dead-weight computation (mirror of computeWaste). Inventory + evidence are
 // injected so this is fully testable and driven by fixture data when present.
 //   items:   [{ id, type, name, source, tokens, chars }]
 //   usedIds: Set|Array of item ids invoked in the look-back window
 //   turns:   billing-grade turn count from the transcript
+//   model:   a raw model id (`claude-opus-5-5[1m]`) or a rate-table key
+//            (`opus-5-5`) — both resolve the same way the CLI's getRates() does.
+//
+// Withhold, don't guess (mirror of the CLI, 2026-09-27): no model, an unknown
+// model, a partner-platform id or a family-fallback guess returns null dollar
+// figures with `unpriced_reason` in the CLI's vocabulary. The inventory and token
+// sizes do not depend on the rate and are still returned.
 export function computeWaste({ items = [], usedIds = new Set(), turns = 0, days = 30, model } = {}) {
-  const inputRate =
-    (model && INPUT_RATE_BY_MODEL[model]) != null ? INPUT_RATE_BY_MODEL[model] : DEFAULT_INPUT_RATE;
+  const resolved = model ? resolveModel(model) : null;
+  const key = resolved ? resolved.key : null;
+  let unpricedReason = null;
+  if (!model) unpricedReason = 'no-model';
+  else if (!resolved || INPUT_RATE_BY_MODEL[key] == null) unpricedReason = 'unresolved-model';
+  else if (resolved.provider) unpricedReason = `partner-platform:${resolved.provider}`;
+  else if (resolved.fallback) unpricedReason = `family-fallback:${key}`;
+  const priced = unpricedReason === null;
+
+  const inputRate = priced ? INPUT_RATE_BY_MODEL[key] : null;
   // Per-model cache-read multiplier, default when the model does not override it.
-  const cacheReadMultiplier =
-    (model && CACHE_READ_MULTIPLIER_BY_MODEL[model]) != null
-      ? CACHE_READ_MULTIPLIER_BY_MODEL[model]
-      : CACHE_READ_MULTIPLIER;
+  const cacheReadMultiplier = priced
+    ? (CACHE_READ_MULTIPLIER_BY_MODEL[key] ?? CACHE_READ_MULTIPLIER)
+    : null;
 
   const used = usedIds instanceof Set ? usedIds : new Set(usedIds);
   const scored = items.map((it) => {
@@ -109,10 +141,23 @@ export function computeWaste({ items = [], usedIds = new Set(), turns = 0, days 
 
   const dead = scored.filter((s) => !s.used);
   const deadTokens = dead.reduce((a, s) => a + (s.tokens || 0), 0);
-  // Re-read at cache-read rates on every turn AFTER the first — the real mechanism.
-  const perTurnUsd = (deadTokens / 1_000_000) * inputRate * cacheReadMultiplier;
-  const windowUsd = perTurnUsd * turns;
-  const monthlyUsd = days > 0 ? windowUsd * (30 / days) : windowUsd;
+  // Nothing to re-read => $0 on any rate, so it is safe to state even withheld.
+  const nothingToPrice = deadTokens === 0 || !turns;
+  let perTurnUsd = null;
+  let windowUsd = null;
+  let monthlyUsd = null;
+  if (priced) {
+    // Re-read at cache-read rates on every turn AFTER the first — the real mechanism.
+    perTurnUsd = (deadTokens / 1_000_000) * inputRate * cacheReadMultiplier;
+    windowUsd = perTurnUsd * turns;
+    monthlyUsd = days > 0 ? windowUsd * (30 / days) : windowUsd;
+  } else if (nothingToPrice) {
+    perTurnUsd = 0;
+    windowUsd = 0;
+    monthlyUsd = 0;
+  }
+  const usdLabel = perTurnUsd === null ? 'withheld' : 'estimate';
+  const rateLabel = priced ? 'billing-grade' : 'unavailable';
 
   return {
     days,
@@ -123,21 +168,25 @@ export function computeWaste({ items = [], usedIds = new Set(), turns = 0, days 
     dead_tokens: deadTokens,
     input_rate: inputRate,
     cache_read_multiplier: cacheReadMultiplier,
-    model: model || null,
-    per_turn_usd: round(perTurnUsd),
-    window_usd: round(windowUsd),
-    monthly_usd: round(monthlyUsd),
+    model: key || model || null,
+    model_id: model || null,
+    priced,
+    unpriced_reason: unpricedReason,
+    per_turn_usd: nullableRound(perTurnUsd),
+    window_usd: nullableRound(windowUsd),
+    monthly_usd: nullableRound(monthlyUsd),
     items: scored,
     // Per-number honesty labels (mirror of the CLI): token SIZE is an estimate;
-    // turns / rate / multiplier are billing-grade.
+    // turns are billing-grade; rate and multiplier are billing-grade only when
+    // the model resolved to a rate we can stand behind.
     labels: {
       dead_tokens: 'estimate',
-      per_turn_usd: 'estimate',
-      window_usd: 'estimate',
-      monthly_usd: 'estimate',
+      per_turn_usd: usdLabel,
+      window_usd: usdLabel,
+      monthly_usd: usdLabel,
       turns: 'billing-grade',
-      cache_read_multiplier: 'billing-grade',
-      input_rate: 'billing-grade',
+      cache_read_multiplier: rateLabel,
+      input_rate: rateLabel,
     },
   };
 }

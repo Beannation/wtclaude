@@ -76,15 +76,33 @@ export default function ContextWaste() {
                   <p className="text-xs text-[var(--muted)] uppercase tracking-wide">Re-reading / mo</p>
                   <HonestyBadge tier="estimate" />
                 </div>
-                <p className="text-2xl font-bold font-mono text-[var(--amber)]">{fc(waste.monthly_usd)}</p>
+                <p className="text-2xl font-bold font-mono text-[var(--amber)]">
+                  {waste.monthly_usd === null ? '—' : fc(waste.monthly_usd)}
+                </p>
               </div>
             </div>
-            <p className="text-xs text-[var(--faint)] mt-4">
-              {waste.loaded_count} always-loaded items, {waste.used_count} used — about{' '}
-              <span className="font-mono text-[var(--muted)]">{fc(waste.monthly_usd)}/mo</span> re-reading the rest at
-              cache-read rates ({waste.turns} turns × {waste.cache_read_multiplier * 100}% of the ${waste.input_rate}/MTok
-              input rate). Token size is an estimate; turns, rate and multiplier are billing-grade.
-            </p>
+            {waste.monthly_usd === null ? (
+              // FIXED 2026-09-27: a model this table does not know used to be
+              // priced at Sonnet 5's $2 default and the rate labelled
+              // billing-grade. A guessed rate never produces a figure shown as ours.
+              <p className="text-xs text-[var(--faint)] mt-4">
+                {waste.loaded_count} always-loaded items, {waste.used_count} used. No dollar figure is shown:{' '}
+                {waste.model_id ? (
+                  <span className="font-mono text-[var(--muted)]">{waste.model_id}</span>
+                ) : (
+                  'your model'
+                )}{' '}
+                has no rate in this dashboard's table that we can stand behind. Token sizes and turns are still shown.
+              </p>
+            ) : (
+              <p className="text-xs text-[var(--faint)] mt-4">
+                {waste.loaded_count} always-loaded items, {waste.used_count} used — about{' '}
+                <span className="font-mono text-[var(--muted)]">{fc(waste.monthly_usd)}/mo</span> re-reading the rest at
+                cache-read rates ({waste.turns} turns × {+(waste.cache_read_multiplier * 100).toFixed(1)}% of the{' '}
+                {`$${waste.input_rate}/MTok`} input rate). Token size is an estimate; turns, rate and multiplier are
+                billing-grade.
+              </p>
+            )}
           </div>
 
           <Mechanisms />
@@ -145,7 +163,7 @@ export default function ContextWaste() {
               'for the full reveal: which items are dead weight, how many tokens each costs, and the monthly re-read total.'
             }
             command="wtclaude waste"
-            note="Token size is an estimate; turns, input rate and the 10% cache-read multiplier are billing-grade. Verdicts are REVIEW — this tool never removes anything for you."
+            note="Token size is an estimate; turns, input rate and your model's own cache-read multiplier are billing-grade. Verdicts are REVIEW — this tool never removes anything for you."
           />
         </>
       )}

@@ -129,9 +129,9 @@ export function getFableBilling(planKey = getPlanKey()) {
 }
 
 // Fable promo-credit facts, straight from the rate sheet so no surface restates
-// them from memory. Claiming closed 2026-08-02; the credits expire 2026-09-17 at
-// 11:59 PM PT regardless of when they were claimed, and they are spent before
-// other credits — including auto-reload — silently.
+// them from memory. Claiming closed 2026-08-02; the credits EXPIRED 2026-09-17 at
+// 11:59 PM PT regardless of when they were claimed. While live they were spent
+// before other credits — including auto-reload — silently.
 //
 // NOT stated here and never to be stated: that credits were consumed or refunded
 // during the Fable mis-gating episode. That has never had an Anthropic-primary
@@ -151,11 +151,24 @@ export function getFableBilling(planKey = getPlanKey()) {
 export function getFablePromoCredits() {
   const f = getLatestPricing().fable || {};
   const scope = Array.isArray(f.promo_credit_scope) ? f.promo_credit_scope : ['fable-5'];
+  // The expiry INSTANT, not just the date: 11:59 PM Pacific on 2026-09-17 is
+  // already 2026-09-18 in UTC, so a date-only comparison would call the credits
+  // expired for most of the world while they were still live in the US.
+  const expiresAt = f.promo_credit_expires_at || '2026-09-17T23:59:00-07:00';
   return {
     expiry_date: f.promo_credit_expiry || '2026-09-17',
+    expires_at: expiresAt,
     expiry_note: f.promo_credit_expiry_note || null,
     claiming_closed: f.promo_credit_claiming_closed || '2026-08-02',
     scope,
+    // 'active' | 'expired', against an injectable clock so both sides of the
+    // instant can be pinned by test. A held release rots: 0.3.1 sat unshipped
+    // across this date, and the CLI kept printing "Credits expire ..." in the
+    // present tense after it had passed.
+    status(now = new Date()) {
+      const t = now instanceof Date ? now.getTime() : Date.parse(now);
+      return t >= Date.parse(expiresAt) ? 'expired' : 'active';
+    },
     // True when at least one model in the window could carry these credits.
     // With no models supplied we return true: a user with no Fable turns at all
     // may still hold claimed credits, and hiding the expiry from them would be

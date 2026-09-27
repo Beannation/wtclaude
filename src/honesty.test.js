@@ -95,6 +95,69 @@ const BANNED = [
   },
 ];
 
+// ADDED 2026-09-27 (BUILD-017). "Sonnet 5 is the Claude Code default" has been
+// FALSE on every current-facing surface since Claude Code 2.1.280 (2026-09-22):
+// Opus 5.5 is the default model on every paid plan, and Pro / Team Standard
+// moved from Sonnet to Opus that day. The shape, not the words — "is the new
+// default", "Claude Code's default", "the default model is Sonnet 5", "Sonnet 5
+// (the new default)". Past tense ("was the default") is history and passes.
+// Scoped to CURRENT-FACING surfaces: shipped CLI strings and help, the dashboard,
+// site pages, meta descriptions and blog FAQ answers. Dated blog bodies — update
+// boxes included — are history and are deliberately NOT scanned.
+export const SONNET_DEFAULT = new RegExp([
+  String.raw`\bsonnet\s*5\b[^.;!?\n]{0,30}?\b(is|as|remains|becomes)\s+(now\s+)?(the\s+)?(new\s+)?((claude\s+code(['’]s)?|cc(['’]s)?)\s+)?default\b`,
+  String.raw`\b(new\s+)?(claude\s+code(['’]s)?\s+)?default(\s+model)?(\s+in\s+claude\s+code)?\s*(is|:|—|–|=|\()\s*(now\s+)?(claude\s+)?sonnet\s*5\b`,
+  String.raw`\bsonnet\s*5\s*(\(|,|—|–)\s*(now\s+)?(the\s+|claude\s+code['’]s\s+)(new\s+)?(claude\s+code\s+)?default\b`,
+].join('|'), 'i');
+
+BANNED.push({
+  pattern: SONNET_DEFAULT,
+  why: 'Sonnet 5 has not been the Claude Code default since v2.1.280 (2026-09-22): Opus 5.5 is the default model on every paid plan (CC changelog + model-config docs). PMO wording for the replacement lives in the BUILD-017 kickoff, Job 2.',
+});
+
+test('honesty gate self-test: the Sonnet-default pattern catches the shape and passes history', () => {
+  const caught = [
+    'Sonnet 5 is the Claude Code default',
+    'Sonnet 5 is the new default',
+    'Sonnet 5 is now the default model',
+    'Sonnet 5 (the new default) is cheaper',
+    'Sonnet 5, the new Claude Code default,',
+    "Claude Code's default model is Sonnet 5",
+    'The default model: Sonnet 5',
+    'Sonnet 5 at $2/$10 is the default',
+  ];
+  const passed = [
+    'Sonnet 5 was the Claude Code default until v2.1.280',
+    'Opus 5.5 is the Claude Code default. Fable 5.1 is the default Fable model, and how Fable bills depends on your plan. Sonnet 5 has the lowest input and output rates of the three.',
+    'Sonnet 5 has the lowest input and output rates',
+    'Pro and Team Standard moved from Sonnet to Opus',
+    'Opus 5.5 is the default; Sonnet 5 stays at $2/$10',
+  ];
+  for (const t of caught) assert.ok(SONNET_DEFAULT.test(t), `should catch: "${t}"`);
+  for (const t of passed) assert.ok(!SONNET_DEFAULT.test(t), `should pass: "${t}"`);
+});
+
+// The dashboard is a current-facing surface that reaches users at the DEPLOY.
+// Same comment-stripped scan as the CLI, over web/src (tests excluded).
+function dashboardFiles(dir = join(ROOT, 'web', 'src'), acc = []) {
+  for (const name of readdirSync(dir)) {
+    const p = join(dir, name);
+    if (statSync(p).isDirectory()) { dashboardFiles(p, acc); continue; }
+    if (/\.(jsx?|tsx?)$/.test(p) && !/\.test\./.test(p)) acc.push(p);
+  }
+  return acc;
+}
+
+test('honesty gate: no Sonnet-5-is-the-default claim in the dashboard', () => {
+  const hits = [];
+  for (const file of dashboardFiles()) {
+    const code = stripComments(readFileSync(file, 'utf8'));
+    const m = code.match(SONNET_DEFAULT);
+    if (m) hits.push(`${relative(ROOT, file)}: "${m[0]}"`);
+  }
+  assert.deepEqual(hits, [], `\n  Dashboard claims Sonnet 5 is the default:\n    ${hits.join('\n    ')}\n`);
+});
+
 test('honesty gate: no banned claim shapes in shipped user-facing strings', () => {
   const hits = [];
   for (const file of SHIPPED) {

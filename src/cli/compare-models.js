@@ -49,7 +49,13 @@ export function registerCompareModels(program) {
       lines.push('  ' + '='.repeat(60));
       lines.push('');
 
-      if (!cmp.surfaces.code.present && !cmp.surfaces.cowork.present) {
+      // "No usage data" only when there genuinely is none. FIXED 2026-09-27: a
+      // window whose every turn was EXCLUDED as unpriceable used to land here
+      // too — shipped 0.3.0 tells a user whose week is all Opus 5.5 (Claude
+      // Code's default since v2.1.280) that it found no usage at all. Excluded
+      // turns fall through to renderSurface(), which says what was left out.
+      const excluded = cmp.surfaces.code.unpriced_turn_count + cmp.surfaces.cowork.unpriced_turn_count;
+      if (!cmp.surfaces.code.present && !cmp.surfaces.cowork.present && excluded === 0) {
         lines.push(`  No usage data found in the last ${days} days. The collector captures`);
         lines.push('  your terminal Code usage — run some Claude Code sessions, then retry.');
         lines.push('');
@@ -82,6 +88,18 @@ function gradeTag(grade) {
 function renderSurface(lines, s) {
   lines.push(`  ${s.label}  ${gradeTag(s.grade)}`);
 
+  // FIXED 2026-09-27: a surface whose EVERY turn was excluded as unpriceable
+  // used to fall into the "no data" branch and print "No data captured on this
+  // machine." — false: the data was captured and then excluded. Shipped 0.3.0
+  // says exactly that to a user whose window is all Opus 5.5 (Claude Code's
+  // default since v2.1.280), because every such turn hits the opus family
+  // fallback. The exclusion notice is the true statement, so it wins.
+  if (s.grade !== 'excluded' && !s.present && s.unpriced_turn_count > 0) {
+    pushExclusion(lines, s);
+    lines.push('');
+    return;
+  }
+
   if (s.grade === 'excluded' || !s.present) {
     lines.push('    ' + (s.reason || 'No data captured on this machine.'));
     if (s.key === 'cowork') {
@@ -112,16 +130,27 @@ function renderSurface(lines, s) {
   // Adding Fable 5.1 to the rate sheet fixes that specific case; printing this
   // line fixes the class, for the next model we have not added yet.
   if (s.unpriced_turn_count > 0) {
-    const n = s.unpriced_turn_count;
     lines.push('');
-    lines.push(`    ⚠ ${n} turn${n === 1 ? '' : 's'} excluded from this comparison — and from the`);
-    lines.push('      baseline, so the figures above do not cover all your usage.');
-    for (const m of s.unpriced_models) lines.push(`        · ${m}`);
-    lines.push('      Either the model is not in this version\'s rate sheet, or it was');
-    lines.push('      served by a partner platform that publishes its own rates. The');
-    lines.push('      cost you were actually charged is unaffected — it comes from the');
-    lines.push('      billing-grade anchor, and `wtclaude today` still counts it.');
-    lines.push('      If the model is new, upgrade: `npm i -g wtclaude@latest`.');
+    pushExclusion(lines, s);
   }
   lines.push('');
+}
+
+function pushExclusion(lines, s) {
+  const n = s.unpriced_turn_count;
+  if (s.present) {
+    lines.push(`    ⚠ ${n} turn${n === 1 ? '' : 's'} excluded from this comparison — and from the`);
+    lines.push('      baseline, so the figures above do not cover all your usage.');
+  } else {
+    lines.push(n === 1
+      ? '    ⚠ The one turn on this surface was excluded, so there is nothing'
+      : `    ⚠ All ${n} turns on this surface were excluded, so there is nothing`);
+    lines.push('      to compare yet — this is not the same as having no usage.');
+  }
+  for (const m of s.unpriced_models) lines.push(`        · ${m}`);
+  lines.push('      Either the model is not in this version\'s rate sheet, or it was');
+  lines.push('      served by a partner platform that publishes its own rates. The');
+  lines.push('      cost you were actually charged is unaffected — it comes from the');
+  lines.push('      billing-grade anchor, and `wtclaude today` still counts it.');
+  lines.push('      If the model is new, upgrade: `npm i -g wtclaude@latest`.');
 }

@@ -50,20 +50,29 @@ export function registerWaste(program) {
       }
 
       lines.push(`  ${r.loaded_count} always-loaded items, ${r.used_count} used in the last ${days} days.`);
-      if (r.dead_count > 0) {
+      if (r.dead_count > 0 && r.monthly_usd !== null) {
         lines.push(`  ~${formatCost(r.monthly_usd)}/mo re-reading the other ${r.dead_count} at cache-read rates.  [estimate]`);
+      } else if (r.dead_count > 0) {
+        // Withheld, not guessed: see computeWaste() — a family-fallback,
+        // partner-platform or unknown rate never produces a figure shown as ours.
+        lines.push(`  ${r.dead_count} are never invoked. No dollar figure is shown:`);
+        for (const l of withheldReason(r)) lines.push(`  ${l}`);
       } else {
         lines.push('  Every loaded item was invoked in the window — no dead weight found.');
       }
       lines.push('');
 
       lines.push('  How this actually costs you (the real mechanism):');
-      // The cache-read multiplier is PER-MODEL as of the 2026-09-07 rate sheet
-      // (0.025x on Fable 5.1 / Mythos 5.1, 0.1x elsewhere), so render the rate
-      // that was actually resolved for this user's model rather than a
-      // hard-coded 10% that is wrong for a Fable 5.1 session.
-      lines.push(`    • re-read every turn — unused prose rides your cached context at ${+(r.cache_read_multiplier * 100).toFixed(1)}% of`);
-      lines.push(`      the input rate on every subsequent turn (${turns} turns tracked).`);
+      // The cache-read multiplier is PER-MODEL (0.025x on Fable 5.1 / Mythos
+      // 5.1, 0.05x on Opus 5.5, 0.1x elsewhere), so render the rate actually
+      // resolved for this user's model — never a hard-coded 10%.
+      if (r.cache_read_multiplier !== null) {
+        lines.push(`    • re-read every turn — unused prose rides your cached context at ${pct(r.cache_read_multiplier)} of`);
+        lines.push(`      the input rate on every subsequent turn (${turns} turns tracked).`);
+      } else {
+        lines.push('    • re-read every turn — unused prose rides your cached context at your');
+        lines.push(`      model's cache-read rate on every subsequent turn (${turns} turns tracked).`);
+      }
       lines.push('    • window bloat — it crowds the context window, forcing earlier compaction.');
       lines.push('    • worse tool selection — more never-used options, more chances to misfire.');
       lines.push('');
@@ -82,8 +91,13 @@ export function registerWaste(program) {
       }
 
       lines.push('  Billing-grade vs estimate:');
-      lines.push('    • billing-grade: turns re-read (your transcript), the 10% cache-read');
-      lines.push('      multiplier, and the model input rate.');
+      if (r.priced) {
+        lines.push(`    • billing-grade: turns re-read (your transcript), the ${pct(r.cache_read_multiplier)} cache-read`);
+        lines.push(`      multiplier and the $${r.input_rate}/MTok input rate for ${r.model}.`);
+      } else {
+        lines.push('    • billing-grade: turns re-read (your transcript). No rate is shown for');
+        lines.push('      this model, for the reason above.');
+      }
       lines.push('    • estimate: each item’s prose token size — so the $ is an estimate of');
       lines.push('      magnitude, not a bill.');
       lines.push('');
@@ -92,6 +106,38 @@ export function registerWaste(program) {
       lines.push('');
       output(lines.join('\n'), o);
     });
+}
+
+function pct(mult) {
+  return `${+(mult * 100).toFixed(1)}%`;
+}
+
+// Why the dollar figure is withheld, in plain words. `unpriced_reason` uses the
+// same vocabulary as priceTurn(): no-model | unresolved-model |
+// partner-platform:<p> | family-fallback:<nearest key>.
+function withheldReason(r) {
+  const reason = r.unpriced_reason || '';
+  const id = r.model_id || 'your model';
+  if (reason.startsWith('family-fallback:')) {
+    return [
+      `${id} is not in this version's rate sheet. The nearest Opus rate would be`,
+      'a guess, and a guessed rate is not a number we will show as ours.',
+      'Update wtclaude to price it: npm i -g wtclaude@latest',
+    ];
+  }
+  if (reason.startsWith('partner-platform:')) {
+    return [
+      `${id} is served through ${reason.slice('partner-platform:'.length)}, which publishes its own rates,`,
+      'so a first-party rate would not be your rate.',
+    ];
+  }
+  if (reason === 'unresolved-model') {
+    return [
+      `${id} is not in this version's rate sheet.`,
+      'Update wtclaude to price it: npm i -g wtclaude@latest',
+    ];
+  }
+  return ['no model could be read from your transcripts in this window.'];
 }
 
 function tok(n) {

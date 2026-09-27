@@ -76,7 +76,8 @@ export function registerFable(program) {
       const attribution = fableAttribution(turns, planKey);
       const projectedMonthly = rr.avgPerDay * 30;
       const promo = getFablePromoCredits();
-      const daysToPromoExpiry = daysUntil(promo.expiry_date, today);
+      const promoStatus = promo.status(new Date());
+      const daysToPromoExpiry = promoStatus === 'active' ? daysUntil(promo.expiry_date, today) : null;
 
       if (o.json) {
         output(JSON.stringify({
@@ -103,9 +104,12 @@ export function registerFable(program) {
           },
           included_share_of_weekly_limit: 0.5,
           promo_credits: {
-            expiry_date: promo.expiry_date, claiming_closed: promo.claiming_closed,
+            status: promoStatus,
+            expiry_date: promo.expiry_date, expires_at: promo.expires_at,
+            claiming_closed: promo.claiming_closed,
             expiry_note: promo.expiry_note, scope: promo.scope,
             applies_to_this_window: promo.appliesTo(Object.keys(rr.models)),
+            // null once expired — a negative countdown is not a useful number.
             days_until_expiry: daysToPromoExpiry,
           },
           fable_models_in_window: rr.models,
@@ -144,7 +148,7 @@ export function registerFable(program) {
         lines.push('  No Fable turns in the look-back window, so there is nothing to');
         lines.push('  measure yet. Select it with /model fable (Claude Code 2.1.170+).');
         lines.push('');
-        pushPromo(lines, promo, daysToPromoExpiry, Object.keys(rr.models));
+        lines.push(...promoLines(promo, new Date(), Object.keys(rr.models), today));
         output(lines.join('\n'), o);
         return;
       }
@@ -195,18 +199,41 @@ export function registerFable(program) {
       }
 
       lines.push('');
-      pushPromo(lines, promo, daysToPromoExpiry, Object.keys(rr.models));
+      lines.push(...promoLines(promo, new Date(), Object.keys(rr.models), today));
       output(lines.join('\n'), o);
     });
 }
 
-// Fable promotional credits. Facts only: claiming closed, the expiry is fixed
-// regardless of claim date, and they are spent ahead of other credits silently.
-// We do NOT say anything about credits consumed or refunded during the Fable
-// mis-gating episode — that has never had an Anthropic-primary source.
-function pushPromo(lines, promo, daysToExpiry, modelKeys) {
+// Fable promotional credits. Facts only: claiming closed, the expiry was fixed
+// regardless of claim date, and while live they were spent ahead of other
+// credits silently. We do NOT say anything about credits consumed or refunded
+// during the Fable mis-gating episode — that has never had an Anthropic-primary
+// source.
+//
+// Pure (clock injected) so both sides of the expiry instant are pinned by test.
+//
+// PAST THE EXPIRY (2026-09-17 11:59 PM PT) — decision, 2026-09-27: keep ONE
+// past-tense line for a window that could have held the credits, and drop the
+// block entirely for a Fable-5.1-only window. Why not drop it for everyone: a
+// Pro / Team Standard Fable 5 user whose promo balance was covering usage sees
+// credits start to draw down after Sep 17, and the one line says why; stated in
+// the past tense it stays true indefinitely. Why drop it for a 5.1-only window:
+// those credits never applied to Fable 5.1, and once expired there is nothing
+// left to explain. The present-tense block ("Credits expire ...", "N days from
+// today") must never print after the instant — 0.3.1 sat unshipped across it.
+export function promoLines(promo, now, modelKeys, today) {
   const applies = promo.appliesTo ? promo.appliesTo(modelKeys) : true;
-  lines.push('  Fable promotional credits');
+  const status = promo.status ? promo.status(now) : 'active';
+  if (status === 'expired') {
+    if (!applies) return [];
+    return [
+      '  Fable promotional credits',
+      `    Expired ${promo.expiry_date} at 11:59 PM PT. They covered Fable 5 only;`,
+      '    nothing in this report counts them.',
+      '',
+    ];
+  }
+  const lines = ['  Fable promotional credits'];
   if (!applies) {
     // SCOPED 2026-09-07. The promotional credits were Fable 5 only — Anthropic
     // states plainly that there is no equivalent credit for Fable 5.1 — so a
@@ -216,15 +243,19 @@ function pushPromo(lines, promo, daysToExpiry, modelKeys) {
     lines.push('    Fable 5 only; there is no equivalent credit for Fable 5.1, and');
     lines.push('    your Fable usage in this window is Fable 5.1.');
     lines.push('');
-    return;
+    return lines;
   }
+  const days = daysUntil(promo.expiry_date, today);
+  const when = days == null || days < 0 ? '.'
+    : days === 0 ? ' — that is today.'
+    : ` — ${days} day${days === 1 ? '' : 's'} from today.`;
   lines.push(`    Claiming closed ${promo.claiming_closed}. Credits expire ${promo.expiry_date} at 11:59 PM PT,`);
-  lines.push('    regardless of when they were claimed' + (daysToExpiry != null && daysToExpiry >= 0
-    ? ` — ${daysToExpiry} day${daysToExpiry === 1 ? '' : 's'} from today.` : '.'));
+  lines.push('    regardless of when they were claimed' + when);
   lines.push('    They cover Fable 5 only — there is no equivalent credit for Fable 5.1.');
   lines.push('    They are spent before your other credits, including auto-reload, and');
   lines.push('    that happens silently.');
   lines.push('');
+  return lines;
 }
 
 // The Fable models this window actually contains, newest first. Falls back to
