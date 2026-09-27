@@ -230,6 +230,10 @@ function round(n) {
   return typeof n === 'number' ? Math.round(n * 1e6) / 1e6 : n;
 }
 
+function hasTokens(t) {
+  return !!((t.input_tokens || 0) || (t.output_tokens || 0) || (t.cache_read_tokens || 0) || (t.cache_write_tokens || 0));
+}
+
 function sumTokens(turns) {
   const t = { input: 0, output: 0, cache_read: 0, cache_write: 0 };
   for (const x of turns) {
@@ -258,7 +262,9 @@ export function repriceSurface(turns, { today = todayStr(), days = 30 } = {}) {
   const unpriced = [];
   for (const t of all) {
     if (priceTurn(t.model, t, today).priceable) list.push(t);
-    else unpriced.push(t);
+    // A turn with no tokens costs $0 on any rate, so an unrecognised model on it
+    // is not an exclusion worth warning about (2026-09-27).
+    else if (hasTokens(t)) unpriced.push(t);
   }
 
   let baselineWindow = 0;
@@ -275,6 +281,10 @@ export function repriceSurface(turns, { today = todayStr(), days = 30 } = {}) {
       window_usd: round(windowUsd),
       monthly_usd: round(windowUsd * monthFactor),
       delta_vs_baseline_usd: round(deltaVsBaselineUsd),
+      // ADDED 2026-09-27: the delta at the SAME monthly scale as monthly_usd and
+      // baseline_monthly_usd. delta_vs_baseline_usd is window dollars and is kept
+      // for --json compatibility; the tables render this one beside /mo figures.
+      monthly_delta_vs_baseline_usd: round(deltaVsBaselineUsd * monthFactor),
       delta_pct: Math.round(deltaPct),
     };
   });

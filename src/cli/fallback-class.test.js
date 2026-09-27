@@ -101,6 +101,7 @@ test('waste: a family-fallback model withholds the dollar figure, in text and in
     const json = JSON.parse(run(['waste', '--days', '7', '--json'], env, home));
     assert.equal(json.priced, false);
     assert.equal(json.unpriced_reason, 'family-fallback:opus-5-5');
+    assert.equal(json.model, null, 'the guess is never named as the model');
     assert.equal(json.monthly_usd, null);
     assert.equal(json.labels.input_rate, 'unavailable');
   } finally {
@@ -118,5 +119,57 @@ test('waste: an Opus 5.5 session renders its own 5% multiplier and $4/MTok rate'
     assert.match(out, /the 5% cache-read\s+multiplier and the \$4\/MTok input rate for opus-5-5/);
   } finally {
     rmSync(home, { recursive: true, force: true });
+  }
+});
+
+test('whatif --model refuses a family-fallback or partner TARGET instead of printing a guessed figure', () => {
+  const dir = wtclaudeDirWith(['claude-opus-5-5', 'claude-sonnet-5']);
+  try {
+    const env = { WTCLAUDE_DIR: dir };
+    for (const target of ['claude-opus-9-20270101', 'opus-6', 'vertex_ai/claude-sonnet-5', 'bedrock/anthropic.claude-opus-5-5']) {
+      const out = run(['whatif', '--model', target, '--days', '2'], env);
+      assert.doesNotMatch(out, /If all/, `${target}: no hypothetical may print`);
+      assert.doesNotMatch(out, /\$\d/, `${target}: no dollar figure may print`);
+      assert.match(out, /no figure shown/, `${target}: says why`);
+    }
+    // The family aliases still resolve to exact, priceable keys.
+    assert.match(run(['whatif', '--model', 'opus', '--days', '2'], env), /If all opus-5-5/);
+    assert.match(run(['whatif', '--model', 'fable', '--days', '2'], env), /If all fable-5-1/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('compare-models: the Cowork exclusion notice never claims a billing-grade anchor or `wtclaude today`', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'wtc-cowork-excl-'));
+  mkdirSync(join(dir, 'sessions'), { recursive: true });
+  writeFileSync(join(dir, 'config.json'), JSON.stringify({ edit_hash_salt: 'deadbeefdeadbeefdeadbeefdeadbeef', anonymous_id: 'a1' }));
+  const line = (id, model, usage) => JSON.stringify({ type: 'assistant', _audit_timestamp: recentTs(3), message: { id, model, role: 'assistant', usage } });
+  writeFileSync(join(dir, 'audit.jsonl'), [
+    line('m1', 'claude-opus-9-20270101', { input_tokens: 100, output_tokens: 50 }),
+    line('m2', '<synthetic>', { input_tokens: 0, output_tokens: 0 }),
+  ].join('\n') + '\n');
+  try {
+    const out = run(['compare-models', '--days', '7'], { WTCLAUDE_DIR: dir, WTCLAUDE_COWORK_AUDIT: join(dir, 'audit.jsonl') });
+    const cowork = out.slice(out.indexOf('Cowork  ['), out.indexOf('Chat  ['));
+    assert.match(cowork, /The one turn on this surface was excluded/, 'the <synthetic> line is not counted');
+    assert.doesNotMatch(cowork, /<synthetic>/);
+    assert.doesNotMatch(cowork, /billing-grade anchor|wtclaude today|headline cost/, `Cowork is an estimate:\n${cowork}`);
+    assert.match(cowork, /Cowork figures are an estimate from your audit log/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('fable --json: the promo note is user-facing text, not internal provenance', () => {
+  const dir = wtclaudeDirWith(['claude-fable-5']);
+  try {
+    const json = JSON.parse(run(['fable', '--json'], { WTCLAUDE_DIR: dir }));
+    assert.equal(json.promo_credits.status, 'expired');
+    assert.equal(json.promo_credits.days_until_expiry, null);
+    assert.doesNotMatch(json.promo_credits.expiry_note, /PMO|Surfaces must|VERIFIED|Help Center \d/);
+    assert.match(json.promo_credits.expiry_note, /^Expired September 17, 2026 at 11:59 PM PT/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
   }
 });

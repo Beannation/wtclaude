@@ -49,13 +49,13 @@ export function registerWaste(program) {
         return;
       }
 
-      lines.push(`  ${r.loaded_count} always-loaded items, ${r.used_count} used in the last ${days} days.`);
+      lines.push(`  ${r.loaded_count} always-loaded item${r.loaded_count === 1 ? '' : 's'}, ${r.used_count} used in the last ${days} days.`);
       if (r.dead_count > 0 && r.monthly_usd !== null) {
         lines.push(`  ~${formatCost(r.monthly_usd)}/mo re-reading the other ${r.dead_count} at cache-read rates.  [estimate]`);
       } else if (r.dead_count > 0) {
         // Withheld, not guessed: see computeWaste() — a family-fallback,
         // partner-platform or unknown rate never produces a figure shown as ours.
-        lines.push(`  ${r.dead_count} are never invoked. No dollar figure is shown:`);
+        lines.push(`  ${r.dead_count} ${r.dead_count === 1 ? 'is' : 'are'} never invoked. No dollar figure is shown:`);
         for (const l of withheldReason(r)) lines.push(`  ${l}`);
       } else {
         lines.push('  Every loaded item was invoked in the window — no dead weight found.');
@@ -95,11 +95,17 @@ export function registerWaste(program) {
         lines.push(`    • billing-grade: turns re-read (your transcript), the ${pct(r.cache_read_multiplier)} cache-read`);
         lines.push(`      multiplier and the $${r.input_rate}/MTok input rate for ${r.model}.`);
       } else {
-        lines.push('    • billing-grade: turns re-read (your transcript). No rate is shown for');
-        lines.push('      this model, for the reason above.');
+        // The reason is printed here, not referred to: when nothing is being
+        // re-read the headline shows a true $0 and no reason appears above.
+        lines.push('    • billing-grade: turns re-read (your transcript). No rate is shown:');
+        for (const l of withheldReason(r)) lines.push(`      ${l}`);
       }
-      lines.push('    • estimate: each item’s prose token size — so the $ is an estimate of');
-      lines.push('      magnitude, not a bill.');
+      if (r.monthly_usd !== null && r.dead_count > 0) {
+        lines.push('    • estimate: each item’s prose token size — so the $ is an estimate of');
+        lines.push('      magnitude, not a bill.');
+      } else {
+        lines.push('    • estimate: each item’s prose token size.');
+      }
       lines.push('');
       lines.push('  WTClaude never edits, moves, or removes your skills — it reads and reviews.');
       lines.push('  Manage them yourself in Claude Code settings.');
@@ -122,7 +128,8 @@ function withheldReason(r) {
     return [
       `${id} is not in this version's rate sheet. The nearest Opus rate would be`,
       'a guess, and a guessed rate is not a number we will show as ours.',
-      'Update wtclaude to price it: npm i -g wtclaude@latest',
+      'If it is a new model, update wtclaude: npm i -g wtclaude@latest.',
+      'If it is a Bedrock or Google Cloud id, that platform publishes its own rates.',
     ];
   }
   if (reason.startsWith('partner-platform:')) {
@@ -134,7 +141,8 @@ function withheldReason(r) {
   if (reason === 'unresolved-model') {
     return [
       `${id} is not in this version's rate sheet.`,
-      'Update wtclaude to price it: npm i -g wtclaude@latest',
+      'If it is a new model, update wtclaude: npm i -g wtclaude@latest.',
+      'If it is a Bedrock or Google Cloud id, that platform publishes its own rates.',
     ];
   }
   return ['no model could be read from your transcripts in this window.'];

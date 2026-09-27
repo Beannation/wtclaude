@@ -46,7 +46,8 @@ export default function ContextWaste() {
       <p className="text-[var(--muted)] max-w-3xl">
         Always-loaded skills, MCP tools and memory files that you never invoke still get re-read on
         every turn after the first, billed at your model's cache-read rate — a fraction of its input
-        rate, shown below for the model you actually ran. This tile
+        rate (<code className="font-mono text-[var(--text)]">wtclaude waste</code> shows the rate for the model
+        you actually ran). This tile
         surfaces what that dead weight costs — and flags each item for{' '}
         <span className="text-[var(--text-strong)]">review</span>, never removal.
       </p>
@@ -81,18 +82,21 @@ export default function ContextWaste() {
                 </p>
               </div>
             </div>
-            {waste.monthly_usd === null ? (
+            {!waste.priced ? (
               // FIXED 2026-09-27: a model this table does not know used to be
               // priced at Sonnet 5's $2 default and the rate labelled
               // billing-grade. A guessed rate never produces a figure shown as ours.
+              // Branch on `priced`, not on a null figure: with nothing to re-read
+              // the figure is a true $0 even when no rate can be named.
               <p className="text-xs text-[var(--faint)] mt-4">
-                {waste.loaded_count} always-loaded items, {waste.used_count} used. No dollar figure is shown:{' '}
+                {waste.loaded_count} always-loaded items, {waste.used_count} used.{' '}
+                {waste.monthly_usd === null ? 'No dollar figure is shown: ' : 'Nothing is being re-read, so the figure is $0 — but no rate is named: '}
                 {waste.model_id ? (
                   <span className="font-mono text-[var(--muted)]">{waste.model_id}</span>
                 ) : (
                   'your model'
                 )}{' '}
-                has no rate in this dashboard's table that we can stand behind. Token sizes and turns are still shown.
+                has no rate in this dashboard's table that we can stand behind. Token sizes are still shown.
               </p>
             ) : (
               <p className="text-xs text-[var(--faint)] mt-4">

@@ -100,13 +100,20 @@ function parseAuditFile(path, dateFilter, seen) {
 
     const model = msg.model || e.model || null;
     if (!model) continue;
-    turns.push({
+    // `<synthetic>` is Claude's placeholder for a message no model produced; it
+    // carries all-zero usage. Kept, it surfaced as an "excluded, unpriceable"
+    // turn with an upgrade hint that no upgrade can satisfy (seen on real logs,
+    // 2026-09-27). A zero-token record has nothing to price either way.
+    if (model === '<synthetic>') continue;
+    const turn = {
       model,
       input_tokens: usage.input_tokens || 0,
       output_tokens: usage.output_tokens || 0,
       cache_read_tokens: usage.cache_read_input_tokens || usage.cache_read || 0,
       cache_write_tokens: usage.cache_creation_input_tokens || usage.cache_write || 0,
-    });
+    };
+    if (!turn.input_tokens && !turn.output_tokens && !turn.cache_read_tokens && !turn.cache_write_tokens) continue;
+    turns.push(turn);
   }
   return turns;
 }

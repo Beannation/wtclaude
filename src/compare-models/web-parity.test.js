@@ -334,3 +334,13 @@ test('no dashboard file outside the two pinned mirrors hand-maintains a price ta
   walk(root);
   assert.deepEqual(hits, [], `hand-maintained price table outside the pinned mirrors: ${hits.join(', ')}`);
 });
+
+test('CLI and dashboard agree on the monthly delta at a non-30-day window (release review, 2026-09-27)', () => {
+  const turns = [{ model: 'claude-opus-5', input_tokens: 1e6, output_tokens: 2e5, cache_read_tokens: 5e6, cache_write_tokens: 1e5 }];
+  const cli = cliReprice(turns, { today: '2026-09-27', days: 10 });
+  const web = webReprice(turns, { today: '2026-09-27', days: 10 });
+  assert.deepEqual(web.models, cli.models);
+  for (const m of web.models) {
+    assert.ok(Math.abs(m.monthly_delta_vs_baseline_usd - (m.monthly_usd - web.baseline_monthly_usd)) < 1e-6, m.key);
+  }
+});

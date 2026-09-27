@@ -110,7 +110,9 @@ function renderSurface(lines, s) {
   }
 
   for (const m of s.models) {
-    const d = m.delta_vs_baseline_usd;
+    // Monthly-scale delta (2026-09-27): it sits between two /mo figures, so it
+    // must be /mo too. The window delta disagreed with both whenever --days != 30.
+    const d = m.monthly_delta_vs_baseline_usd ?? m.delta_vs_baseline_usd;
     const sign = d > 0 ? '+' : ''; // dollar and pct share a sign; formatCost carries the minus
     const delta = `${sign}${formatCost(d)} / ${sign}${m.delta_pct}%`;
     lines.push(`    ${m.label.padEnd(9)} ${formatCost(m.monthly_usd).padStart(11)}/mo   (${delta} vs your mix)`);
@@ -149,8 +151,17 @@ function pushExclusion(lines, s) {
   }
   for (const m of s.unpriced_models) lines.push(`        · ${m}`);
   lines.push('      Either the model is not in this version\'s rate sheet, or it was');
-  lines.push('      served by a partner platform that publishes its own rates. The');
-  lines.push('      cost you were actually charged is unaffected — it comes from the');
-  lines.push('      billing-grade anchor, and `wtclaude today` still counts it.');
+  lines.push('      served by a partner platform that publishes its own rates.');
+  // Surface-aware (2026-09-27). Only terminal Code has a headline cost from
+  // Claude Code itself, and only Code turns are what `wtclaude today` counts;
+  // Cowork is a labeled estimate built from audit-log tokens, so the Code
+  // sentence would be false there.
+  if (s.key === 'cowork') {
+    lines.push('      Cowork figures are an estimate from your audit log, and these');
+    lines.push('      turns are left out of that estimate.');
+  } else {
+    lines.push('      Your headline cost is unaffected — it is the cost figure Claude');
+    lines.push('      Code itself reports, and `wtclaude today` still counts it.');
+  }
   lines.push('      If the model is new, upgrade: `npm i -g wtclaude@latest`.');
 }

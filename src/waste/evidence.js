@@ -16,7 +16,8 @@ export function gatherEvidence({ sessions, dateFilter } = {}) {
       const msg = entry.message && typeof entry.message === 'object' ? entry.message : null;
       if (!msg) continue;
 
-      if (msg.role === 'assistant') {
+      // `<synthetic>` placeholders are not model turns (no API call, zero usage).
+      if (msg.role === 'assistant' && msg.model !== '<synthetic>') {
         const key = msg.id != null ? String(msg.id) : `${s.session_id}:${entry.timestamp}`;
         if (!seenTurns.has(key)) {
           seenTurns.add(key);

@@ -168,7 +168,7 @@ export function computeWaste({ items = [], usedIds = new Set(), turns = 0, days 
     dead_tokens: deadTokens,
     input_rate: inputRate,
     cache_read_multiplier: cacheReadMultiplier,
-    model: key || model || null,
+    model: resolved && resolved.fallback ? null : (key || model || null),
     model_id: model || null,
     priced,
     unpriced_reason: unpricedReason,

@@ -107,6 +107,8 @@ test('a family-fallback model WITHHOLDS the dollar figure — never a guess pres
     turns: 50, days: 30, model: 'claude-opus-9-20270101', today: '2026-09-27' });
   assert.equal(r.priced, false);
   assert.equal(r.unpriced_reason, 'family-fallback:opus-5-5');
+  assert.equal(r.model, null, 'never name the guess as the model the user ran');
+  assert.equal(r.model_id, 'claude-opus-9-20270101');
   for (const k of ['per_turn_usd', 'window_usd', 'monthly_usd', 'input_rate', 'cache_read_multiplier']) {
     assert.equal(r[k], null, `${k} must be withheld`);
   }

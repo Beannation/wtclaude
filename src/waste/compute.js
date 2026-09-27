@@ -86,7 +86,9 @@ export function computeWaste({ items = [], usedIds = new Set(), turns = 0, days 
     dead_tokens: deadTokens,
     input_rate: inputRate,
     cache_read_multiplier: cacheReadMultiplier,
-    model: rates ? rates.key : (model || null),
+    // Never name the fallback's guess as the model (2026-09-27): on a
+    // family fallback `rates.key` is the nearest Opus, not what the user ran.
+    model: rates ? (rates.fallback ? null : rates.key) : (model || null),
     model_id: model || null,
     priced,
     unpriced_reason: unpricedReason,

@@ -84,3 +84,19 @@ test('missing override path degrades to [] (never a fabricated zero)', () => {
     else process.env.WTCLAUDE_COWORK_AUDIT = prev;
   }
 });
+
+test('`<synthetic>` placeholders and zero-usage lines are not turns (release review, 2026-09-27)', () => {
+  // Real Cowork logs carry `<synthetic>` assistant lines with all-zero usage.
+  // Kept, they surfaced in compare-models as "excluded, unpriceable" turns with
+  // an upgrade hint no upgrade can satisfy.
+  const turns = withFixture(
+    [
+      asst('msg_real', 'claude-opus-5-5', { input_tokens: 10, output_tokens: 20, cache_read_input_tokens: 300, cache_creation_input_tokens: 0 }),
+      asst('msg_syn', '<synthetic>', { input_tokens: 0, output_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 }),
+      asst('msg_zero', 'claude-opus-5-5', { input_tokens: 0, output_tokens: 0 }),
+    ],
+    () => readCoworkTurns(),
+  );
+  assert.equal(turns.length, 1);
+  assert.equal(turns[0].model, 'claude-opus-5-5');
+});

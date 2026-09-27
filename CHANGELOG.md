@@ -78,7 +78,7 @@ the secondary calculations.
   first-party rates — a model not in this version's rate sheet, a partner-platform
   id, or a family-fallback guess — is left out of both sides of a comparison and
   **named**, in the CLI and on the dashboard. When that empties a whole window, it
-  says so instead of reporting no usage. The cost you were charged is unaffected.
+  says so instead of reporting no usage. Your headline cost is unaffected.
 - **A guessed rate never produces a figure shown as ours.** `waste` and the
   dashboard's context-waste tile now withhold their dollar figure for a
   family-fallback, partner-platform or unknown model, and say why. The next model

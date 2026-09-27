@@ -163,3 +163,23 @@ test('B1: the comparison surfaces Fable 5.1 cheaper than Fable 5 on cache-heavy 
   // 8M cache reads x $10/MTok x 0.025 = $2.00 on Fable 5.1.
   assert.equal(round(f51.window_usd), 2);
 });
+
+test('a zero-token turn on an unknown model is not reported as an exclusion (release review, 2026-09-27)', () => {
+  const zero = { model: 'claude-opus-9', input_tokens: 0, output_tokens: 0, cache_read_tokens: 0, cache_write_tokens: 0 };
+  const s = repriceSurface([turn('claude-opus-5-5'), zero], { today: '2026-09-27', days: 30 });
+  assert.equal(s.unpriced_turn_count, 0, 'nothing to price is not an exclusion');
+  assert.equal(s.turn_count, 1);
+  // A real unknown turn still is.
+  const real = repriceSurface([turn('claude-opus-5-5'), turn('claude-opus-9')], { today: '2026-09-27', days: 30 });
+  assert.equal(real.unpriced_turn_count, 1);
+});
+
+test('the monthly delta is on the same scale as the monthly figures it sits between', () => {
+  // delta_vs_baseline_usd is WINDOW dollars (kept for --json compatibility);
+  // the tables render monthly_delta_vs_baseline_usd beside /mo figures.
+  const s = repriceSurface([turn('claude-opus-5')], { today: '2026-09-27', days: 10 });
+  for (const m of s.models) {
+    assert.ok(Math.abs(m.monthly_delta_vs_baseline_usd - (m.monthly_usd - s.baseline_monthly_usd)) < 1e-6, m.key);
+    assert.ok(Math.abs(m.monthly_delta_vs_baseline_usd - m.delta_vs_baseline_usd * 3) < 1e-6, `${m.key}: 30/10 scaling`);
+  }
+});

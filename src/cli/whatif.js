@@ -1,5 +1,5 @@
 import { getSessionsForDateRange, summarizeSessions } from '../utils/sessions.js';
-import { getLatestPricing, getModelPricing } from '../utils/pricing.js';
+import { getLatestPricing, getModelEntry } from '../utils/pricing.js';
 import { priceTurn, formatCost } from '../utils/cost.js';
 import { localDate } from '../utils/time.js';
 
@@ -68,8 +68,20 @@ function showModelComparison(sessions, targetModel, days) {
   const families = { haiku: 'haiku', sonnet: 'sonnet', opus: 'opus', fable: 'fable' };
   const fam = families[String(targetModel).toLowerCase()];
   const resolved = fam ? currentModelKey(fam, targetModel) : targetModel;
-  if (!getModelPricing(resolved)) {
-    console.log(`\n  Unknown model "${targetModel}". Try: haiku, sonnet, opus.\n`);
+  // FIXED 2026-09-27 (BUILD-017): the TARGET must be a model we can price at
+  // first-party rates, not just one that resolves. An unknown opus id used to
+  // resolve by the family fallback, so `--model opus-6` printed "If all opus-6:"
+  // at Opus 5.5's rates under the new name — exactly how 0.3.0 would have
+  // answered `--model opus-5-5`, at Opus 5's rates. A partner-platform id was
+  // priced at first-party rates with no flag. Refuse both, and say why.
+  const target = getModelEntry(resolved);
+  if (!target || !target.priceable) {
+    const why = !target
+      ? 'is not a model we recognise'
+      : target.provider
+        ? `is served by ${target.provider}, which publishes its own rates, so a first-party figure would not be yours`
+        : 'is not in this version\'s rate sheet, so any figure would be a guess (if it is new: npm i -g wtclaude@latest)';
+    console.log(`\n  "${targetModel}" ${why} — no figure shown. Try: haiku, sonnet, opus, fable.\n`);
     return;
   }
 

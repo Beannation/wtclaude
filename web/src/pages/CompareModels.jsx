@@ -20,21 +20,21 @@ import { LinkPrompt } from './Overview';
 export function ExclusionNotice({ surface }) {
   const n = surface.unpriced_turn_count || 0;
   if (n === 0) return null;
-  const slices = `model-slice${n === 1 ? '' : 's'}`;
+  const ids = surface.unpriced_models || [];
+  const m = ids.length;
+  const models = `model${m === 1 ? '' : 's'}`;
   return (
     <div className="mt-4 rounded-lg border border-[var(--amber)] px-4 py-3 text-xs text-[var(--muted)] space-y-1">
       <p className="text-[var(--amber)] font-medium">
         {surface.present
-          ? `${n} ${slices} excluded from this comparison — and from your mix, so the figures above don't cover all your usage.`
-          : `${n === 1 ? 'The one model-slice in this window was' : `All ${n} ${slices} in this window were`} excluded, so there is nothing to compare yet — this is not the same as having no usage.`}
+          ? `Usage on ${m} ${models} was excluded from this comparison — and from your mix, so the figures above don't cover all your usage.`
+          : `All usage in this window was on ${models} this dashboard can't price, so there is nothing to compare yet — this is not the same as having no usage.`}
       </p>
-      {surface.unpriced_models && surface.unpriced_models.length > 0 && (
-        <p className="font-mono">{surface.unpriced_models.join(' · ')}</p>
-      )}
+      {m > 0 && <p className="font-mono">{ids.join(' · ')}</p>}
       <p>
         Either the model isn't in this dashboard's rate table yet, or it was served by a partner platform that
-        publishes its own rates. What you were actually charged is unaffected — it comes from the billing-grade
-        anchor.
+        publishes its own rates. Your headline cost is unaffected — it is the cost figure Claude Code itself
+        reports.
       </p>
     </div>
   );
@@ -108,7 +108,7 @@ export default function CompareModels() {
                 {formatTokens(
                   code.tokens.input + code.tokens.output + code.tokens.cache_read + code.tokens.cache_write,
                 )}{' '}
-                tokens across {code.turn_count} model-slices · your mix ≈{' '}
+                tokens re-priced · your mix ≈{' '}
                 <span className="text-[var(--text)] font-mono">{fc(code.baseline_monthly_usd)}/mo</span>
               </p>
               <div className="overflow-x-auto">
@@ -125,9 +125,9 @@ export default function CompareModels() {
                       <tr key={m.key} className="border-t border-[var(--border)]">
                         <td className="py-2.5 pr-4 text-[var(--text-strong)] font-medium">{m.label}</td>
                         <td className="py-2.5 pr-4 text-right font-mono text-[var(--text)]">{fc(m.monthly_usd)}</td>
-                        <td className={`py-2.5 text-right font-mono ${deltaColor(m.delta_vs_baseline_usd)}`}>
-                          {fmtDelta(m.delta_vs_baseline_usd, fc)}
-                          {m.delta_pct !== 0 && Math.abs(m.delta_vs_baseline_usd) >= 0.005 && (
+                        <td className={`py-2.5 text-right font-mono ${deltaColor(m.monthly_delta_vs_baseline_usd)}`}>
+                          {fmtDelta(m.monthly_delta_vs_baseline_usd, fc)}
+                          {m.delta_pct !== 0 && Math.abs(m.monthly_delta_vs_baseline_usd) >= 0.005 && (
                             <span className="text-[var(--faint)] ml-1">({m.delta_pct > 0 ? '+' : ''}{m.delta_pct}%)</span>
                           )}
                         </td>

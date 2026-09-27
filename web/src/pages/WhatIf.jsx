@@ -5,7 +5,7 @@ import { totals } from '../lib/derive';
 import HonestyBadge from '../components/HonestyBadge';
 import EmptyState from '../components/EmptyState';
 import { LinkPrompt } from './Overview';
-import { repriceSurface, codeTurnsFromSessions } from '../lib/compareModels';
+import { repriceSurface, codeTurnsFromSessions, CAVEATS } from '../lib/compareModels';
 import { ExclusionNotice } from './CompareModels';
 
 // REPLACED 2026-09-27. This page kept its OWN price table — Haiku 4.5, Sonnet
@@ -23,6 +23,8 @@ const PLANS = [
   { key: 'max5', label: 'Max 5x', price: 100 },
   { key: 'max20', label: 'Max 20x', price: 200 },
 ];
+
+const FABLE_CAVEAT = CAVEATS.find((c) => c.startsWith('Fable’s row'));
 
 export default function WhatIf() {
   const { data, loading, error, linked } = useDashboard();
@@ -74,7 +76,7 @@ export default function WhatIf() {
         {models.present ? (
           <div className="space-y-3">
             {models.models.map((m) => {
-              const diff = m.delta_vs_baseline_usd;
+              const diff = m.monthly_delta_vs_baseline_usd;
               return (
                 <div key={m.key} className="flex items-center justify-between bg-[var(--surface)] rounded-lg p-4">
                   <span className="text-[var(--text-strong)] font-semibold">{m.label}</span>
@@ -92,6 +94,11 @@ export default function WhatIf() {
               % is against your own model mix, priced the same way — about{' '}
               <span className="font-mono">{fc(models.baseline_monthly_usd)}/mo</span>.
             </p>
+            {/* The Fable row is a list-rate re-price, and Fable is plan-conditional:
+                the same caveat Compare Models and the CLI carry (added 2026-09-27,
+                when this card started showing a Fable row). Found by prefix so it
+                survives any reordering of CAVEATS. */}
+            {FABLE_CAVEAT && <p className="text-xs text-[var(--faint)]">{FABLE_CAVEAT}</p>}
           </div>
         ) : models.unpriced_turn_count > 0 ? null : (
           <p className="text-[var(--muted)] text-sm">No recorded terminal usage in this window yet.</p>

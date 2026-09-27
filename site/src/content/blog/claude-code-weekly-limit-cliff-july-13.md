@@ -14,7 +14,7 @@ faq:
   - q: "Could the boost be extended?"
     a: "It was, more than once — from July 13 to ~July 19, and again after that, until the promotion ended on September 13, 2026. Starting September 14, 2026, weekly limits in Claude Code are 25% higher than they were before the promotion."
   - q: "How do I see where I stand?"
-    a: "`/usage` inside a session shows your current ceiling. WTClaude's `wtclaude limit` shows it continuously with reset countdowns, reading Anthropic's own rate-limit data — so it reflects whatever the limit is, before or after the boost expires."
+    a: "`/usage` inside a session shows your current ceiling. WTClaude's `wtclaude limit` shows it continuously with reset countdowns, reading Anthropic's own rate-limit data — so it reflects whatever the limit is, before or after the boost ended."
 ---
 
 > **Update, September 27, 2026:** The boost has ended, and it did not end on August 31 as the August 24 note below said it was scheduled to. Anthropic's Help Center (article 15910845) now states that the promotion ran from **May 13 through September 13, 2026**, and that **starting September 14, 2026, weekly limits in Claude Code are 25% higher than they were before the promotion**, on Pro, Max, Team, and seat-based Enterprise plans. 5-hour usage limits were not affected by the promotion. The dates below are kept as a record of what was announced at the time; check `/usage` for the ceiling in effect right now.
@@ -79,7 +79,7 @@ The boost ended on September 13, 2026, but weekly limits did not return to the p
 It was, more than once — from July 13 to ~July 19, and again after that, until the promotion ended on September 13, 2026. Starting September 14, 2026, weekly limits in Claude Code are 25% higher than they were before the promotion.
 
 **How do I see where I stand?**
-`/usage` inside a session shows your current ceiling. WTClaude's `wtclaude limit` shows it continuously with reset countdowns, reading Anthropic's own rate-limit data — so it reflects whatever the limit is, before or after the boost expires.
+`/usage` inside a session shows your current ceiling. WTClaude's `wtclaude limit` shows it continuously with reset countdowns, reading Anthropic's own rate-limit data — so it reflects whatever the limit is, before or after the boost ended.
 
 ---
 
