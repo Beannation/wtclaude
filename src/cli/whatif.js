@@ -105,7 +105,7 @@ function showModelComparison(sessions, targetModel, days) {
       // Same rule as compare-models (2026-09-27): a zero-token turn is $0 on any
       // rate, so it is not an exclusion.
       if (!hasTokens(t)) continue;
-      const label = `${t.model || 'unknown'} (${actual.reason})`;
+      const label = `${t.model || 'unknown'} (${plainReason(actual.reason)})`;
       unpriced.set(label, (unpriced.get(label) || 0) + 1);
       continue;
     }
@@ -123,6 +123,12 @@ function showModelComparison(sessions, targetModel, days) {
   // Everything excluded: say so, instead of printing $0 against $0 — which is
   // the "no data" shape compare-models stopped using in 0.3.1.
   const excludedTotal = [...unpriced.values()].reduce((a, b) => a + b, 0);
+  if (priced === 0 && excludedTotal === 0) {
+    // Only zero-token turns: nothing to price on either side (same as
+    // compare-models' "no usage" case) — never a $0-vs-$0 comparison.
+    console.log('  Nothing to compare in this window — no turns with tokens.\n');
+    return;
+  }
   if (priced === 0 && excludedTotal > 0) {
     console.log(excludedTotal === 1
       ? '  The one turn in this window was excluded, so there is nothing to compare'
@@ -131,7 +137,7 @@ function showModelComparison(sessions, targetModel, days) {
     for (const [label, n] of unpriced) console.log(`    ${String(n).padStart(5)} x ${label}`);
     console.log('  We do not have first-party rates we can stand behind for these. Your');
     console.log('  headline cost is unaffected — it is the cost figure Claude Code itself');
-    console.log('  reports, and `wtclaude today` still counts it.\n');
+    console.log('  reports, and your headline totals still count it.\n');
     return;
   }
 
@@ -148,7 +154,17 @@ function showModelComparison(sessions, targetModel, days) {
     console.log('  for these, and counting them as $0 would quietly flatter the comparison:');
     for (const [label, n] of unpriced) console.log(`    ${String(n).padStart(5)} x ${label}`);
     console.log('  Your headline cost is unaffected — it is the cost figure Claude Code');
-    console.log('  itself reports, and `wtclaude today` still counts it.');
+    console.log('  itself reports, and your headline totals still count it.');
   }
   console.log('');
+}
+
+// Plain words for priceTurn()'s reason codes (user-facing; never name the
+// fallback's guess as though it were the model).
+function plainReason(reason) {
+  if (!reason) return 'not priced';
+  if (reason.startsWith('family-fallback:')) return "not in this version's rate sheet";
+  if (reason.startsWith('partner-platform:')) return `served by ${reason.slice('partner-platform:'.length)}, which sets its own rates`;
+  if (reason === 'unresolved-model') return 'not a model we recognise';
+  return 'not priced';
 }

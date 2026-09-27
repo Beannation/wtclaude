@@ -161,7 +161,7 @@ function pushExclusion(lines, s) {
     lines.push('      turns are left out of that estimate.');
   } else {
     lines.push('      Your headline cost is unaffected — it is the cost figure Claude');
-    lines.push('      Code itself reports, and `wtclaude today` still counts it.');
+    lines.push('      Code itself reports, and your headline totals still count it.');
   }
   lines.push('      If the model is new, upgrade: `npm i -g wtclaude@latest`.');
 }

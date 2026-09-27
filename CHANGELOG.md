@@ -91,8 +91,9 @@ the secondary calculations.
   now per month, like the figures beside it. It used to be the whole window's
   dollars, which matched them only for a 30-day window. `--json` keeps
   `delta_vs_baseline_usd` (window) and adds `monthly_delta_vs_baseline_usd`.
-- Cowork's `<synthetic>` placeholder lines, and any turn with no tokens, no
-  longer count as turns or as exclusions — they cost nothing on any rate.
+- Cowork's `<synthetic>` placeholder lines are no longer read as turns, and a
+  turn with no tokens on a model we cannot price is no longer reported as an
+  exclusion — it costs nothing on any rate.
 - `waste`, the dashboard's context-waste tile and `wtclaude fable` resolve the
   cache-read multiplier per model, and name it — the hard-coded "10%" is gone.
 - The dashboard's **What If** page kept its own hand-typed price table (Opus 4.8,

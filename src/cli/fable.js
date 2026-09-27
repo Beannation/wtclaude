@@ -77,7 +77,9 @@ export function registerFable(program) {
       const projectedMonthly = rr.avgPerDay * 30;
       const promo = getFablePromoCredits();
       const promoStatus = promo.status(new Date());
-      const daysToPromoExpiry = promoStatus === 'active' ? daysUntil(promo.expiry_date, today) : null;
+      // Clamped at 0: east of Pacific time the local date can already read
+      // Sep 18 while the credits are still live until 11:59 PM PT on Sep 17.
+      const daysToPromoExpiry = promoStatus === 'active' ? Math.max(0, daysUntil(promo.expiry_date, today)) : null;
 
       if (o.json) {
         output(JSON.stringify({
@@ -249,8 +251,8 @@ export function promoLines(promo, now, modelKeys, today) {
     return lines;
   }
   const days = daysUntil(promo.expiry_date, today);
-  const when = days == null || days < 0 ? '.'
-    : days === 0 ? ' — that is today.'
+  const when = days == null ? '.'
+    : days <= 0 ? ' — that is today.'
     : ` — ${days} day${days === 1 ? '' : 's'} from today.`;
   lines.push(`    Claiming closed ${promo.claiming_closed}. Credits expire ${promo.expiry_date} at 11:59 PM PT,`);
   lines.push('    regardless of when they were claimed' + when);

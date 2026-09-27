@@ -51,3 +51,11 @@ test('after the instant, a Fable-5.1-only window gets no promo block at all', ()
   assert.deepEqual(promoLines(promo, AFTER, ['fable-5-1'], '2026-09-27'), []);
   assert.match(promoLines(promo, BEFORE, ['fable-5-1'], '2026-09-17').join('\n'), /Not applicable to your usage/);
 });
+
+test('east of Pacific time, the last live hours read "today", never a negative countdown', () => {
+  // 02:58 ET on Sep 18 (local date already the 18th) is still 11:58 PM PT on the 17th.
+  const lines = promoLines(promo, BEFORE, ['fable-5'], '2026-09-18').join('\n');
+  assert.match(lines, /Credits expire 2026-09-17/);
+  assert.match(lines, /that is today/);
+  assert.doesNotMatch(lines, /-\d+ day/);
+});

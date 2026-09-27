@@ -211,3 +211,30 @@ test('waste: the withheld reason prints once, not twice', () => {
     rmSync(home, { recursive: true, force: true });
   }
 });
+
+test('whatif: plain-language reasons, and a zero-token-only window is not a $0 comparison', () => {
+  const all = wtclaudeDirWith(['claude-opus-9-20270101', 'vertex_ai/claude-sonnet-5']);
+  try {
+    const out = run(['whatif', '--model', 'opus', '--days', '2'], { WTCLAUDE_DIR: all });
+    assert.doesNotMatch(out, /family-fallback|partner-platform|unresolved-model|opus-5-5\)/, 'no internal reason codes');
+    assert.match(out, /not in this version's rate sheet/);
+    assert.match(out, /served by vertex_ai/);
+    assert.doesNotMatch(out, /wtclaude today/);
+  } finally {
+    rmSync(all, { recursive: true, force: true });
+  }
+  const dir = mkdtempSync(join(tmpdir(), 'wtc-zero-'));
+  mkdirSync(join(dir, 'sessions'), { recursive: true });
+  writeFileSync(join(dir, 'config.json'), JSON.stringify({ edit_hash_salt: 'deadbeefdeadbeefdeadbeefdeadbeef', anonymous_id: 'a1' }));
+  writeFileSync(join(dir, 'sessions', 'z.ndjson'), JSON.stringify({
+    ts: recentTs(1), model: 'claude-opus-9-20270101', speed_tier: 'standard', session_id: 'z',
+    input_tokens: 0, output_tokens: 0, cache_read_tokens: 0, cache_write_tokens: 0, cost_usd: 0,
+  }) + '\n');
+  try {
+    const out = run(['whatif', '--model', 'opus', '--days', '2'], { WTCLAUDE_DIR: dir });
+    assert.match(out, /Nothing to compare in this window/);
+    assert.doesNotMatch(out, /\$0\.0000/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
