@@ -2,41 +2,43 @@ import { useDashboard } from '../lib/useDashboard';
 import { useApp } from '../context/AppContext';
 import { formatCost, formatTokens } from '../lib/format';
 import {
-  computeComparison, COMPARE_MODELS, CAVEATS, COMPARE_HONESTY_LINE,
+  computeComparison, codeTurnsFromSessions, COMPARE_MODELS, CAVEATS, COMPARE_HONESTY_LINE,
 } from '../lib/compareModels';
 import HonestyBadge from '../components/HonestyBadge';
 import EmptyState from '../components/EmptyState';
 import CopyCommand from '../components/CopyCommand';
+import InlineCode from '../components/InlineCode';
 import { LinkPrompt } from './Overview';
 
-// Build the billing-grade "Code (terminal)" re-priceable turns from the synced
-// dashboard payload. The payload carries session-level aggregate tokens plus
-// per-session models_used turn counts (per-turn detail is not synced), so we
-// attribute each session's tokens across its models by turn-share — the same
-// honest attribution derive.costByModel uses. Each per-model bucket becomes ONE
-// re-priceable "turn" tagged with the model the user ACTUALLY ran, so the
-// baseline prices at the real mix and a no-op switch nets ~$0.
-function codeTurnsFromSessions(sessions) {
-  const turns = [];
-  for (const s of sessions || []) {
-    const models = s.models_used || {};
-    const totalTurns = Object.values(models).reduce((a, b) => a + b, 0) || 1;
-    const inTok = Number(s.total_input_tokens || 0);
-    const outTok = Number(s.total_output_tokens || 0);
-    const cr = Number(s.total_cache_read || 0);
-    const cw = Number(s.total_cache_write || 0);
-    for (const [model, count] of Object.entries(models)) {
-      const share = count / totalTurns;
-      turns.push({
-        model,
-        input_tokens: inTok * share,
-        output_tokens: outTok * share,
-        cache_read_tokens: cr * share,
-        cache_write_tokens: cw * share,
-      });
-    }
-  }
-  return turns;
+// ADDED 2026-09-27. Turns this dashboard cannot price at first-party rates — a
+// model its rate table does not know, a partner-platform id, or a family-fallback
+// guess — are excluded from both sides of the comparison (mirror of the CLI).
+// Before this, the browser priced them silently: every Opus 5.5 slice went into
+// "your mix" at Opus 5's rates with nothing on the page to say so. Excluding
+// without saying so would be the same error in a different shape, so the tile
+// names what it left out — and when EVERYTHING was left out, it says that rather
+// than "no usage".
+export function ExclusionNotice({ surface }) {
+  const n = surface.unpriced_turn_count || 0;
+  if (n === 0) return null;
+  const ids = surface.unpriced_models || [];
+  const m = ids.length;
+  const models = `model${m === 1 ? '' : 's'}`;
+  return (
+    <div className="mt-4 rounded-lg border border-[var(--amber)] px-4 py-3 text-xs text-[var(--muted)] space-y-1">
+      <p className="text-[var(--amber)] font-medium">
+        {surface.present
+          ? `${m > 0 ? `Usage on ${m} ${models} was` : 'Some usage was'} excluded from this comparison — and from your mix, so the figures above don't cover all your usage.`
+          : `All usage in this window was on ${m === 1 ? 'a model' : 'models'} this dashboard can't price, so there is nothing to compare yet — this is not the same as having no usage.`}
+      </p>
+      {m > 0 && <p className="font-mono">{ids.join(' · ')}</p>}
+      <p>
+        Either the model isn't in this dashboard's rate table yet, or it was served by a partner platform that
+        publishes its own rates. Your headline cost is unaffected — it is the cost figure Claude Code itself
+        reports.
+      </p>
+    </div>
+  );
 }
 
 function deltaColor(usd) {
@@ -75,11 +77,20 @@ export default function CompareModels() {
         <h2 className="text-2xl font-bold text-[var(--text-strong)]">Compare Models</h2>
         <HonestyBadge tier="estimate" />
       </div>
+      {/* FIXED 2026-09-07: these three names were hard-coded and read "Opus 4.8 /
+          Sonnet 5 / Fable 5" — stale since the 0.3.0 Opus 5 swap, so the live
+          dashboard named a model it does not price. Derived from COMPARE_MODELS
+          now, exactly as the CLI header is, so the label cannot drift from the
+          set being compared. */}
       <p className="text-[var(--muted)] max-w-3xl">
         Re-prices your recorded usage across{' '}
-        <span className="text-[var(--text-strong)]">Opus 4.8</span>,{' '}
-        <span className="text-[var(--text-strong)]">Sonnet 5</span> and{' '}
-        <span className="text-[var(--text-strong)]">Fable 5</span> — holding your token counts fixed
+        {COMPARE_MODELS.map((m, i) => (
+          <span key={m.key}>
+            <span className="text-[var(--text-strong)]">{m.label}</span>
+            {i < COMPARE_MODELS.length - 2 ? ', ' : i === COMPARE_MODELS.length - 2 ? ' and ' : ''}
+          </span>
+        ))}
+        {' '}— holding your token counts fixed
         and applying each model's rate. The delta is measured against your actual model mix, so
         re-pricing a model you already run nets about $0.
       </p>
@@ -98,7 +109,7 @@ export default function CompareModels() {
                 {formatTokens(
                   code.tokens.input + code.tokens.output + code.tokens.cache_read + code.tokens.cache_write,
                 )}{' '}
-                tokens across {code.turn_count} model-slices · your mix ≈{' '}
+                tokens re-priced · your mix ≈{' '}
                 <span className="text-[var(--text)] font-mono">{fc(code.baseline_monthly_usd)}/mo</span>
               </p>
               <div className="overflow-x-auto">
@@ -115,9 +126,9 @@ export default function CompareModels() {
                       <tr key={m.key} className="border-t border-[var(--border)]">
                         <td className="py-2.5 pr-4 text-[var(--text-strong)] font-medium">{m.label}</td>
                         <td className="py-2.5 pr-4 text-right font-mono text-[var(--text)]">{fc(m.monthly_usd)}</td>
-                        <td className={`py-2.5 text-right font-mono ${deltaColor(m.delta_vs_baseline_usd)}`}>
-                          {fmtDelta(m.delta_vs_baseline_usd, fc)}
-                          {m.delta_pct !== 0 && Math.abs(m.delta_vs_baseline_usd) >= 0.005 && (
+                        <td className={`py-2.5 text-right font-mono ${deltaColor(m.monthly_delta_vs_baseline_usd)}`}>
+                          {fmtDelta(m.monthly_delta_vs_baseline_usd, fc)}
+                          {m.delta_pct !== 0 && Math.abs(m.monthly_delta_vs_baseline_usd) >= 0.005 && (
                             <span className="text-[var(--faint)] ml-1">({m.delta_pct > 0 ? '+' : ''}{m.delta_pct}%)</span>
                           )}
                         </td>
@@ -127,11 +138,12 @@ export default function CompareModels() {
                 </table>
               </div>
             </>
-          ) : (
+          ) : code.unpriced_turn_count > 0 ? null : (
             <p className="text-[var(--muted)] text-sm mt-2">
               No recorded terminal usage in this window yet.
             </p>
           )}
+          <ExclusionNotice surface={code} />
         </div>
 
         {/* COWORK — labeled estimate, honest placeholder (no synced per-surface data) */}
@@ -170,7 +182,9 @@ export default function CompareModels() {
         <h3 className="text-sm text-[var(--muted)] uppercase tracking-wide mb-3">How to read this</h3>
         <ul className="space-y-2 text-sm text-[var(--muted)] list-disc pl-5">
           {CAVEATS.map((c, i) => (
-            <li key={i}>{c}</li>
+            <li key={i}>
+              <InlineCode text={c} />
+            </li>
           ))}
         </ul>
       </div>

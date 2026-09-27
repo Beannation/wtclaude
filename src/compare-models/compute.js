@@ -18,17 +18,32 @@
 //  • Cost only, not quality — we surface what the choice costs; we never judge which
 //    model is "better."
 
-import { expectedCost, priceTurn } from '../utils/cost.js';
+import { expectedCost, priceTurn, hasTokens } from '../utils/cost.js';
+import { getRates } from '../utils/pricing.js';
 
 // The three models compared, newest-generation keys (must match pricing config keys).
-// Opus 5 replaced Opus 4.8 here on 2026-08-24: Opus 5 launched 2026-07-24 and has
-// been Claude Code's default `opus` since v2.1.219, so it is the Opus most users
-// are actually running. Both price at $5/$25, so an Opus 4.8 user re-pricing to
-// Opus 5 nets ~$0 — which is the correct, honest result.
+// THE RULE (PMO, applied three times now): the compare set carries Claude Code's
+// CURRENT default model per family.
+//
+// Opus 5.5 replaced Opus 5 here on 2026-09-27. Claude Code 2.1.280 (2026-09-22)
+// made Opus 5.5 the default model on every paid plan — Pro and Team Standard moved
+// from Sonnet to Opus, and the default Opus became Opus 5.5 — so it is the model
+// most sessions now run on. The two differ on every rate: $4/$20 against $5/$25,
+// and cache reads at 0.05x ($0.20/MTok) against 0.1x ($0.50/MTok). Opus 5 is
+// dropped from the COMPARISON only: it stays fully priced in the rate sheet so
+// historical turns still cost correctly, and it remains Active on the Claude API
+// (retirement not sooner than 2027-07-24). Before that, Opus 5 replaced Opus 4.8
+// on 2026-08-24 (default `opus` from v2.1.219 until v2.1.280).
+//
+// Fable 5.1 replaced Fable 5 here on 2026-09-07, for the same reason: it has been
+// Claude Code's default Fable model since v2.1.257 (2026-09-01). The two share
+// $10/$50 base rates and differ only in cache reads — $0.25 vs $1 per MTok — so a
+// Fable 5 user re-pricing to Fable 5.1 sees a real, cache-driven saving rather
+// than a wash. Fable 5 stays fully priced and Active (not sooner than 2027-06-09).
 export const COMPARE_MODELS = [
-  { key: 'opus-5', label: 'Opus 5' },
+  { key: 'opus-5-5', label: 'Opus 5.5' },
   { key: 'sonnet-5', label: 'Sonnet 5' },
-  { key: 'fable-5', label: 'Fable 5' },
+  { key: 'fable-5-1', label: 'Fable 5.1' },
 ];
 
 function sumTokens(turns) {
@@ -58,7 +73,9 @@ export function repriceSurface(turns, { today, days = 30 } = {}) {
   const list = [], unpriced = [];
   for (const t of all) {
     if (priceTurn(t.model, 'standard', t, today).priceable) list.push(t);
-    else unpriced.push(t);
+    // A turn with no tokens costs $0 on any rate, so an unrecognised model on it
+    // is not an exclusion worth warning about (2026-09-27).
+    else if (hasTokens(t)) unpriced.push(t);
   }
 
   // Baseline: the same turns priced at the models you ACTUALLY ran (token×rate).
@@ -77,6 +94,10 @@ export function repriceSurface(turns, { today, days = 30 } = {}) {
       window_usd: round(windowUsd),
       monthly_usd: round(windowUsd * monthFactor),
       delta_vs_baseline_usd: round(deltaVsBaselineUsd),
+      // ADDED 2026-09-27: the delta at the SAME monthly scale as monthly_usd and
+      // baseline_monthly_usd. delta_vs_baseline_usd is window dollars and is kept
+      // for --json compatibility; the tables render this one beside /mo figures.
+      monthly_delta_vs_baseline_usd: round(deltaVsBaselineUsd * monthFactor),
       delta_pct: Math.round(deltaPct),
     };
   });
@@ -123,11 +144,43 @@ export function computeComparison({ codeTurns = [], coworkTurns = [], today, day
 
 // Honesty caveats carried on every surface (handback §C rails). No "first/only";
 // Fable is framed as an allowance cap (never "free"); every projection is labeled.
+//
+// CORRECTED 2026-09-07. The Fable caveat carried a countdown — "included ... through
+// ~July 19 (extended from July 7 → July 12 → July 19), then usage credits" — which
+// was already false when 0.3.0 shipped: Fable became permanent and plan-conditional
+// on 2026-07-20, and the rate sheet's own `fable` block says the historical boundary
+// date "is NOT a future event and must never be rendered as a countdown." The
+// honesty gate missed it because the string never used the word "cliff"; the gate
+// has been widened to catch the countdown shape itself.
 export const CAVEATS = [
   'Re-prices your recorded usage — not the same task run on each model. A different model emits different token counts for identical work (Sonnet 5’s tokenizer runs ~1.0–1.35× heavier than Opus), so holding tokens fixed understates the true gap. Every projected number is a labeled estimate.',
-  'Fable’s row is priced as usage credits at $10/$50. Fable is included up to 50% of your weekly limit through ~July 19 (extended from July 7 → July 12 → July 19), then usage credits — run `wtclaude fable` for the forecast.',
+  'Fable’s row is priced at $10/$50 list. Fable is plan-conditional, not date-limited: included up to 50% of the weekly usage limit on Max, Team Premium and Enterprise Premium, and billed as usage credits on Pro and Team Standard — run `wtclaude fable` for your plan’s reading. Credits figures are at standard API list rates; bundle discounts up to 30% and promos not reflected.',
+  'Fable 5.1 and Fable 5 have identical $10/$50 base rates; their cached-input rates differ. A cache read costs $0.25/MTok on Fable 5.1 against $1/MTok on Fable 5, so on a cache-heavy session that gap is most of the difference between the two models.',
+  opusRateCaveat(rateCard('opus-5-5'), rateCard('opus-5')),
   'Cost, not quality — we surface what the choice costs you; we don’t judge which model is better.',
   'Code is billing-grade (your anchored terminal tokens). Cowork is a labeled estimate (audit-log tokens × rate). Chat is excluded (no local cost data).',
 ];
+
+// ADDED 2026-09-27 — a fact caveat, not a claim. The Opus row moved from Opus 5
+// to Opus 5.5, whose rates are lower on every axis, so an Opus 5 user now sees a
+// cheaper Opus row and deserves to know exactly why. Stated as rate arithmetic
+// only. Anthropic's own "costs 40% less to run than Opus 5" is THEIR measurement
+// from THEIR tests and includes fewer tokens per task; re-pricing holds tokens
+// fixed, so it can never show more than the rate part — and the caveat says so rather
+// than borrowing their number. Built from the rate sheet, never typed in: the
+// browser mirror builds the same sentence from its own table, and
+// web-parity.test.js asserts the two arrays are identical.
+function rateCard(key) {
+  const r = getRates(`claude-${key}`, 'standard');
+  return { input: r.input, output: r.output, cacheRead: r.input * r.cache_read_multiplier };
+}
+
+export function opusRateCaveat(next, prev) {
+  const less = (a, b) => Math.round((1 - a / b) * 100);
+  const inPct = less(next.input, prev.input), outPct = less(next.output, prev.output);
+  const io = inPct === outPct ? `${inPct}% less in and out` : `${inPct}% less in and ${outPct}% less out`;
+  const usd = n => (Number.isInteger(n) ? `$${n}` : `$${n.toFixed(2)}`);
+  return `Opus 5.5 is priced at ${usd(next.input)}/${usd(next.output)} per MTok with cache reads at ${usd(next.cacheRead)}, against Opus 5’s ${usd(prev.input)}/${usd(prev.output)} and ${usd(prev.cacheRead)} — so identical tokens cost ${io}, and ${less(next.cacheRead, prev.cacheRead)}% less on cache reads. Re-pricing holds your token counts fixed, so it reflects that rate difference alone — not any change in how many tokens a model spends on the same work.`;
+}
 
 function round(n) { return typeof n === 'number' ? Math.round(n * 1e6) / 1e6 : n; }

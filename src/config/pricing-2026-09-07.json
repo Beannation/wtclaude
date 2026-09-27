@@ -1,0 +1,255 @@
+{
+  "version": "2026-09-07",
+  "effective_date": "2026-09-07",
+  "note": "Adds Claude Fable 5.1 and Claude Mythos 5.1, and introduces a PER-MODEL cache-read multiplier. Read from the live Anthropic platform pricing table 2026-09-07 (17 rows, up from 15). THE LOAD-BEARING CHANGE: cache-read pricing is no longer one global multiplier. The pricing page's footnote is explicit — 'Cache hits and refreshes on Claude Fable 5.1 and Claude Mythos 5.1 are priced at 0.025x the base input price. All other models use the standard 0.1x multiplier.' So Fable 5.1 and Mythos 5.1 price cache hits at $0.25/MTok while Fable 5 and Mythos 5 stay at $1/MTok, on identical $10 base input. RESOLUTION ORDER for the cache-read multiplier is: the model entry's own `cache.read_multiplier` first, then this sheet's global `cache.read_multiplier` as the default. A model with no `cache` block inherits the global 0.1x, which is correct for every row except the two 5.1s. Leaving the global multiplier in place for Fable 5.1 would over-price every one of its cache reads by 4x, and cache reads dominate agentic sessions — it is a silent error: no test fails and no user complains, the number is just wrong. Fable 5.1 has been Claude Code's DEFAULT Fable model since v2.1.257 (2026-09-01), so `claude-fable-5-1` rows are landing in local data now; in the 2026-08-24 sheet they resolved to null. Rates here are per million tokens, standard first-party Claude API. Partner-operated platforms (Amazon Bedrock, Google Cloud) publish their own pricing and are NOT covered by this sheet. Everything else carries forward from pricing-2026-08-24.json unchanged: Sonnet 5 is still $2/$10 (the September 1 step-up definitively did not occur — the cancellation note is still on the pricing page, re-read 2026-09-07), and no model carries a `scheduled` rate change.",
+  "source": {
+    "primary": "https://platform.claude.com/docs/en/about-claude/pricing",
+    "read_date": "2026-09-07",
+    "table_rows": 17,
+    "also_read": [
+      "https://platform.claude.com/docs/en/about-claude/model-deprecations",
+      "https://platform.claude.com/docs/en/about-claude/models/overview",
+      "https://code.claude.com/docs/en/changelog",
+      "https://www.anthropic.com/claude-fable-and-mythos-5-1"
+    ]
+  },
+  "models": {
+    "opus-5": {
+      "input": 5,
+      "output": 25,
+      "fast_mode": {
+        "input": 10,
+        "output": 50
+      },
+      "cache_min_tokens": 512,
+      "released": "2026-07-24",
+      "retirement_not_before": "2027-07-24",
+      "note": "Claude Code's default `opus` since v2.1.219. Thinking is ON by default (effort `high`); `thinking: disabled` returns 400 at xhigh/max effort. 1M context at standard rates. Cache minimum is 512 tokens — small cache lines on this model are normal, not anomalies."
+    },
+    "opus-4-8": {
+      "input": 5,
+      "output": 25,
+      "fast_mode": {
+        "input": 10,
+        "output": 50
+      },
+      "retirement_not_before": "2027-05-28"
+    },
+    "opus-4-7": {
+      "input": 5,
+      "output": 25,
+      "retirement_not_before": "2027-04-16",
+      "note": "NO fast mode. `speed: \"fast\"` returns an error on Opus 4.7 — it does not fall back to standard. Promoted from an alias of opus-4-8 on 2026-08-24 precisely so it stops inheriting opus-4-8's fast_mode block."
+    },
+    "opus-4-6": {
+      "input": 5,
+      "output": 25,
+      "retirement_not_before": "2027-02-05",
+      "note": "NO fast mode. `speed: \"fast\"` runs at standard speed and is billed at standard rates. Promoted from an alias of opus-4-8 on 2026-08-24 for the same reason as opus-4-7."
+    },
+    "opus-4-5": {
+      "input": 5,
+      "output": 25,
+      "retirement_not_before": "2026-11-24",
+      "note": "Nearest retirement floor of any active model."
+    },
+    "opus-4-1": {
+      "input": 15,
+      "output": 75,
+      "retired": true,
+      "retired_date": "2026-08-05",
+      "note": "Retired 2026-08-05 on the first-party API; still served on Amazon Bedrock and Google Cloud. Rates kept so historical records price correctly — the opus-* family fallback used to cost these at $5/$25, a 3x under-estimate. Batch is $7.50/$37.50; Opus 4.1 has no fast mode."
+    },
+    "opus-4": {
+      "input": 15,
+      "output": 75,
+      "retired": true,
+      "note": "Retired on the first-party API; still served on Google Cloud. Historical pricing only."
+    },
+    "sonnet-5": {
+      "input": 2,
+      "output": 10,
+      "note": "$2/$10 is the STANDARD price. The increase to $3/$15 previously scheduled for 2026-09-01 was cancelled by Anthropic on 2026-08-10 and will not occur. Do not reintroduce a `scheduled` array here."
+    },
+    "sonnet-4-6": {
+      "input": 3,
+      "output": 15,
+      "retirement_not_before": "2027-02-17",
+      "note": "Last model on the previous tokenizer. Claude 4.7 and later produce roughly 30% more tokens for the same text."
+    },
+    "sonnet-4-5": {
+      "input": 3,
+      "output": 15,
+      "retirement_not_before": "2026-09-29"
+    },
+    "sonnet-4": {
+      "input": 3,
+      "output": 15,
+      "retired": true,
+      "note": "Retired on the first-party API; still served on Bedrock and Google Cloud. Previously resolved to null and priced at $0 in the secondary calc."
+    },
+    "haiku-4-5": {
+      "input": 1,
+      "output": 5,
+      "retirement_not_before": "2026-10-15"
+    },
+    "haiku-3-5": {
+      "input": 0.8,
+      "output": 4,
+      "retired": true,
+      "note": "Retired on the first-party API; still served on Bedrock and Google Cloud. Previously resolved to null and priced at $0 in the secondary calc."
+    },
+    "fable-5-1": {
+      "input": 10,
+      "output": 50,
+      "cache": {
+        "read_multiplier": 0.025
+      },
+      "released": "2026-09-01",
+      "retirement_not_before": "2027-09-01",
+      "note": "Claude Code's DEFAULT Fable model since v2.1.257 (2026-09-01) — not an opt-in, so these rows arrive in local data without the user choosing them. Cache hits and refreshes are 0.025x base input ($0.25/MTok), NOT the global 0.1x: see this entry's `cache` block and the sheet note. Same $10/$50 base as Fable 5, so the ONLY price difference between the two is the cache-read multiplier — 4x. 1M context, 128K max output, thinking adaptive and always on, API default effort `high`, reliable knowledge cutoff Jun 2026. Billing depends on the user's plan, not on a date — see the `fable` block, which is family-scoped and which Fable 5.1 inherits."
+    },
+    "fable-5": {
+      "input": 10,
+      "output": 50,
+      "retirement_not_before": "2027-06-09",
+      "note": "Requires Claude Code 2.1.170 or later. Thinking cannot be disabled on Fable 5. Cache hits are the global 0.1x ($1/MTok) — Fable 5 did NOT get the 0.025x multiplier that fable-5-1 and mythos-5-1 carry, even though the base rates are identical. STILL ACTIVE on the Claude API, retirement not sooner than 2027-06-09 (model-deprecations status table, read 2026-09-07). claude.com/pricing and the models-overview page both file it under a 'Legacy models' heading; that is marketing/grouping framing, NOT lifecycle state, and nothing we publish may call Fable 5 deprecated, retired or unsupported. Dropped from the `compare-models` comparison set on 2026-09-07 in favour of fable-5-1, but fully priced here so historical turns still cost correctly. Billing depends on the user's plan, not on a date — see the `fable` block."
+    },
+    "mythos-5-1": {
+      "input": 10,
+      "output": 50,
+      "cache": {
+        "read_multiplier": 0.025
+      },
+      "cc_selectable": false,
+      "released": "2026-09-01",
+      "note": "On the public pricing table at limited availability, but not selectable in Claude Code, so it should never appear in local Claude Code data. Priced here so that if it ever does appear it costs correctly instead of resolving to null — the same treatment mythos-5 gets. Carries the same 0.025x cache-read multiplier as fable-5-1 (pricing page footnote 1). No retirement date is recorded: limited-availability models are not listed on the model-deprecations status table, and inventing one would be asserting a lifecycle fact Anthropic has not published."
+    },
+    "mythos-5": {
+      "input": 10,
+      "output": 50,
+      "cc_selectable": false,
+      "note": "On the public pricing table at limited availability, but not selectable in Claude Code, so it should never appear in local Claude Code data. Priced here so that if it ever does appear it costs correctly instead of resolving to null. Cache hits are the global 0.1x ($1/MTok): the 0.025x footnote names Mythos 5.1, not Mythos 5."
+    }
+  },
+  "family_fallback": {
+    "opus": "newest",
+    "note": "Last resort only, and it should now essentially never fire because every table row has an explicit entry. When it does fire it resolves to the NEWEST opus key by sort order, never to whichever key happens to come first in the object, and the caller is handed fallback: true so it can flag the turn. There is deliberately NO fable family fallback, and none may be added: Fable 5 and Fable 5.1 carry different cache-read multipliers on identical base rates, so a fallback would silently price an unrecognised Fable at the wrong cache multiplier — the exact silent-4x error this sheet exists to prevent. An unrecognised fable id must return null and flag the turn."
+  },
+  "cache": {
+    "read_multiplier": 0.1,
+    "write_multiplier_5m": 1.25,
+    "write_multiplier_1h": 2,
+    "write_multiplier": 2,
+    "write_ttl_default": "1h",
+    "note": "PER-MODEL OVERRIDE ADDED 2026-09-07. `read_multiplier` here is the DEFAULT; a model entry's own `cache.read_multiplier` wins when present. Resolution order: model override -> this global default. Today only fable-5-1 and mythos-5-1 override it, at 0.025x, per the pricing page footnote: 'Cache hits and refreshes on Claude Fable 5.1 and Claude Mythos 5.1 are priced at 0.025x the base input price. All other models use the standard 0.1x multiplier.' Every other row inherits 0.1x, which is correct for all of them. Do NOT collapse this back to a single global number: Fable 5 and Fable 5.1 share a $10 base input and differ ONLY in cache reads ($1 vs $0.25), so a global multiplier cannot express both. Cache WRITE multipliers remain global — the live table shows 1.25x (5m) and 2x (1h) of base input for every row including the 5.1s, with no per-model exception. CARRIED FORWARD 2026-08-24: the write multipliers were corrected then from 0.25, which under-priced every cache write 5-8x. Anthropic's pricing page states the multipliers relative to base input price: 5-minute cache write 1.25x, 1-hour cache write 2x. Cache write tokens are a separate billed quantity, charged when content is first stored — they are not a premium layered on top of an input charge. `write_multiplier` is the effective default used when the payload cannot tell us the TTL, and it is set to the 1-hour rate because that is what Claude Code subscription sessions actually bill: the costs doc states subscription cache lifetime is 1 hour, and fitting 24 clean local sessions against their billing-grade cost anchors implies a multiplier of 2.10 (median), reconstructing 0.991 of the anchor at 2.0x versus 0.899 at 1.25x. On credits-billed usage the cache lifetime collapses to 5 minutes unless ENABLE_PROMPT_CACHING_1H=1 is set (default off), which moves the correct multiplier to 1.25x. We cannot see that crossing in local data, so this is a labeled default, not a measurement of any individual turn."
+  },
+  "modifiers": {
+    "batch_multiplier": 0.5,
+    "residency_us_multiplier": 1.1,
+    "residency_min_model": "4.6",
+    "residency_statusline_included_from": "2.1.239",
+    "long_context_premium": 0,
+    "note": "Documented so no surface maintains its own copy of these numbers. NONE of them are applied to the headline figure: the headline is the payload's own cost.total_cost_usd, which already has every applicable modifier baked in. Re-applying the 1.1x residency multiplier on top of the anchor would double-count. Batch (-50% both directions) is an API-surface concept and never appears in Claude Code data. Claude 4.6 and later include the full 1M context window at standard rates, so long context carries no premium; models before 4.6 return 400 on the inference_geo parameter."
+  },
+  "plans": {
+    "pro": {
+      "price_monthly": 20,
+      "price_monthly_annual_billing": 17,
+      "label": "Pro",
+      "fable_billing": "usage_credits"
+    },
+    "max_5x": {
+      "price_monthly": 100,
+      "label": "Max 5x",
+      "fable_billing": "included_to_50pct_weekly",
+      "price_monthly_verified": true
+    },
+    "max_20x": {
+      "price_monthly": 200,
+      "label": "Max 20x",
+      "fable_billing": "included_to_50pct_weekly",
+      "price_monthly_verified": false,
+      "price_monthly_note": "NOT VERIFIED. Carried forward from earlier sheets and NOT confirmed against an Anthropic primary on 2026-09-07 — the third release in a row this figure has been carried without same-day confirmation. claude.com/pricing shows the Max card as 'From $100 Per month' with 'Choose 5x or 20x more usage than Pro' and does not publish a separate 20x price; the Max Help Center article names the 5x and 20x tiers but carries no prices at all. $100 for max_5x IS on the page and is verified. Do not print the $200 figure in user-facing copy without re-reading a primary that actually states it."
+    },
+    "team_standard": {
+      "price_monthly": 25,
+      "price_monthly_annual_billing": 20,
+      "label": "Team Standard",
+      "per_seat": true,
+      "fable_billing": "usage_credits"
+    },
+    "team_premium": {
+      "price_monthly": 125,
+      "price_monthly_annual_billing": 100,
+      "label": "Team Premium",
+      "per_seat": true,
+      "fable_billing": "included_to_50pct_weekly"
+    },
+    "note": "claude.com/pricing read 2026-08-24. Where two figures are given the lower one is the effective monthly rate when billed annually. The $25 and $125 figures are the monthly-billed variants of Team Standard and Team Premium, NOT a price increase. Enterprise is usage-based ($20 per seat plus usage at API rates) and is deliberately absent because no CLI surface consumes it. agent_sdk_credits_monthly has been REMOVED from every plan — see the agent_sdk_pool block. RE-READ 2026-09-07: Pro ($17 annual / $20 monthly), Team Standard ($20 annual / $25 monthly), Team Premium ($100 annual / $125 monthly) and Enterprise ($20/seat + usage at API rates) all confirmed verbatim on claude.com/pricing. Max 5x's $100 is confirmed ('From $100 Per month'); max_20x's $200 is NOT — see that entry's price_monthly_note."
+  },
+  "pools": {
+    "interactive": {
+      "label": "Interactive (subscription limits)",
+      "billing_basis": "subscription_limits"
+    },
+    "agent_sdk": {
+      "label": "Agent SDK (draws subscription limits — split paused)",
+      "billing_basis": "subscription_limits"
+    }
+  },
+  "agent_sdk_pool": {
+    "status": "paused",
+    "announced_activation_date": "2026-06-15",
+    "activated": false,
+    "primary": "https://support.claude.com/en/articles/15036540-use-the-claude-agent-sdk-with-your-claude-plan",
+    "note": "The June-15 Agent-SDK credit-pool split was announced and then PAUSED, and the pause still held when this sheet was written. Agent SDK usage, `claude -p`, and third-party integrations draw the subscription's ordinary usage limits today — there is no separate credit wallet. The former per-plan agent_sdk_credits_monthly figures are preserved for reference in agent_sdk_pool.paused_credit_table_for_reference and MUST NOT be presented as being in effect. If this reactivates without notice, that is a critical accuracy event for us.",
+    "paused_credit_table_for_reference": {
+      "pro": 20,
+      "max_5x": 100,
+      "max_20x": 200
+    }
+  },
+  "fable": {
+    "model": "plan_conditional",
+    "permanent_since": "2026-07-20",
+    "historical_boundary_date": "2026-07-19",
+    "included_plans": [
+      "max_5x",
+      "max_20x",
+      "team_premium",
+      "enterprise_premium"
+    ],
+    "included_share_of_weekly_limit": 0.5,
+    "credits_plans": [
+      "pro",
+      "team_standard"
+    ],
+    "enterprise_standard": "usage credits only if the organisation enables it; never promo-eligible",
+    "promo_credit_expiry": "2026-09-17",
+    "promo_credit_expiry_note": "11:59 PM PT, regardless of when the credit was claimed. VERIFIED against an Anthropic primary on 2026-09-07: Help Center 15862783 states verbatim 'These new promotional credits expire on September 17, 2026 at 11:59 PM PT, 60 days after the promotion begins' and 'you can claim your promotional credits through August 2, 2026 at 11:59 PM PT'. Promo credits are spent before other credits, including auto-reload, and that happens silently — the article's wording is 'Your free promotional credits are spent first, then your other credits, including auto-reload if you have it turned on.' SCOPE, and this is the part that is easy to get wrong: these credits are FABLE 5 ONLY. Help Center 15424964: the one-time credit 'applied to the Fable 5 change only, and there's no equivalent credit for Fable 5.1.' Eligibility was Pro and Team standard seats held as of 2026-07-19. A Fable 5.1 user has no promotional credits and must never be shown a countdown to this date as though they did. This is the ONE part of the `fable` block that is model-scoped rather than family-scoped.",
+    "note": "FAMILY-SCOPED, not model-scoped (reworded 2026-09-07). Fable became a PERMANENT, PLAN-CONDITIONAL offering on 2026-07-20 — it is not a date cliff any more. The mechanic attaches to Fable as a family, not to any one Fable model: claude.com/pricing states the plan rows generically as 'Fable', so Claude Fable 5.1 inherits exactly the same mechanic Fable 5 has, and any future Fable inherits it too. On Max, Team Premium and Enterprise Premium, Fable is included up to 50 percent of the weekly usage limit; that is a share OF the weekly limit, not an allowance on top of it, and it is not a credits wallet. On Pro and Team Standard, Fable bills usage credits from the first token. historical_boundary_date is retained only so records from before 2026-07-20 can be interpreted under the old mechanic; it is NOT a future event and must never be rendered as a countdown.",
+    "scope": "family",
+    "models_covered": [
+      "fable-5",
+      "fable-5-1"
+    ],
+    "plan_rows_read_date": "2026-09-07",
+    "promo_credit_expiry_verified": "2026-09-07",
+    "promo_credit_scope": [
+      "fable-5"
+    ],
+    "promo_credit_claiming_closed": "2026-08-02",
+    "historical_boundary_note": "2026-07-19 is when the PREVIOUS mechanic ended — the promotion that let Pro and Team-standard users spend up to 50% of the weekly subscription limit on Fable 5 at no extra cost. Help Center 15424964, read 2026-09-07: 'That promotion ended on July 19, 2026 at 11:59:59 PM PT, and it applied to Fable 5 only. Claude Fable 5.1 was never part of it.' Do not confuse this date with promo_credit_expiry — they are different mechanics that happen to sit two months apart.",
+    "plan_rows_note": "B2, settled 2026-09-07. claude.com/pricing's 'Models and usage' table collapses Team into a SINGLE column reading 'No' for Fable. That is a page simplification, NOT a change in Team Fable access: the same page's plan card still sells two Team seat types (Standard $20/$25, Premium $100/$125), and Help Center 15424964 states the split explicitly — Fable is included on 'Max plans, premium seats on Team plans, and premium seats on legacy seat-based Enterprise plans', while on 'Pro plans, Team standard seats and Enterprise standard seats' it runs on usage credits. included_plans and credits_plans below are therefore CORRECT as encoded and were deliberately left unchanged. The same article states 'Fable 5 and Fable 5.1 work the same way on your plan', which is the primary-sourced basis for this block being family-scoped."
+  },
+  "credits": {
+    "expire": true,
+    "expiry_begins": "2026-09-10",
+    "expiry_window_months": 6,
+    "jurisdiction_scoped": true,
+    "note": "Usage credits DO expire. VERIFIED against an Anthropic primary on 2026-09-07: Help Center 12429409 states verbatim 'In most cases, usage credits do not expire. However, in certain jurisdictions such as Japan, usage credits expire six months after purchase starting September 10, 2026.' A 7-day email warning is sent and expiry dates are visible on the Usage page. The exact jurisdiction set is not published — Japan is given as an example, not as the complete list — so 'credits don't expire' is not a safe sentence anywhere. Separately, pre-purchased usage bundles discount the effective rate by up to 30 percent ($50 to $45, $250 to $200, $1000 to $700), and local data cannot see which bundle a user holds — so every credits-denominated figure we print is at standard list rates and must say so.",
+    "expiry_begins_verified": "2026-09-07"
+  },
+  "units": "USD per million tokens"
+}

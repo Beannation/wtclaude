@@ -1,7 +1,7 @@
 {
   "name": "wtclaude",
-  "version": "0.3.0",
-  "description": "Billing-grade cost tracking for Claude Code \u2014 reads the statusline (the source behind your bill), not the session logs. Free and open source.",
+  "version": "0.3.1",
+  "description": "Billing-grade cost tracking for Claude Code — reads the statusline (the source behind your bill), not the session logs. Free and open source.",
   "license": "MIT",
   "type": "module",
   "bin": {

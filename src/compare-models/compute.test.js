@@ -10,13 +10,15 @@ function turn(model) {
 function findModel(surface, key) { return surface.models.find(m => m.key === key); }
 
 test('3-model re-pricing reconciles to a hand-calc (1M in + 1M out)', () => {
-  // Sonnet 5 = $2/$10, Opus 5 = $5/$25, Fable 5 = $10/$50 (live pricing table,
-  // read 2026-08-24). Opus 5 replaced Opus 4.8 in the comparison set; both are
-  // $5/$25, so the hand-calc is unchanged.
-  const s = repriceSurface([turn('sonnet-5')], { today: '2026-07-15', days: 30 });
-  assert.equal(round(findModel(s, 'sonnet-5').window_usd), 12); // 2 + 10
-  assert.equal(round(findModel(s, 'opus-5').window_usd), 30);   // 5 + 25
-  assert.equal(round(findModel(s, 'fable-5').window_usd), 60);  // 10 + 50
+  // Sonnet 5 = $2/$10, Opus 5.5 = $4/$20, Fable 5.1 = $10/$50 (live pricing
+  // table, read 2026-09-27). Opus 5.5 replaced Opus 5 in the comparison set on
+  // 2026-09-27 — and unlike the Fable 5 -> 5.1 swap, this one moves the no-cache
+  // hand-calc: Opus 5 would have been $30 here, Opus 5.5 is $24.
+  const s = repriceSurface([turn('sonnet-5')], { today: '2026-09-27', days: 30 });
+  assert.equal(round(findModel(s, 'sonnet-5').window_usd), 12);   // 2 + 10
+  assert.equal(round(findModel(s, 'opus-5-5').window_usd), 24);   // 4 + 20
+  assert.equal(round(findModel(s, 'fable-5-1').window_usd), 60);  // 10 + 50
+  assert.equal(findModel(s, 'opus-5'), undefined, 'Opus 5 is no longer in the comparison set');
 });
 
 test('a no-op switch (re-pricing a model you already run) nets ~$0', () => {
@@ -53,7 +55,7 @@ test('per-surface split renders: Code billing-grade, Cowork estimate, Chat exclu
   assert.equal(cmp.surfaces.chat.present, false);
   // Each present surface carries all three models.
   assert.equal(cmp.surfaces.code.models.length, 3);
-  assert.deepEqual(cmp.models.map(m => m.key), ['opus-5', 'sonnet-5', 'fable-5']);
+  assert.deepEqual(cmp.models.map(m => m.key), ['opus-5-5', 'sonnet-5', 'fable-5-1']);
 });
 
 test('the total inherits the estimate (lowest) label and stays present with Code data', () => {
@@ -85,7 +87,16 @@ test('caveats are honest: no first/only, Fable framed as allowance not free, qua
   const blob = CAVEATS.join(' ').toLowerCase();
   assert.ok(!/\bfirst\b|\bonly\b/.test(blob), 'no first/only');
   assert.ok(!/\bfree\b/.test(blob), 'Fable never described as free');
-  assert.ok(blob.includes('50%') && blob.includes('july 19'), 'Fable allowance mechanic stated');
+  // CORRECTED 2026-09-07. This line used to assert the caveat contained
+  // "july 19" — i.e. the test was PINNING a countdown that had been false since
+  // 2026-07-20, so the wrong copy could never be caught by the suite. It now
+  // asserts the plan-conditional mechanic AND that no month-date countdown has
+  // come back.
+  assert.ok(blob.includes('50%'), 'Fable allowance mechanic stated');
+  assert.ok(blob.includes('plan-conditional'), 'Fable framed as plan-conditional, not date-bounded');
+  assert.ok(
+    !/\b(through|until)\s+~?\s*(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/.test(blob),
+    'no date countdown on Fable inclusion — it is plan-conditional, not date-bounded');
   assert.ok(blob.includes('not the same task') , 'tokenizer/recorded-usage caveat present');
   assert.ok(blob.includes('quality'), 'cost-not-quality caveat present');
 });
@@ -104,4 +115,71 @@ test('compare-models excludes partner-platform turns from both sides and counts 
   assert.equal(s.unpriced_turn_count, 1);
   assert.deepEqual(s.unpriced_models, ['vertex_ai/claude-sonnet-5']);
   assert.equal(round(s.baseline_window_usd), 12, 'baseline is the one priceable turn, not two');
+});
+
+// ───────────────────────────────────────────────────────────────────────────
+// B1 (2026-09-07). Tracing a `claude-fable-5-1` turn through shipped 0.3.0
+// showed the honest exclusion was invisible where it mattered: the comparison
+// dropped the turn from both sides AND from the baseline, reported that only in
+// `--json`, and printed a table that silently omitted the user's most expensive
+// turn. The DATA carried it all along — these pin that it keeps doing so, and
+// cli/compare-models.js now renders it.
+// ───────────────────────────────────────────────────────────────────────────
+
+test('B1: an unresolvable model is excluded from the baseline and reported, not hidden', () => {
+  const s = repriceSurface(
+    [turn('opus-5'), turn('claude-fable-9-9')],
+    { today: '2026-09-07', days: 30 });
+  assert.equal(s.turn_count, 1, 'only the priceable turn is compared');
+  assert.equal(s.unpriced_turn_count, 1, 'the exclusion must be counted, never silent');
+  assert.deepEqual(s.unpriced_models, ['claude-fable-9-9'], 'and the model named');
+  // The baseline excludes it too — that is the honest choice (a $0 turn would
+  // remove real spend from the baseline and make every switch look cheaper),
+  // but it is exactly why the count has to be rendered to the user.
+  assert.equal(round(s.baseline_window_usd), 30, 'baseline is the one priceable turn');
+});
+
+test('B1: a Fable 5.1 turn is now fully priceable — the 0.3.0 exclusion is closed', () => {
+  const s = repriceSurface([turn('claude-fable-5-1')], { today: '2026-09-07', days: 30 });
+  assert.equal(s.unpriced_turn_count, 0, 'fable-5-1 must no longer be excluded');
+  assert.equal(s.turn_count, 1);
+  assert.equal(round(findModel(s, 'fable-5-1').window_usd), 60);
+  // And through the live payload shape the collector actually records.
+  const live = repriceSurface([turn('claude-fable-5-1[1m]')], { today: '2026-09-07', days: 30 });
+  assert.equal(live.unpriced_turn_count, 0);
+});
+
+test('B1: the comparison surfaces Fable 5.1 cheaper than Fable 5 on cache-heavy usage', () => {
+  // Same turn, 8M cache reads and little else — the shape of an agentic session.
+  // This is the arithmetic we are allowed to state: a cache read costs a quarter
+  // on 5.1 of what it costs on 5. It is NOT a claim about anyone's savings.
+  const cacheHeavy = {
+    model: 'opus-5', input_tokens: 0, output_tokens: 0,
+    cache_read_tokens: 8_000_000, cache_write_tokens: 0,
+  };
+  const s = repriceSurface([cacheHeavy], { today: '2026-09-07', days: 30 });
+  const f51 = findModel(s, 'fable-5-1');
+  assert.ok(f51, 'fable-5-1 is in the comparison set');
+  // 8M cache reads x $10/MTok x 0.025 = $2.00 on Fable 5.1.
+  assert.equal(round(f51.window_usd), 2);
+});
+
+test('a zero-token turn on an unknown model is not reported as an exclusion (release review, 2026-09-27)', () => {
+  const zero = { model: 'claude-opus-9', input_tokens: 0, output_tokens: 0, cache_read_tokens: 0, cache_write_tokens: 0 };
+  const s = repriceSurface([turn('claude-opus-5-5'), zero], { today: '2026-09-27', days: 30 });
+  assert.equal(s.unpriced_turn_count, 0, 'nothing to price is not an exclusion');
+  assert.equal(s.turn_count, 1);
+  // A real unknown turn still is.
+  const real = repriceSurface([turn('claude-opus-5-5'), turn('claude-opus-9')], { today: '2026-09-27', days: 30 });
+  assert.equal(real.unpriced_turn_count, 1);
+});
+
+test('the monthly delta is on the same scale as the monthly figures it sits between', () => {
+  // delta_vs_baseline_usd is WINDOW dollars (kept for --json compatibility);
+  // the tables render monthly_delta_vs_baseline_usd beside /mo figures.
+  const s = repriceSurface([turn('claude-opus-5')], { today: '2026-09-27', days: 10 });
+  for (const m of s.models) {
+    assert.ok(Math.abs(m.monthly_delta_vs_baseline_usd - (m.monthly_usd - s.baseline_monthly_usd)) < 1e-6, m.key);
+    assert.ok(Math.abs(m.monthly_delta_vs_baseline_usd - m.delta_vs_baseline_usd * 3) < 1e-6, `${m.key}: 30/10 scaling`);
+  }
 });

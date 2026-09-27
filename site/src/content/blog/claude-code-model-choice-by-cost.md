@@ -1,6 +1,6 @@
 ---
 title: "Sonnet 5, Opus 5, or Fable 5? Choosing Your Claude Code Model by Cost"
-description: "Sonnet 5 is the Claude Code default, Opus 5 is the default opus, and Fable 5 is now plan-conditional — so your model choice just got harder. Here's the honest, cost-first way to decide, priced from your own real usage."
+description: "Opus 5.5 is now the Claude Code default and the default opus, and Fable 5 is now plan-conditional — so your model choice just got harder. Here's the honest, cost-first way to decide, priced from your own real usage."
 pubDate: 2026-07-02
 author: "Peter Bean"
 readingTime: "8 min read"
@@ -10,10 +10,12 @@ faq:
   - q: "How much does Claude Fable 5 cost?"
     a: "Fable 5 is permanent and plan-conditional — there is no cliff and no countdown. On Max, Team Premium and Enterprise Premium it's included up to 50% of your weekly usage limit: a share OF that weekly limit, not an allowance on top of it and not a credits wallet. On Pro and Team Standard it bills as usage credits from the first token, at $10/$50 per million (cache-read $1) — at standard API list rates; bundle discounts up to 30% and promos not reflected. Enterprise Standard is credits only, and only if the organisation enables Fable. Any 'what Fable will cost me' figure is a labeled estimate — it depends on your plan and your usage."
   - q: "How do I compare Claude models by cost?"
-    a: "WTClaude's compare-models re-prices your own recorded, billing-grade usage across Opus 5, Sonnet 5, and Fable 5 and shows what the month would cost on each — split by surface (Code billing-grade, Cowork a labeled estimate, Chat excluded). Every projected number is a labeled estimate, and it compares cost, not model quality."
+    a: "WTClaude's compare-models re-prices your own recorded, billing-grade usage across Opus 5.5, Sonnet 5, and Fable 5.1 and shows what the month would cost on each — split by surface (Code billing-grade, Cowork a labeled estimate, Chat excluded). Every projected number is a labeled estimate, and it compares cost, not model quality."
   - q: "Does WTClaude track Sonnet 5 and Fable 5?"
     a: "It prices both from the model's own reported tokens — Sonnet 5 at $2/$10 (permanently; the increase to $3/$15 that had been scheduled for September 1, 2026 was cancelled) and Fable 5 at $10/$50, at standard API list rates — with billing-grade cost for terminal Code (Anthropic-computed). Desktop-app and Chat usage are labeled estimates."
 ---
+
+> **Update — September 27, 2026: Claude Code's default model is now Opus 5.5, and its default Fable is Fable 5.1.** Anthropic released **Claude Opus 5.5** (`claude-opus-5-5`) on September 22, 2026, and since Claude Code v2.1.280 it has been the **default model on every paid plan** — Pro and Team Standard moved from Sonnet to Opus that day — so the July text below, written when Sonnet 5 held that spot, no longer describes Claude Code's default. Opus 5.5 is **$4 / $20 per million** input/output tokens ($8 / $40 in fast mode), with cache reads at **$0.20 per million** (0.05× base input); Opus 5, still Active, is $5 / $25 ($10 / $50 in fast mode) with cache reads at $0.50 — so identical tokens cost 20% less in and out on Opus 5.5, and 60% less on cache reads. Sonnet 5 is unchanged at $2 / $10, and its $0.20 cache read now matches Opus 5.5's. Anthropic also released **Claude Fable 5.1** (`claude-fable-5-1`) on September 1, 2026, and it has been Claude Code's **default** Fable model since v2.1.257. Its base rates match Fable 5's **$10 / $50 per million**; the one price that differs is cached input — **$0.25 per million on Fable 5.1** against **$1.00 on Fable 5**. Anthropic's Help Center states that Fable 5 and Fable 5.1 work the same way on your plan, and **Claude Fable 5 has not been retired**: it remains Active on the Claude API with a retirement date no sooner than June 9, 2027. WTClaude's `compare-models` now compares Opus 5.5, Sonnet 5 and Fable 5.1; the comparison below still holds for the models it names.
 
 > **Update — August 24, 2026:** Three things below have moved. **Sonnet 5 stays at $2/$10 per million** — Anthropic cancelled the step-up to $3/$15 that had been scheduled for September 1, 2026. **Opus 5** launched July 24 at $5/$25 ($10/$50 in fast mode) and has been Claude Code's default `opus` since v2.1.219, so it's the Opus in this comparison now. And **Fable 5's 50% inclusion is permanent and plan-conditional** as of July 20 — there is no cliff and no countdown. The body has been corrected to match; the July history stays as history.
 
@@ -80,7 +82,7 @@ Per token, yes — $2/$10 undercuts Opus 5's $5/$25, and $2/$10 is now the stand
 Included up to 50% of your weekly limit on Max, Team Premium and Enterprise Premium — a share of that limit, not an allowance on top of it. On Pro and Team Standard it's usage credits from the first token at $10/$50 per million (cache-read $1), at standard API list rates; bundle discounts up to 30% and promos not reflected. Enterprise Standard is credits only if the org enables Fable. There's no cliff. Any figure is a labeled estimate that depends on your plan and your usage.
 
 **How do I compare Claude models by cost?**
-`wtclaude compare-models` re-prices your recorded usage across Opus 5, Sonnet 5, and Fable 5 — split by surface (Code billing-grade, Cowork a labeled estimate, Chat excluded), every projection labeled. It compares cost, not quality.
+`wtclaude compare-models` re-prices your recorded usage across Opus 5.5, Sonnet 5, and Fable 5.1 — split by surface (Code billing-grade, Cowork a labeled estimate, Chat excluded), every projection labeled. It compares cost, not quality.
 
 **Does the Sonnet 5 tokenizer make my cost tracking wrong?**
 No. WTClaude reads the model's own reported token counts (and Anthropic's computed cost in terminal Code), so more tokens just register as more tokens — no drift. The tokenizer only matters as a caveat on cross-model *projections*.

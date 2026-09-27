@@ -5,20 +5,27 @@ import { totals } from '../lib/derive';
 import HonestyBadge from '../components/HonestyBadge';
 import EmptyState from '../components/EmptyState';
 import { LinkPrompt } from './Overview';
+import { repriceSurface, codeTurnsFromSessions, CAVEATS } from '../lib/compareModels';
+import { ExclusionNotice } from './CompareModels';
+import InlineCode from '../components/InlineCode';
 
-// Standard-rate pricing (USD/M tokens). Opus 4.8/4.7 bill 1M context at standard
-// $5/$25 (no long-context premium), per the live-capture finding.
-const PRICING = {
-  'claude-haiku-4-5': { input: 1.0, output: 5.0 },
-  'claude-sonnet-4-6': { input: 3.0, output: 15.0 },
-  'claude-opus-4-8': { input: 5.0, output: 25.0 },
-};
-
+// REPLACED 2026-09-27. This page kept its OWN price table — Haiku 4.5, Sonnet
+// 4.6 and Opus 4.8, typed in during Phase 0 — outside every parity guard. By
+// the time Opus 5.5 became Claude Code's default model (v2.1.280) it offered a
+// "use a single model for everything" answer that omitted the model most
+// sessions now run on, ignored cache writes, used one global 0.1x cache-read
+// multiplier, and compared a token×rate hypothetical against the billing-grade
+// anchor (the QA-0610-03 bias the CLI fixed in June). The model comparison now
+// runs on the shared, parity-tested mirror (lib/compareModels.js): the same
+// three models as `wtclaude compare-models`, per-model cache pricing, a
+// same-method baseline, and unpriceable turns excluded and named.
 const PLANS = [
   { key: 'pro', label: 'Pro', price: 20 },
   { key: 'max5', label: 'Max 5x', price: 100 },
   { key: 'max20', label: 'Max 20x', price: 200 },
 ];
+
+const FABLE_CAVEAT = CAVEATS.find((c) => c.startsWith('Fable’s row'));
 
 export default function WhatIf() {
   const { data, loading, error, linked } = useDashboard();
@@ -31,16 +38,11 @@ export default function WhatIf() {
 
   const daily = data.daily_summaries;
   const t = totals(daily);
-  const totalInput = daily.reduce((s, d) => s + Number(d.total_input_tokens || 0), 0);
-  const totalOutput = daily.reduce((s, d) => s + Number(d.total_output_tokens || 0), 0);
-  const totalCacheRead = daily.reduce((s, d) => s + Number(d.total_cache_read || 0), 0);
   const days = daily.length || 1;
   const monthlyCost = (t.cost / days) * 30;
-
-  const modelCost = (model) => {
-    const p = PRICING[model];
-    return (totalInput / 1e6) * p.input + (totalOutput / 1e6) * p.output + (totalCacheRead / 1e6) * p.input * 0.1;
-  };
+  // Same tokens, same token×rate method on both sides: the baseline is your
+  // turns priced at the models you actually ran, so a no-op switch nets ~$0.
+  const models = repriceSurface(codeTurnsFromSessions(data.sessions), { days: daily.length || 30 });
 
   return (
     <div className="space-y-6">
@@ -72,22 +74,41 @@ export default function WhatIf() {
       <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
         <h3 className="text-sm text-[var(--muted)] uppercase tracking-wide mb-4">Model comparison</h3>
         <p className="text-[var(--muted)] mb-4">What if you used a single model for everything?</p>
-        <div className="space-y-3">
-          {Object.keys(PRICING).map((model) => {
-            const cost = modelCost(model);
-            const diff = cost - t.cost;
-            const pct = t.cost > 0 ? ((diff / t.cost) * 100).toFixed(0) : 0;
-            return (
-              <div key={model} className="flex items-center justify-between bg-[var(--surface)] rounded-lg p-4">
-                <span className="text-[var(--text-strong)] font-semibold">{model}</span>
-                <div className="text-right">
-                  <span className="text-[var(--text)] font-mono">{fc(cost)}</span>
-                  <span className={`ml-3 text-sm font-mono ${diff > 0 ? 'text-[var(--rose)]' : 'text-[var(--accent)]'}`}>{diff > 0 ? '+' : ''}{pct}%</span>
+        {models.present ? (
+          <div className="space-y-3">
+            {models.models.map((m) => {
+              const diff = m.monthly_delta_vs_baseline_usd;
+              return (
+                <div key={m.key} className="flex items-center justify-between bg-[var(--surface)] rounded-lg p-4">
+                  <span className="text-[var(--text-strong)] font-semibold">{m.label}</span>
+                  <div className="text-right">
+                    <span className="text-[var(--text)] font-mono">{fc(m.monthly_usd)}/mo</span>
+                    <span className={`ml-3 text-sm font-mono ${diff > 0 ? 'text-[var(--rose)]' : 'text-[var(--accent)]'}`}>
+                      {diff > 0 ? '+' : ''}
+                      {m.delta_pct}%
+                    </span>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+            <p className="text-xs text-[var(--faint)]">
+              % is against your own model mix, priced the same way — about{' '}
+              <span className="font-mono">{fc(models.baseline_monthly_usd)}/mo</span>.
+            </p>
+            {/* The Fable row is a list-rate re-price, and Fable is plan-conditional:
+                the same caveat Compare Models and the CLI carry (added 2026-09-27,
+                when this card started showing a Fable row). Found by prefix so it
+                survives any reordering of CAVEATS. */}
+            {FABLE_CAVEAT && (
+              <p className="text-xs text-[var(--faint)]">
+                <InlineCode text={FABLE_CAVEAT} />
+              </p>
+            )}
+          </div>
+        ) : models.unpriced_turn_count > 0 ? null : (
+          <p className="text-[var(--muted)] text-sm">No recorded terminal usage in this window yet.</p>
+        )}
+        <ExclusionNotice surface={models} />
       </div>
 
       <p className="text-xs text-[var(--faint)]">

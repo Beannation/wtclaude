@@ -45,7 +45,9 @@ export default function ContextWaste() {
       </div>
       <p className="text-[var(--muted)] max-w-3xl">
         Always-loaded skills, MCP tools and memory files that you never invoke still get re-read on
-        every turn after the first, billed at the cache-read rate (10% of the input rate). This tile
+        every turn after the first, billed at your model's cache-read rate — a fraction of its input
+        rate (<code className="font-mono text-[var(--text)]">wtclaude waste</code> shows the rate for the model
+        you actually ran). This tile
         surfaces what that dead weight costs — and flags each item for{' '}
         <span className="text-[var(--text-strong)]">review</span>, never removal.
       </p>
@@ -75,15 +77,36 @@ export default function ContextWaste() {
                   <p className="text-xs text-[var(--muted)] uppercase tracking-wide">Re-reading / mo</p>
                   <HonestyBadge tier="estimate" />
                 </div>
-                <p className="text-2xl font-bold font-mono text-[var(--amber)]">{fc(waste.monthly_usd)}</p>
+                <p className="text-2xl font-bold font-mono text-[var(--amber)]">
+                  {waste.monthly_usd === null ? '—' : fc(waste.monthly_usd)}
+                </p>
               </div>
             </div>
-            <p className="text-xs text-[var(--faint)] mt-4">
-              {waste.loaded_count} always-loaded items, {waste.used_count} used — about{' '}
-              <span className="font-mono text-[var(--muted)]">{fc(waste.monthly_usd)}/mo</span> re-reading the rest at
-              cache-read rates ({waste.turns} turns × {waste.cache_read_multiplier * 100}% of the ${waste.input_rate}/MTok
-              input rate). Token size is an estimate; turns, rate and multiplier are billing-grade.
-            </p>
+            {!waste.priced ? (
+              // FIXED 2026-09-27: a model this table does not know used to be
+              // priced at Sonnet 5's $2 default and the rate labelled
+              // billing-grade. A guessed rate never produces a figure shown as ours.
+              // Branch on `priced`, not on a null figure: with nothing to re-read
+              // the figure is a true $0 even when no rate can be named.
+              <p className="text-xs text-[var(--faint)] mt-4">
+                {waste.loaded_count} always-loaded items, {waste.used_count} used.{' '}
+                {waste.monthly_usd === null ? 'No dollar figure is shown: ' : 'Nothing is being re-read, so the figure is $0 — but no rate is named: '}
+                {waste.model_id ? (
+                  <span className="font-mono text-[var(--muted)]">{waste.model_id}</span>
+                ) : (
+                  'your model'
+                )}{' '}
+                has no rate in this dashboard's table that we can stand behind. Token sizes are still shown.
+              </p>
+            ) : (
+              <p className="text-xs text-[var(--faint)] mt-4">
+                {waste.loaded_count} always-loaded items, {waste.used_count} used — about{' '}
+                <span className="font-mono text-[var(--muted)]">{fc(waste.monthly_usd)}/mo</span> re-reading the rest at
+                cache-read rates ({waste.turns} turns × {+(waste.cache_read_multiplier * 100).toFixed(1)}% of the{' '}
+                {`$${waste.input_rate}/MTok`} input rate). Token size is an estimate; turns, rate and multiplier are
+                billing-grade.
+              </p>
+            )}
           </div>
 
           <Mechanisms />
@@ -144,7 +167,7 @@ export default function ContextWaste() {
               'for the full reveal: which items are dead weight, how many tokens each costs, and the monthly re-read total.'
             }
             command="wtclaude waste"
-            note="Token size is an estimate; turns, input rate and the 10% cache-read multiplier are billing-grade. Verdicts are REVIEW — this tool never removes anything for you."
+            note="Token size is an estimate; turns, input rate and your model's own cache-read multiplier are billing-grade. Verdicts are REVIEW — this tool never removes anything for you."
           />
         </>
       )}

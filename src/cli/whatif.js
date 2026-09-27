@@ -1,6 +1,6 @@
 import { getSessionsForDateRange, summarizeSessions } from '../utils/sessions.js';
-import { getLatestPricing, getModelPricing } from '../utils/pricing.js';
-import { priceTurn, formatCost } from '../utils/cost.js';
+import { getLatestPricing, getModelEntry } from '../utils/pricing.js';
+import { priceTurn, formatCost, hasTokens } from '../utils/cost.js';
 import { localDate } from '../utils/time.js';
 
 export function registerWhatIf(program) {
@@ -68,8 +68,20 @@ function showModelComparison(sessions, targetModel, days) {
   const families = { haiku: 'haiku', sonnet: 'sonnet', opus: 'opus', fable: 'fable' };
   const fam = families[String(targetModel).toLowerCase()];
   const resolved = fam ? currentModelKey(fam, targetModel) : targetModel;
-  if (!getModelPricing(resolved)) {
-    console.log(`\n  Unknown model "${targetModel}". Try: haiku, sonnet, opus.\n`);
+  // FIXED 2026-09-27 (BUILD-017): the TARGET must be a model we can price at
+  // first-party rates, not just one that resolves. An unknown opus id used to
+  // resolve by the family fallback, so `--model opus-6` printed "If all opus-6:"
+  // at Opus 5.5's rates under the new name — exactly how 0.3.0 would have
+  // answered `--model opus-5-5`, at Opus 5's rates. A partner-platform id was
+  // priced at first-party rates with no flag. Refuse both, and say why.
+  const target = getModelEntry(resolved);
+  if (!target || !target.priceable) {
+    const why = !target
+      ? 'is not a model we recognise'
+      : target.provider
+        ? `is served by ${target.provider}, which publishes its own rates, so a first-party figure would not be yours`
+        : 'is not in this version\'s rate sheet, so any figure would be a guess (if it is new: npm i -g wtclaude@latest)';
+    console.log(`\n  "${targetModel}" ${why} — no figure shown. Try: haiku, sonnet, opus, fable.\n`);
     return;
   }
 
@@ -90,7 +102,10 @@ function showModelComparison(sessions, targetModel, days) {
   for (const t of allTurns) {
     const actual = priceTurn(t.model, 'standard', t);
     if (!actual.priceable) {
-      const label = `${t.model || 'unknown'} (${actual.reason})`;
+      // Same rule as compare-models (2026-09-27): a zero-token turn is $0 on any
+      // rate, so it is not an exclusion.
+      if (!hasTokens(t)) continue;
+      const label = `${t.model || 'unknown'} (${plainReason(actual.reason)})`;
       unpriced.set(label, (unpriced.get(label) || 0) + 1);
       continue;
     }
@@ -104,6 +119,28 @@ function showModelComparison(sessions, targetModel, days) {
 
   console.log(`\n  What-If: all ${resolved} (${days} day${days > 1 ? 's' : ''})  (estimate)`);
   console.log('  ==========================================');
+
+  // Everything excluded: say so, instead of printing $0 against $0 — which is
+  // the "no data" shape compare-models stopped using in 0.3.1.
+  const excludedTotal = [...unpriced.values()].reduce((a, b) => a + b, 0);
+  if (priced === 0 && excludedTotal === 0) {
+    // Only zero-token turns: nothing to price on either side (same as
+    // compare-models' "no usage" case) — never a $0-vs-$0 comparison.
+    console.log('  Nothing to compare in this window — no turns with tokens.\n');
+    return;
+  }
+  if (priced === 0 && excludedTotal > 0) {
+    console.log(excludedTotal === 1
+      ? '  The one turn in this window was excluded, so there is nothing to compare'
+      : `  All ${excludedTotal} turns in this window were excluded, so there is nothing to compare`);
+    console.log('  yet — this is not the same as having no usage:');
+    for (const [label, n] of unpriced) console.log(`    ${String(n).padStart(5)} x ${label}`);
+    console.log('  We do not have first-party rates we can stand behind for these. Your');
+    console.log('  headline cost is unaffected — it is the cost figure Claude Code itself');
+    console.log('  reports, and your headline totals still count it.\n');
+    return;
+  }
+
   console.log('  Estimated on the same tokens (token x rate, not billing-grade):');
   console.log(`    Current models:  ${formatCost(baseline)}`);
   console.log(`    If all ${resolved}: ${formatCost(hypothetical)}`);
@@ -116,7 +153,18 @@ function showModelComparison(sessions, targetModel, days) {
     console.log(`  (${priced} priced). We do not have first-party rates we can stand behind`);
     console.log('  for these, and counting them as $0 would quietly flatter the comparison:');
     for (const [label, n] of unpriced) console.log(`    ${String(n).padStart(5)} x ${label}`);
-    console.log('  Their real cost is unaffected — it comes from the billing-grade anchor.');
+    console.log('  Your headline cost is unaffected — it is the cost figure Claude Code');
+    console.log('  itself reports, and your headline totals still count it.');
   }
   console.log('');
+}
+
+// Plain words for priceTurn()'s reason codes (user-facing; never name the
+// fallback's guess as though it were the model).
+function plainReason(reason) {
+  if (!reason) return 'not priced';
+  if (reason.startsWith('family-fallback:')) return "not in this version's rate sheet";
+  if (reason.startsWith('partner-platform:')) return `served by ${reason.slice('partner-platform:'.length)}, which sets its own rates`;
+  if (reason === 'unresolved-model') return 'not a model we recognise';
+  return 'not priced';
 }

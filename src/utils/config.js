@@ -61,9 +61,12 @@ export const AGENT_SDK_POOL_PAUSED_NOTE =
   + 'and third-party usage still draw your subscription\'s ordinary usage limits, not a '
   + 'separate credit pool.';
 
-// ── Fable 5: PLAN-CONDITIONAL, not a date cliff ──────────────────────────────
+// ── Fable: PLAN-CONDITIONAL, not a date cliff ───────────────────────────────
 //
-// REWRITTEN 2026-08-24. Fable 5 became a permanent, plan-conditional offering on
+// FAMILY-SCOPED 2026-09-07: the plan mechanic below attaches to Fable as a
+// family, not to any one Fable model, so Fable 5.1 inherits it unchanged.
+//
+// REWRITTEN 2026-08-24. Fable became a permanent, plan-conditional offering on
 // 2026-07-20 (Help Center: "Claude Fable 5 on your plan"). Everything below used
 // to be built on a moving "Fable cliff" date — a date after which all Fable use
 // billed usage credits. That model is simply the wrong SHAPE now:
@@ -78,7 +81,8 @@ export const AGENT_SDK_POOL_PAUSED_NOTE =
 // 2026-07-20 were produced under the previous mechanic and must be read that way.
 // It is NOT a future event and must never be rendered as a countdown.
 //
-// Fable 5 in Claude Code requires CC 2.1.170 or later.
+// Fable in Claude Code requires CC 2.1.170 or later; Fable 5.1 specifically has
+// been the default Fable model since CC 2.1.257 (2026-09-01).
 
 // Neutral availability gate. Replaces the June-2026 export-control suspension
 // switch, whose text described a suspension that ended when Anthropic redeployed
@@ -94,7 +98,7 @@ export function isFableAvailable() {
 export function getFableUnavailableNote() {
   const c = loadConfig();
   return c.fable_unavailable_note
-    || 'Claude Fable 5 is marked unavailable in your local config, so the forecast is paused.';
+    || 'Claude Fable is marked unavailable in your local config, so the forecast is paused.';
 }
 
 // The boundary between the old date-based mechanic and the current
@@ -125,19 +129,54 @@ export function getFableBilling(planKey = getPlanKey()) {
 }
 
 // Fable promo-credit facts, straight from the rate sheet so no surface restates
-// them from memory. Claiming closed 2026-08-02; the credits expire 2026-09-17 at
-// 11:59 PM PT regardless of when they were claimed, and they are spent before
-// other credits — including auto-reload — silently.
+// them from memory. Claiming closed 2026-08-02; the credits EXPIRED 2026-09-17 at
+// 11:59 PM PT regardless of when they were claimed. While live they were spent
+// before other credits — including auto-reload — silently.
 //
 // NOT stated here and never to be stated: that credits were consumed or refunded
 // during the Fable mis-gating episode. That has never had an Anthropic-primary
 // source; it is a third-party report only.
+// Fable promotional credits — the ONE model-scoped fact inside the otherwise
+// family-scoped `fable` block.
+//
+// SCOPED 2026-09-07. These credits are FABLE 5 ONLY. Help Center 15424964, read
+// that day: the one-time credit "applied to the Fable 5 change only, and there's
+// no equivalent credit for Fable 5.1", and the earlier 50%-inclusion promotion
+// "applied to Fable 5 only. Claude Fable 5.1 was never part of it." Eligibility
+// was Pro and Team standard seats held as of 2026-07-19.
+//
+// So a user whose Fable usage is entirely Fable 5.1 has no promotional credits
+// and must not be shown a countdown to their expiry as though they did.
+// `applies_to` lets the caller decide; `scope` carries the model list.
 export function getFablePromoCredits() {
   const f = getLatestPricing().fable || {};
+  const scope = Array.isArray(f.promo_credit_scope) ? f.promo_credit_scope : ['fable-5'];
+  // The expiry INSTANT, not just the date: 11:59 PM Pacific on 2026-09-17 is
+  // already 2026-09-18 in UTC, so a date-only comparison would call the credits
+  // expired for most of the world while they were still live in the US.
+  const expiresAt = f.promo_credit_expires_at || '2026-09-17T23:59:00-07:00';
   return {
     expiry_date: f.promo_credit_expiry || '2026-09-17',
+    expires_at: expiresAt,
     expiry_note: f.promo_credit_expiry_note || null,
-    claiming_closed: '2026-08-02',
+    claiming_closed: f.promo_credit_claiming_closed || '2026-08-02',
+    scope,
+    // 'active' | 'expired', against an injectable clock so both sides of the
+    // instant can be pinned by test. A held release rots: 0.3.1 sat unshipped
+    // across this date, and the CLI kept printing "Credits expire ..." in the
+    // present tense after it had passed.
+    status(now = new Date()) {
+      const t = now instanceof Date ? now.getTime() : Date.parse(now);
+      return t >= Date.parse(expiresAt) ? 'expired' : 'active';
+    },
+    // True when at least one model in the window could carry these credits.
+    // With no models supplied we return true: a user with no Fable turns at all
+    // may still hold claimed credits, and hiding the expiry from them would be
+    // the more harmful error of the two.
+    appliesTo(modelKeys) {
+      if (!Array.isArray(modelKeys) || modelKeys.length === 0) return true;
+      return modelKeys.some(k => scope.includes(k));
+    },
   };
 }
 

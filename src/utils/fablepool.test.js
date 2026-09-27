@@ -104,3 +104,86 @@ test('A2: the old date-based mechanic still reads correctly for historical recor
   assert.equal(fableTurnBilling({ ts: '2026-07-19T23:00:00Z' }, 'pro'), 'included_historical');
   assert.equal(fableTurnBilling({ ts: '2026-07-19T23:00:00Z' }, 'max_20x'), 'included_historical');
 });
+
+// ───────────────────────────────────────────────────────────────────────────
+// A5 (2026-09-07) — Fable 5.1 in the pool. `isFableTurn` is
+// `key.startsWith('fable')`, so 5.1 SHOULD already count. The kickoff's own
+// instruction was to verify that with a test rather than trust the read, and
+// to check that a 5.1 turn attributes exactly the way a Fable 5 turn does —
+// the plan mechanic is family-scoped, so it must.
+// ───────────────────────────────────────────────────────────────────────────
+
+test('A5: a Fable 5.1 turn counts toward the Fable pool, in every live id shape', () => {
+  const shapes = [
+    'claude-fable-5-1',
+    'claude-fable-5-1[1m]',
+    'claude-fable-5-1-20260901',
+    'vertex_ai/claude-fable-5-1',
+    'bedrock/anthropic.claude-fable-5-1',
+    'claude-mythos-5-1',
+  ];
+  for (const model of shapes) {
+    assert.equal(isFableTurn({ model }), model.includes('fable'), `isFableTurn("${model}")`);
+  }
+  // And the negative cases, so the family test is not simply "always true".
+  for (const model of ['claude-opus-5', 'claude-sonnet-5', 'claude-haiku-4-5', null, undefined, '']) {
+    assert.equal(isFableTurn({ model }), false, `isFableTurn("${model}") must be false`);
+  }
+});
+
+test('A5: a Fable 5.1 turn attributes identically to a Fable 5 turn on every plan', () => {
+  // The plan mechanic is family-scoped (claude.com/pricing states the plan rows
+  // generically as "Fable"), so the ONLY thing that may differ between a 5 and a
+  // 5.1 turn is the price — never the billing attribution.
+  const ts = '2026-09-05T10:00:00.000Z';
+  for (const plan of ['max_5x', 'max_20x', 'team_premium', 'pro', 'team_standard', 'enterprise_standard', null]) {
+    const five = fableTurnBilling({ model: 'claude-fable-5', ts }, plan);
+    const fiveOne = fableTurnBilling({ model: 'claude-fable-5-1', ts }, plan);
+    assert.equal(fiveOne, five, `plan ${plan}: fable-5-1 attributed as "${fiveOne}", fable-5 as "${five}"`);
+  }
+});
+
+test('A5: fableAttribution and the run-rate both pick up Fable 5.1 turns', () => {
+  const turns = [
+    { model: 'claude-fable-5-1', ts: '2026-09-05T10:00:00.000Z', cost_usd: 2 },
+    { model: 'claude-fable-5',   ts: '2026-09-05T11:00:00.000Z', cost_usd: 3 },
+    { model: 'claude-opus-5',    ts: '2026-09-05T12:00:00.000Z', cost_usd: 99 },
+  ];
+  const rr = fableDailyRunRate(turns);
+  assert.equal(rr.fableTurns, 2, 'both Fable turns counted, the Opus turn excluded');
+  assert.equal(rr.sum, 5, 'Opus spend must not leak into the Fable pool');
+  // The window's model breakdown, so no surface has to hard-code a rate.
+  assert.deepEqual(rr.models, { 'fable-5-1': 1, 'fable-5': 1 });
+
+  const attr = fableAttribution(turns, 'max_5x');
+  assert.equal(attr.fableTurns, 2);
+  assert.equal(attr.byBilling.included_weekly.turns, 2,
+    'on Max, BOTH Fable models are included — the mechanic is family-scoped');
+  assert.equal(attr.byBilling.included_weekly.usd, 5);
+});
+
+test('A5: an unrecognised Fable id still counts toward the pool, by design', () => {
+  // Deliberately broader than the rate sheet: the pool asks "was this Fable
+  // usage", which is a family question, while pricing asks "what did it cost",
+  // which is a model question. A future `claude-fable-6` must not silently
+  // vanish from the user's Fable accounting just because we have no rate for it
+  // yet — its cost comes from the anchor regardless.
+  const rr = fableDailyRunRate([{ model: 'claude-fable-6', ts: '2026-09-05T10:00:00.000Z', cost_usd: 7 }]);
+  assert.equal(rr.fableTurns, 1);
+  assert.equal(rr.sum, 7);
+  assert.deepEqual(rr.models, { 'fable-6': 1 }, 'the unknown model is recorded by name');
+});
+
+
+test('F12: promo credits do not apply to a Fable-5.1-only window', async () => {
+  const { getFablePromoCredits } = await import('./config.js');
+  const promo = getFablePromoCredits();
+  assert.deepEqual(promo.scope, ['fable-5']);
+  assert.equal(promo.appliesTo(['fable-5-1']), false, 'Fable 5.1 was never part of the promotion');
+  assert.equal(promo.appliesTo(['fable-5']), true);
+  assert.equal(promo.appliesTo(['fable-5-1', 'fable-5']), true, 'a mixed window still has Fable 5 credits');
+  // No models at all => show it. A user with no Fable turns this window may
+  // still hold claimed credits, and hiding the expiry is the worse error.
+  assert.equal(promo.appliesTo([]), true);
+  assert.equal(promo.appliesTo(undefined), true);
+});

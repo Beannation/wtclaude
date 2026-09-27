@@ -1,8 +1,17 @@
-// Shared Fable-5 accounting.
+// Shared Fable accounting — FAMILY-scoped, not Fable-5-scoped.
+//
+// EXTENDED 2026-09-07 for Fable 5.1, which has been Claude Code's default Fable
+// model since v2.1.257 (2026-09-01). Everything here keys off the Fable FAMILY,
+// because the plan mechanic is family-scoped: claude.com/pricing states the plan
+// rows generically as "Fable", so a Fable 5.1 turn on Max attributes exactly the
+// way a Fable 5 turn does. The two models differ in PRICE (cache reads are
+// $0.25/MTok on 5.1 against $1/MTok on 5) but not in how they are billed to a
+// plan, and the price difference is already handled upstream by the rate sheet
+// and the anchored cost — nothing in this module needs to know about it.
 //
 // REWRITTEN 2026-08-24 for the plan-conditional mechanic. This module used to
 // implement a "Fable cliff": a date after which every Fable turn was treated as
-// credits-billed. Since 2026-07-20 Fable 5 is permanent and PLAN-CONDITIONAL —
+// credits-billed. Since 2026-07-20 Fable is permanent and PLAN-CONDITIONAL —
 // on Max, Team Premium and Enterprise Premium it is included, drawing up to 50%
 // of the weekly usage limit and producing no bill at all; on Pro and Team
 // Standard it bills usage credits from the first token. A date cannot answer the
@@ -23,10 +32,17 @@ import { computeTurnCost } from './cost.js';
 import { normalizeModel } from './pricing.js';
 import { getFableBilling, getFableHistoricalBoundary, getFablePermanentSince } from './config.js';
 
-// A turn is Fable only while the recorded model id is Fable. The collector
+// A turn is Fable while the recorded model id is any Fable model. The collector
 // stamps each record with the snapshot's current model, so an Opus-4.8
 // content-fallback mid-session naturally attributes post-flip deltas to Opus
 // (research §C3) — we must never cost Opus tokens at Fable rates.
+//
+// The `startsWith('fable')` test is family-wide by design, so `fable-5-1` counts
+// toward the pool exactly as `fable-5` does, and so will the next Fable. Pinned
+// by test rather than assumed — see fablepool.test.js. Note this is deliberately
+// BROADER than the rate sheet's resolution: an unrecognised Fable id counts
+// toward the pool (it is Fable usage, and the plan mechanic is family-wide) even
+// though it will not resolve to a rate. Its cost still comes from the anchor.
 export function isFableTurn(turn) {
   const key = normalizeModel(turn && turn.model);
   return !!key && key.startsWith('fable');
@@ -39,9 +55,15 @@ export function fableDailyRunRate(turns) {
   const perDay = {};
   let anchoredTurns = 0, estimatedTurns = 0, fableTurns = 0;
   const tokens = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 };
+  // Which Fable models the window actually contains, and how many turns each.
+  // A window can hold both fable-5 and fable-5-1 turns, and they carry different
+  // cache-read rates, so no surface may print a single hard-coded cached rate.
+  const models = {};
   for (const t of turns) {
     if (!isFableTurn(t)) continue;
     fableTurns++;
+    const key = normalizeModel(t.model);
+    if (key) models[key] = (models[key] || 0) + 1;
     if (typeof t.cost_usd === 'number') anchoredTurns++;
     else estimatedTurns++;
     tokens.input += t.input_tokens || 0;
@@ -56,7 +78,7 @@ export function fableDailyRunRate(turns) {
   return {
     perDay, days, sum,
     avgPerDay: days > 0 ? sum / days : 0,
-    anchoredTurns, estimatedTurns, fableTurns, tokens,
+    anchoredTurns, estimatedTurns, fableTurns, tokens, models,
   };
 }
 
