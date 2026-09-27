@@ -1,6 +1,6 @@
 import { getSessionsForDateRange, summarizeSessions } from '../utils/sessions.js';
 import { getLatestPricing, getModelEntry } from '../utils/pricing.js';
-import { priceTurn, formatCost } from '../utils/cost.js';
+import { priceTurn, formatCost, hasTokens } from '../utils/cost.js';
 import { localDate } from '../utils/time.js';
 
 export function registerWhatIf(program) {
@@ -102,6 +102,9 @@ function showModelComparison(sessions, targetModel, days) {
   for (const t of allTurns) {
     const actual = priceTurn(t.model, 'standard', t);
     if (!actual.priceable) {
+      // Same rule as compare-models (2026-09-27): a zero-token turn is $0 on any
+      // rate, so it is not an exclusion.
+      if (!hasTokens(t)) continue;
       const label = `${t.model || 'unknown'} (${actual.reason})`;
       unpriced.set(label, (unpriced.get(label) || 0) + 1);
       continue;
@@ -116,6 +119,22 @@ function showModelComparison(sessions, targetModel, days) {
 
   console.log(`\n  What-If: all ${resolved} (${days} day${days > 1 ? 's' : ''})  (estimate)`);
   console.log('  ==========================================');
+
+  // Everything excluded: say so, instead of printing $0 against $0 — which is
+  // the "no data" shape compare-models stopped using in 0.3.1.
+  const excludedTotal = [...unpriced.values()].reduce((a, b) => a + b, 0);
+  if (priced === 0 && excludedTotal > 0) {
+    console.log(excludedTotal === 1
+      ? '  The one turn in this window was excluded, so there is nothing to compare'
+      : `  All ${excludedTotal} turns in this window were excluded, so there is nothing to compare`);
+    console.log('  yet — this is not the same as having no usage:');
+    for (const [label, n] of unpriced) console.log(`    ${String(n).padStart(5)} x ${label}`);
+    console.log('  We do not have first-party rates we can stand behind for these. Your');
+    console.log('  headline cost is unaffected — it is the cost figure Claude Code itself');
+    console.log('  reports, and `wtclaude today` still counts it.\n');
+    return;
+  }
+
   console.log('  Estimated on the same tokens (token x rate, not billing-grade):');
   console.log(`    Current models:  ${formatCost(baseline)}`);
   console.log(`    If all ${resolved}: ${formatCost(hypothetical)}`);
@@ -128,7 +147,8 @@ function showModelComparison(sessions, targetModel, days) {
     console.log(`  (${priced} priced). We do not have first-party rates we can stand behind`);
     console.log('  for these, and counting them as $0 would quietly flatter the comparison:');
     for (const [label, n] of unpriced) console.log(`    ${String(n).padStart(5)} x ${label}`);
-    console.log('  Their real cost is unaffected — it comes from the billing-grade anchor.');
+    console.log('  Your headline cost is unaffected — it is the cost figure Claude Code');
+    console.log('  itself reports, and `wtclaude today` still counts it.');
   }
   console.log('');
 }

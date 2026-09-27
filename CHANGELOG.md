@@ -83,6 +83,16 @@ the secondary calculations.
   dashboard's context-waste tile now withhold their dollar figure for a
   family-fallback, partner-platform or unknown model, and say why. The next model
   we have not added yet lands on this path on day one.
+- **`whatif --model` no longer gives a figure for a model it can only guess** —
+  an Opus newer than this rate sheet, say — or for a partner-platform id. It says
+  "no figure shown" and why. The `opus`, `sonnet`, `haiku` and `fable` shortcuts
+  resolve to Claude Code's current model in each family.
+- The **"vs your mix" dollar delta** in `compare-models` and on the dashboard is
+  now per month, like the figures beside it. It used to be the whole window's
+  dollars, which matched them only for a 30-day window. `--json` keeps
+  `delta_vs_baseline_usd` (window) and adds `monthly_delta_vs_baseline_usd`.
+- Cowork's `<synthetic>` placeholder lines, and any turn with no tokens, no
+  longer count as turns or as exclusions — they cost nothing on any rate.
 - `waste`, the dashboard's context-waste tile and `wtclaude fable` resolve the
   cache-read multiplier per model, and name it — the hard-coded "10%" is gone.
 - The dashboard's **What If** page kept its own hand-typed price table (Opus 4.8,

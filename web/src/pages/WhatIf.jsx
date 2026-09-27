@@ -7,6 +7,7 @@ import EmptyState from '../components/EmptyState';
 import { LinkPrompt } from './Overview';
 import { repriceSurface, codeTurnsFromSessions, CAVEATS } from '../lib/compareModels';
 import { ExclusionNotice } from './CompareModels';
+import InlineCode from '../components/InlineCode';
 
 // REPLACED 2026-09-27. This page kept its OWN price table — Haiku 4.5, Sonnet
 // 4.6 and Opus 4.8, typed in during Phase 0 — outside every parity guard. By
@@ -98,7 +99,11 @@ export default function WhatIf() {
                 the same caveat Compare Models and the CLI carry (added 2026-09-27,
                 when this card started showing a Fable row). Found by prefix so it
                 survives any reordering of CAVEATS. */}
-            {FABLE_CAVEAT && <p className="text-xs text-[var(--faint)]">{FABLE_CAVEAT}</p>}
+            {FABLE_CAVEAT && (
+              <p className="text-xs text-[var(--faint)]">
+                <InlineCode text={FABLE_CAVEAT} />
+              </p>
+            )}
           </div>
         ) : models.unpriced_turn_count > 0 ? null : (
           <p className="text-[var(--muted)] text-sm">No recorded terminal usage in this window yet.</p>

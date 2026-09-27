@@ -18,7 +18,7 @@
 //  • Cost only, not quality — we surface what the choice costs; we never judge which
 //    model is "better."
 
-import { expectedCost, priceTurn } from '../utils/cost.js';
+import { expectedCost, priceTurn, hasTokens } from '../utils/cost.js';
 import { getRates } from '../utils/pricing.js';
 
 // The three models compared, newest-generation keys (must match pricing config keys).
@@ -45,10 +45,6 @@ export const COMPARE_MODELS = [
   { key: 'sonnet-5', label: 'Sonnet 5' },
   { key: 'fable-5-1', label: 'Fable 5.1' },
 ];
-
-function hasTokens(t) {
-  return !!((t.input_tokens || 0) || (t.output_tokens || 0) || (t.cache_read_tokens || 0) || (t.cache_write_tokens || 0));
-}
 
 function sumTokens(turns) {
   const t = { input: 0, output: 0, cache_read: 0, cache_write: 0 };

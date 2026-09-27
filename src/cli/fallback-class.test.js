@@ -173,3 +173,41 @@ test('fable --json: the promo note is user-facing text, not internal provenance'
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('whatif: zero-token turns are not exclusions, an all-excluded window says so, and no anchor jargon', () => {
+  // All-excluded: two real (tokened) turns on ids we cannot price.
+  const all = wtclaudeDirWith(['claude-opus-9-20270101', 'vertex_ai/claude-sonnet-5']);
+  try {
+    const out = run(['whatif', '--model', 'opus', '--days', '2'], { WTCLAUDE_DIR: all });
+    assert.match(out, /All 2 turns in this window were excluded/);
+    assert.doesNotMatch(out, /Current models:|If all/, 'no $0-vs-$0 comparison');
+    assert.doesNotMatch(out, /billing-grade anchor|real cost/);
+    assert.match(out, /headline cost is unaffected/);
+  } finally {
+    rmSync(all, { recursive: true, force: true });
+  }
+  // Zero-token unknown turn next to a priced one: nothing excluded.
+  const dir = wtclaudeDirWith(['claude-sonnet-5']);
+  try {
+    writeFileSync(join(dir, 'sessions', 'zero.ndjson'), JSON.stringify({
+      ts: recentTs(1), model: 'claude-opus-9-20270101', speed_tier: 'standard', session_id: 'zero',
+      input_tokens: 0, output_tokens: 0, cache_read_tokens: 0, cache_write_tokens: 0, cost_usd: 0,
+    }) + '\n');
+    const out = run(['whatif', '--model', 'opus', '--days', '2'], { WTCLAUDE_DIR: dir });
+    assert.match(out, /If all opus-5-5/);
+    assert.doesNotMatch(out, /unpriced and excluded/, 'a zero-token turn is not an exclusion');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('waste: the withheld reason prints once, not twice', () => {
+  const { home, claude } = claudeHomeWith('claude-opus-9-20270101');
+  try {
+    const out = run(['waste', '--days', '7'], { HOME: home, CLAUDE_CONFIG_DIR: claude, WTCLAUDE_DIR: join(home, '.wtclaude') }, home);
+    assert.equal(out.split("is not in this version's rate sheet").length - 1, 1, out);
+    assert.match(out, /for the reason above/);
+  } finally {
+    rmSync(home, { recursive: true, force: true });
+  }
+});

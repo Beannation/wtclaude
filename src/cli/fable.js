@@ -107,7 +107,10 @@ export function registerFable(program) {
             status: promoStatus,
             expiry_date: promo.expiry_date, expires_at: promo.expires_at,
             claiming_closed: promo.claiming_closed,
-            expiry_note: promo.expiry_note, scope: promo.scope,
+            // The sheet's note is written in the past tense, so it is emitted only
+            // once the instant has passed; before it, `status` + `expiry_date` say it.
+            expiry_note: promoStatus === 'expired' ? promo.expiry_note : null,
+            scope: promo.scope,
             applies_to_this_window: promo.appliesTo(Object.keys(rr.models)),
             // null once expired — a negative countdown is not a useful number.
             days_until_expiry: daysToPromoExpiry,

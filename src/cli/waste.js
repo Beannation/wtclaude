@@ -94,9 +94,13 @@ export function registerWaste(program) {
       if (r.priced) {
         lines.push(`    • billing-grade: turns re-read (your transcript), the ${pct(r.cache_read_multiplier)} cache-read`);
         lines.push(`      multiplier and the $${r.input_rate}/MTok input rate for ${r.model}.`);
+      } else if (r.dead_count > 0 && r.monthly_usd === null) {
+        // The headline already printed the reason — refer to it, don't repeat it.
+        lines.push('    • billing-grade: turns re-read (your transcript). No rate is shown,');
+        lines.push('      for the reason above.');
       } else {
-        // The reason is printed here, not referred to: when nothing is being
-        // re-read the headline shows a true $0 and no reason appears above.
+        // Nothing is being re-read, so the headline showed a true $0 and no
+        // reason — print it here instead.
         lines.push('    • billing-grade: turns re-read (your transcript). No rate is shown:');
         for (const l of withheldReason(r)) lines.push(`      ${l}`);
       }

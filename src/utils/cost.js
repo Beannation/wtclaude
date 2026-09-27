@@ -52,6 +52,13 @@ export function priceTurn(model, speedTier, tokens, today) {
   return { usd, priceable: true, reason: null };
 }
 
+// True when a turn carries any tokens at all. A zero-token turn costs $0 on any
+// rate, so an unrecognised model on it is not an exclusion worth reporting — one
+// rule for compare-models and whatif, so their counts cannot disagree.
+export function hasTokens(t) {
+  return !!((t?.input_tokens || 0) || (t?.output_tokens || 0) || (t?.cache_read_tokens || 0) || (t?.cache_write_tokens || 0));
+}
+
 // Numeric shim. Returns 0 (never throws) if the model can't be resolved — the
 // anchor still carries the real cost. Callers that need to know whether the
 // number is presentable should use priceTurn() instead: a bare 0 here is exactly

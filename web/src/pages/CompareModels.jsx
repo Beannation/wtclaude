@@ -7,6 +7,7 @@ import {
 import HonestyBadge from '../components/HonestyBadge';
 import EmptyState from '../components/EmptyState';
 import CopyCommand from '../components/CopyCommand';
+import InlineCode from '../components/InlineCode';
 import { LinkPrompt } from './Overview';
 
 // ADDED 2026-09-27. Turns this dashboard cannot price at first-party rates — a
@@ -27,8 +28,8 @@ export function ExclusionNotice({ surface }) {
     <div className="mt-4 rounded-lg border border-[var(--amber)] px-4 py-3 text-xs text-[var(--muted)] space-y-1">
       <p className="text-[var(--amber)] font-medium">
         {surface.present
-          ? `Usage on ${m} ${models} was excluded from this comparison — and from your mix, so the figures above don't cover all your usage.`
-          : `All usage in this window was on ${models} this dashboard can't price, so there is nothing to compare yet — this is not the same as having no usage.`}
+          ? `${m > 0 ? `Usage on ${m} ${models} was` : 'Some usage was'} excluded from this comparison — and from your mix, so the figures above don't cover all your usage.`
+          : `All usage in this window was on ${m === 1 ? 'a model' : 'models'} this dashboard can't price, so there is nothing to compare yet — this is not the same as having no usage.`}
       </p>
       {m > 0 && <p className="font-mono">{ids.join(' · ')}</p>}
       <p>
@@ -181,7 +182,9 @@ export default function CompareModels() {
         <h3 className="text-sm text-[var(--muted)] uppercase tracking-wide mb-3">How to read this</h3>
         <ul className="space-y-2 text-sm text-[var(--muted)] list-disc pl-5">
           {CAVEATS.map((c, i) => (
-            <li key={i}>{c}</li>
+            <li key={i}>
+              <InlineCode text={c} />
+            </li>
           ))}
         </ul>
       </div>
