@@ -1,6 +1,6 @@
 # Data notes — what WTClaude knows, what it estimates, and what it cannot see
 
-Last reviewed **2026-09-07**. Every fact below is traceable to an Anthropic
+Last reviewed **2026-09-27**. Every fact below is traceable to an Anthropic
 primary read on the date shown, or is explicitly labelled as our own measurement.
 Where Anthropic has not stated something, this file says so rather than guessing.
 
@@ -79,7 +79,24 @@ counted**, and the count is printed. Those are:
 - a family-fallback guess (an Opus we do not have an explicit entry for).
 
 Counting these at $0 — which is what used to happen — quietly flattered the
-comparison and never told the user a turn had gone missing.
+comparison and never told the user a turn had gone missing. Since 0.3.1 the
+exclusion is also stated when it swallows a whole window: a surface whose every
+turn was excluded says so, rather than reporting "no usage" — which is what 0.3.0
+told a user whose week was all Claude Opus 5.5 before it had a rate for it.
+
+### A guessed rate is never a figure we present
+
+The rate sheet has one family fallback: an Opus id with no entry resolves to the
+newest Opus, flagged `fallback: true` and unpriceable. It fired for real on
+2026-09-22, when Claude Opus 5.5 became Claude Code's default model and
+`claude-opus-5-5` resolved to Opus 5's rates — cache reads at $0.50/MTok against
+a true $0.20. The rule since 0.3.1: a family-fallback rate, a partner-platform id
+or an unknown model never produces a dollar figure shown as ours.
+`compare-models` and `whatif` exclude and count the turn; `waste` (and the
+dashboard's context-waste tile) **withholds** its dollar figure and says why,
+because every dollar on that surface is rate × multiplier × tokens, so a guessed
+rate is a guessed figure end to end. The item list and token sizes, which do not
+depend on the rate, are still shown.
 
 ### Token counts are context-window occupancy, not billed tokens
 
@@ -114,6 +131,11 @@ that field as:
 
 > Estimated session cost in USD, computed client-side. May differ from your actual
 > bill. Resets to $0 when `/clear` starts a new session
+
+Re-read 2026-09-27, the same row now reads: "Estimated session cost in USD,
+computed client-side at list price unless a `modelPricing` table is in effect.
+May differ from your actual bill." — the `modelPricing` qualifier matches the
+2.1.243 boundary in the table below.
 
 That is worth stating plainly. The figure is computed by Claude Code on your
 machine from finalized token counts at list rates — it is not retrieved from
@@ -162,7 +184,8 @@ code.claude.com/docs/en/statusline, both read 2026-08-24.
 Since 2026-09-07 this cuts one layer finer: Fable 5.1 and Fable 5 are separate
 rate-sheet entries with a 4× difference in cache-read price, so "attributed by
 session model setting" now carries a price consequence within the Fable family,
-not only across families.
+not only across families. Since 2026-09-27 the same is true within Opus: Opus
+5.5 and Opus 5 differ on every rate, cache reads by 2.5×.
 
 ### The `compare` gap is not a like-for-like token comparison
 
@@ -194,43 +217,67 @@ That is fixed; the ratio it produces is now smaller and more defensible.
 | :-- | :-- |
 | 5-minute cache write | 1.25× |
 | 1-hour cache write | 2× |
-| Cache read (hit) | 0.1× — **except 0.025× on Fable 5.1 and Mythos 5.1** |
+| Cache read (hit) | 0.1× — **except 0.05× on Opus 5.5, and 0.025× on Fable 5.1 and Mythos 5.1** |
 
 Cache-write tokens are their own billed quantity, charged when content is first
 stored — not a premium layered on top of an input charge.
 
-### Cache reads are priced per model (2026-09-07)
+### Cache reads are priced per model — three multipliers (2026-09-27)
 
-The cache-read multiplier stopped being one global number when Fable 5.1
-shipped. Anthropic's pricing page states it as a footnote on the model table:
+The cache-read multiplier stopped being one global number when Fable 5.1 shipped
+(2026-09-07), and gained a third value with Opus 5.5 (2026-09-27). Anthropic's
+pricing page, §Prompt caching, verbatim:
 
-> Cache hits and refreshes on Claude Fable 5.1 and Claude Mythos 5.1 are priced
-> at 0.025x the base input price. All other models use the standard 0.1x
-> multiplier.
-
-So on a **$10/MTok base input**, which Fable 5 and Fable 5.1 share exactly:
+> Cache read (hit): 0.1x base input price (0.025x on Claude Fable 5.1 and Claude
+> Mythos 5.1; 0.05x on Claude Opus 5.5)
 
 | Model | Base input | Cache read | Multiplier |
 | :-- | --: | --: | --: |
+| Claude Opus 5.5 | $4 / MTok | **$0.20 / MTok** | 0.05× |
+| Claude Opus 5 | $5 / MTok | **$0.50 / MTok** | 0.1× |
 | Claude Fable 5.1 | $10 / MTok | **$0.25 / MTok** | 0.025× |
 | Claude Fable 5 | $10 / MTok | **$1.00 / MTok** | 0.1× |
+| Claude Sonnet 5 | $2 / MTok | $0.20 / MTok | 0.1× |
 
-The two models are otherwise identically priced. A cache read costs **a quarter**
-on Fable 5.1 of what it costs on Fable 5 — that arithmetic is ours to state; any
-broader savings figure is Anthropic's own indexed-cost claim and is attributed as
-such, never presented as something measured from your data.
+Fable 5 and Fable 5.1 are otherwise identically priced, so a cache read costing
+**a quarter** on Fable 5.1 is the whole difference between them. Opus 5.5 differs
+from Opus 5 on every rate: identical tokens cost 20% less in and out ($4/$20
+against $5/$25) and 60% less on cache reads. That arithmetic is ours to state.
+Anthropic's own "costs 40% less to run than Opus 5" is their measurement, from
+their tests, and includes fewer tokens per task — something re-pricing recorded
+tokens cannot show. It is attributed as theirs wherever it appears and never
+presented as something measured from your data.
+
+Note that Opus 5.5 and Sonnet 5 share a $0.20 cache read ($4 × 0.05 = $2 × 0.1),
+so a test that checks cache reads alone cannot tell them apart; ours assert input
+and output rates too.
 
 The rate sheet holds this as a per-model `cache.read_multiplier` that overrides
 the global default, and the resolution order is **model override → global
 default**. A model with no override inherits 0.1×, which is correct for every
-other row. Applying the global multiplier to a Fable 5.1 turn over-prices its
-cache reads by 4× — and because cache reads dominate agentic sessions, that is
-the largest silent error available in this codebase. It is pinned by tests on
-the sheet, the resolver, the browser comparison mirror and the browser
-context-waste mirror.
+other row. A model missing its override is silently wrong — Fable 5.1 cache reads
+over-priced 4×, Opus 5.5 cache reads 2× — and because cache reads dominate agentic
+sessions, that is the largest silent error available in this codebase. It is
+pinned by tests on the sheet, the resolver, the browser comparison mirror and the
+browser context-waste mirror, each mutation-tested.
 
 Source: platform.claude.com/docs/en/about-claude/pricing, model pricing table
-footnote 1 and §Prompt caching, read 2026-09-07.
+footnotes 1–2 and §Prompt caching, read 2026-09-27.
+
+### Fast mode and cache reads
+
+Fast mode exists on Opus 5.5 ($8/$40 per MTok), Opus 5 and Opus 4.8 ($10/$50).
+The pricing page states that "Prompt caching multipliers apply on top of fast mode
+pricing", so a fast-mode cache read is the model's own cache-read multiplier times
+its **fast** input rate: 0.05 × $8 = **$0.40/MTok** on Opus 5.5, 0.1 × $10 =
+$1.00 on Opus 5. The page prints the $8/$40 but not the $0.40 — that figure is
+**derived** by the stated rule, and is labelled so wherever it appears. On
+subscription plans fast mode draws usage credits only, never plan limits.
+
+Source: platform.claude.com/docs/en/about-claude/pricing §Fast mode pricing and
+code.claude.com/docs/en/fast-mode, read 2026-09-27.
+
+### Cache-write TTL
 
 Where a payload does not tell us which TTL was in play, we use the **1-hour** rate.
 Two independent reasons: Anthropic's costs doc states that subscription cache
@@ -243,23 +290,29 @@ collapses to 5 minutes unless `ENABLE_PROMPT_CACHING_1H=1` is set (default off).
 That crossing is not visible in local data, so the 1-hour default is a labelled
 assumption about the common case, not a measurement of any individual turn.
 
-Opus 5 has a 512-token cache minimum, so small cache lines on Opus 5 are normal
-and are not flagged as anomalies.
+Opus 5.5 and Opus 5 (and Fable 5.1 / Fable 5) have a 512-token cache minimum, so
+small cache lines on them are normal and are not flagged as anomalies (prompt
+caching docs, read 2026-09-27).
 
 ## Credits expire
 
-From **2026-09-10**, in certain jurisdictions (the article names Japan as an
+Since **2026-09-10**, in certain jurisdictions (the article names Japan as an
 example, and does not publish the full set), usage credits expire six months after
-purchase, with a 7-day email warning and visible expiry dates in-product.
+purchase, with a 7-day email warning and visible expiry dates in-product. Re-read
+by slugged URL on 2026-09-27: in effect, wording unchanged.
 
 **"Credits don't expire" is banned copy** — in the CLI, the docs, and on the site.
 The jurisdiction set is not published, so the sentence cannot be made safe by
 qualifying it.
 
-Fable promotional credits are separate and harder-edged: claiming closed
-2026-08-02, and the credits expire **2026-09-17 at 11:59 PM PT regardless of when
-they were claimed**. They are spent before other credits, including auto-reload,
-and that happens silently.
+Fable promotional credits were separate and harder-edged, and they are now
+**expired**: claiming closed 2026-08-02, and the credits expired **2026-09-17 at
+11:59 PM PT regardless of when they were claimed** (the article still gives that
+date, re-read 2026-09-27). While live they were spent before other credits,
+including auto-reload, silently. They covered Fable 5 only — there was never an
+equivalent credit for Fable 5.1. `wtclaude fable` speaks of them in the past tense
+after that instant, computed against the instant in Pacific time rather than the
+calendar date.
 
 Source: Help Center articles 12429409 (usage credits) and 15862783 (Fable promo).
 
@@ -327,6 +380,9 @@ already stored straddle those changes.
 | 2.1.252 | `rate_limits.spend_limit` status line field; per-session prompt-cache line in `/cost` plus a `prompt_cache` object for status line scripts | Both are **ignored**, not captured and not a crash. `rate_limits` is extracted whole but flattened to four named columns (`five_hour`/`seven_day` percentage and reset), so `spend_limit` is dropped; `payload.prompt_cache` is never read. Verified by running the collector against a 2.1.260-shaped payload: exit 0, record written, no breadcrumb. Records from 2.1.252 onward therefore carry neither field. |
 | 2.1.257 | **Claude Fable 5.1 added and made the default Fable model** | `claude-fable-5-1` rows begin appearing without the user opting in. Records from before wtclaude 0.3.1 had no rate-sheet entry for it. |
 | 2.1.260 | Prompt caching on Fable 5.1 fixed — context attached after tool results was being re-sent as uncached input on every tool-call turn | Fable 5.1 turns recorded on 2.1.257–2.1.259 carry genuinely higher uncached input and lower cache reads than the same work would produce today. The cost anchor is correct for what was actually billed; the token *mix* is not representative. |
+| 2.1.271 | `modelPricing` multipliers may exceed 1 (up to 10) | A managed org can now pin rates *above* list (the stated purpose is internal chargeback), so on such an org the anchor can read higher than list price, not only lower. |
+| 2.1.277 | A headless resume (`claude -p --resume`, the SDK, a VS Code reload) no longer starts the session's cost and usage totals at zero | Before this, a resumed headless session's counter restarted, which our non-decreasing clamp under-counts until the counter passes its old high-water mark. Tracked with the `/clear` case for a later release. |
+| 2.1.280 | **Claude Opus 5.5 added and made the default model on every paid plan** — Pro and Team Standard moved from Sonnet to Opus, and the default Opus became Opus 5.5; Opus 5.5 is also the fast-mode default | `claude-opus-5-5` rows begin appearing without the user opting in. Records from before wtclaude 0.3.1 had no rate-sheet entry for it: the headline was unaffected (it is the anchor), but secondary calculations resolved it to Opus 5's rates by family fallback. From this build, nothing may call Sonnet 5 the Claude Code default. |
 
 The collector records `cc_version` on every turn, so these boundaries are
 answerable per record rather than guessed at in aggregate.
