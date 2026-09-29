@@ -4,6 +4,7 @@
 // summary commands use, so grouped totals reconcile with ungrouped ones.
 
 import { summarizeTurns } from './sessions.js';
+import { loadConfig } from './config.js';
 
 // Logical dimension name -> the turn-record field it reads.
 export const GROUP_FIELDS = {
@@ -45,13 +46,26 @@ export function coverage(turns, dimension) {
   return { withVal, total: turns.length };
 }
 
-export function displayKey(key, dimension) {
+// One label per device bucket, shared by `--group-by device` and `devices`
+// (QA-0928-158): this machine by its configured label (else its id prefix) and
+// marked "(this device)"; other ids by prefix; turns with no device id as
+// "(no device id)" — that bucket is NOT known to be this machine.
+export function deviceLabel(key, cfg = {}) {
+  if (key == null || key === '') return '(no device id)';
+  const short = `device ${String(key).slice(0, 8)}`;
+  if (cfg.device_id && key === cfg.device_id) return `${cfg.device_label || short} (this device)`;
+  return short;
+}
+
+// `cfg` (device_id / device_label) is only read for the device dimension; it is
+// loaded from config when not passed.
+export function displayKey(key, dimension, cfg) {
+  if (dimension === 'device') return deviceLabel(key, cfg ?? loadConfig());
   if (key != null && key !== '') return String(key);
   switch (dimension) {
     case 'cost_center': return '(untagged)';
     case 'branch': return '(no branch)';
     case 'task': return '(unclassified)';
-    case 'device': return '(this device)';
     case 'project': return '(unknown)';
     default: return '(none)';
   }

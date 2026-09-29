@@ -15,7 +15,7 @@
   --text: #e5e7eb;
   --text-strong: #ffffff;
   --muted: #8b8b9e;
-  --faint: #5c5c6e;
+  --faint: #818195;       /* 4.7:1 on --card, 4.9:1 on --surface (QA-0928-186) */
   --accent: #4ade80;       /* billing-grade green */
   --accent-dim: #4ade8033;
   --indigo: #818cf8;
@@ -33,7 +33,7 @@
   --text: #1f2430;
   --text-strong: #0a0a0f;
   --muted: #5c6170;
-  --faint: #9aa0ad;
+  --faint: #686e7c;       /* 4.8:1 on --bg, 5.1:1 on --card (QA-0928-186) */
   --accent: #16a34a;
   --accent-dim: #16a34a1f;
   --indigo: #6366f1;

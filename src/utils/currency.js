@@ -4,9 +4,13 @@
 // a billing-grade cost. Users can override/extend rates via config.fx_rates.
 
 import { loadConfig, getDisplayCurrency } from './config.js';
+import { formatCost, groupDigits } from './cost.js';
 
 // Approximate static rates (USD -> X). Display only; refresh-by-config only.
-const DEFAULT_FX = {
+// Exported (QA-0928-91) so the dashboard's FX_RATES / FX_SNAPSHOT_DATE in
+// web/src/lib/config.js can be checked against it without parsing this file;
+// a rate change here must be made there too (web/src/lib/format.test.js).
+export const DEFAULT_FX = {
   USD: 1, EUR: 0.92, GBP: 0.79, CAD: 1.37, AUD: 1.52,
   JPY: 157, INR: 83, BRL: 5.0, CHF: 0.88, CNY: 7.2,
   MXN: 17.0, SGD: 1.34, SEK: 10.6, NOK: 10.7, ZAR: 18.5,
@@ -40,17 +44,18 @@ export function resolveCurrency(opts = {}) {
 export function formatMoney(usd, cur) {
   const c = cur || { code: 'USD', rate: 1, symbol: '$', isUsd: true };
   // Sign before the symbol (QA-0610-07): "-$10.69" / "≈ -€9.83", never "$-10.69".
+  // USD is exactly the billing-grade formatter (one set of thresholds).
+  if (c.isUsd) return formatCost(usd);
   const sign = usd < 0 ? '-' : '';
-  const abs = Math.abs(usd);
-  if (c.isUsd) {
-    if (abs < 0.01) return `${sign}$${abs.toFixed(4)}`;
-    if (abs < 1) return `${sign}$${abs.toFixed(3)}`;
-    return `${sign}$${abs.toFixed(2)}`;
-  }
-  const v = abs * c.rate;
-  const digits = v < 1 ? 3 : 2;
-  return `≈ ${sign}${c.symbol}${v.toFixed(digits)}`;
+  const v = Math.abs(usd) * c.rate;
+  // QA-0928-156: currencies with no minor unit print whole numbers; the rest
+  // keep the 3-digit sub-unit precision below 1. Digits grouped for display.
+  const digits = ZERO_DECIMAL.has(c.code) ? 0 : (v > 0 && v < 1 ? 3 : 2);
+  return `≈ ${sign}${c.symbol}${groupDigits(v.toFixed(digits))}`;
 }
+
+// Display currencies with no minor unit (from DEFAULT_FX).
+const ZERO_DECIMAL = new Set(['JPY']);
 
 // A one-line honesty caveat for non-USD output. Empty string for USD.
 export function currencyNote(cur) {

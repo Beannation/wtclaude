@@ -36,6 +36,8 @@ import { registerLeaderboard } from '../src/cli/leaderboard.js';
 import { registerUninstall } from '../src/cli/uninstall.js';
 import { registerExport } from '../src/cli/export.js';
 import { maybeBackgroundSync } from '../src/sync/autosync.js';
+import { pendingUnreadableNote } from '../src/utils/sessions.js';
+import { configWarning } from '../src/utils/firstrun.js';
 
 const program = new Command();
 
@@ -84,9 +86,27 @@ registerLeaderboard(program);
 registerUninstall(program);
 registerExport(program);
 
+// A session line the reads had to skip is named by every read command
+// (QA-0928-14; RC 2026-09-28: only some did). Commands that print the note
+// themselves are not repeated; it goes to stderr so --json/--csv stay clean.
+// Not after `statusline` (Claude Code's status line), `watch` (a live screen)
+// or the commands that write settings.
+const NO_READ_NOTE = new Set(['statusline', 'watch', 'setup', 'uninstall']);
+program.hook('postAction', (_root, actionCommand) => {
+  if (NO_READ_NOTE.has(actionCommand.name())) return;
+  const note = pendingUnreadableNote();
+  if (note) console.error(note);
+  // A config.json that doesn't parse (RC 2026-09-28): read commands keep
+  // working on the local data and say so once, on stderr. Commands that would
+  // write it refuse and name it themselves (withConfigGuard, setup); the
+  // cold-start copy names it too — neither is repeated here.
+  const warning = configWarning();
+  if (warning) console.error(warning);
+});
+
 // Opportunistic, fully-detached background push — only when the user has opted
 // in (`sync --enable`) and local data has changed since the last sync. Debounced
 // and non-blocking; a no-op for everyone else. Never runs on the collector path.
-maybeBackgroundSync(process.argv);
+maybeBackgroundSync(process.argv, program.commands.map((c) => c.name()));
 
 program.parse();

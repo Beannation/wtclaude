@@ -11,7 +11,7 @@ export default function Footer() {
         <p className="text-xs text-[var(--faint)] leading-relaxed max-w-2xl">{LEGAL}</p>
         <div className="flex items-center gap-3 text-xs text-[var(--faint)]">
           {IS_MOCK && (
-            <span className="rounded-md border border-[var(--border)] px-2 py-1" title="Showing local demo fixtures — not your real usage. Live data turns on once cloud sync (SEC Phase C) is deployed.">
+            <span className="rounded-md border border-[var(--border)] px-2 py-1" title="Demo mode — sample data, not your usage.">
               Demo data
             </span>
           )}

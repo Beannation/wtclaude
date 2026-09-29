@@ -1,3 +1,6 @@
+// Fixed zone first: Fable attribution and the run-rate bucket by LOCAL date.
+process.env.TZ = 'America/New_York';
+
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { fableDailyRunRate, isFableTurn, fableAttribution, fableTurnBilling } from './fablepool.js';
@@ -24,13 +27,21 @@ test('forecast anchors on the per-turn notional cost when present', () => {
   assert.ok(Math.abs(rr.sum - 0.3646) < 1e-9);
 });
 
-test('run-rate averages across days with Fable data', () => {
+test('run-rate averages over the days the window covers, not the days with Fable use (QA-0928-73)', () => {
+  // Spend on 2 days of a 7-day look-back: $0.60 / 7, not $0.60 / 2.
   const rr = fableDailyRunRate([
     fableTurn({ cost_usd: 0.2, ts: '2026-06-08T12:00:00.000Z' }),
     fableTurn({ cost_usd: 0.4, ts: '2026-06-09T12:00:00.000Z' }),
-  ]);
+  ], { coveredDays: 7 });
   assert.equal(rr.days, 2);
-  assert.ok(Math.abs(rr.avgPerDay - 0.3) < 1e-9);
+  assert.ok(Math.abs(rr.avgPerDay - 0.6 / 7) < 1e-9);
+  assert.equal(fableDailyRunRate([fableTurn({ cost_usd: 1 })]).avgPerDay, null, 'no basis given -> no average');
+});
+
+test('run-rate days are LOCAL days (QA-0928-168)', () => {
+  // 02:10Z on Jul 20 is 22:10 EDT on Jul 19.
+  const rr = fableDailyRunRate([fableTurn({ cost_usd: 1, ts: '2026-07-20T02:10:00.000Z' })], { coveredDays: 1 });
+  assert.deepEqual(Object.keys(rr.perDay), ['2026-07-19']);
 });
 
 test('a mixed Fable/Opus fallback session attributes per recorded model (§C3)', () => {
@@ -186,4 +197,64 @@ test('F12: promo credits do not apply to a Fable-5.1-only window', async () => {
   // still hold claimed credits, and hiding the expiry is the worse error.
   assert.equal(promo.appliesTo([]), true);
   assert.equal(promo.appliesTo(undefined), true);
+});
+
+// ───────────────────────────────────────────────────────────────────────────
+// BUILD-018. QA-0928-168: attribution keyed on the UTC date called a local
+// Jul-19 evening turn "usage credits" while `today` put it on Jul 19.
+// QA-0928-78: a partner-platform Fable turn (Vertex, Bedrock) is billed by that
+// platform, never by the Claude plan, so it gets its own bucket.
+// ───────────────────────────────────────────────────────────────────────────
+
+test('QA-0928-168: attribution uses the LOCAL date at the UTC-midnight boundary', () => {
+  const evening = { model: 'claude-fable-5', ts: '2026-07-20T02:10:00.000Z', cost_usd: 0.08 }; // Jul 19, 22:10 EDT
+  assert.equal(fableTurnBilling(evening, 'pro'), 'included_historical');
+  const a = fableAttribution([evening], 'pro');
+  assert.equal(a.byBilling.included_historical.turns, 1);
+  assert.equal(a.byBilling.usage_credits, undefined);
+});
+
+test('QA-0928-78: a partner-platform Fable turn is billed by the platform, not the plan', () => {
+  const turns = [
+    { model: 'vertex_ai/claude-fable-5-1', ts: '2026-09-05T10:00:00.000Z', cost_usd: 4 },
+    { model: 'bedrock/anthropic.claude-fable-5-1', ts: '2026-09-05T11:00:00.000Z', cost_usd: 1 },
+    { model: 'claude-fable-5-1', ts: '2026-09-05T12:00:00.000Z', cost_usd: 2 },
+  ];
+  assert.equal(fableTurnBilling(turns[0], 'pro'), 'partner_platform');
+  const a = fableAttribution(turns, 'pro');
+  assert.deepEqual(a.byBilling.partner_platform, { usd: 5, turns: 2, anchored_turns: 2, excluded_turns: 0, providers: { vertex_ai: 1, bedrock: 1 } });
+  assert.equal(a.byBilling.usage_credits.turns, 1, 'only the first-party turn bills the Pro plan');
+  const rr = fableDailyRunRate(turns, { coveredDays: 1 });
+  assert.equal(rr.sum, 2, 'the plan run-rate leaves partner turns out');
+  assert.equal(rr.partnerTurns, 2);
+  assert.deepEqual(rr.models, { 'fable-5-1': 1 });
+});
+
+// RC 2026-09-28 (QA-0928-54 in the Fable pool): an unanchored Fable turn on an
+// id the rate sheet can't resolve is excluded and named, not counted as a
+// token × rate estimate; a partner-platform Fable turn with no anchor carries
+// no dollar figure at all (never a first-party guess).
+test('fableDailyRunRate: unanchored unknown Fable ids are excluded, not estimated', () => {
+  const tok = { input_tokens: 100_000, output_tokens: 10_000, cache_read_tokens: 0, cache_write_tokens: 0 };
+  const rr = fableDailyRunRate([
+    { ts: '2026-09-27T12:00:00Z', model: 'claude-fable-6', cost_usd: 0.5, ...tok },
+    { ts: '2026-09-27T12:01:00Z', model: 'claude-fable-6', cost_usd: 1, ...tok },
+    { ts: '2026-09-27T12:02:00Z', model: 'claude-fable-6', cost_usd: null, ...tok },
+    { ts: '2026-09-27T12:03:00Z', model: 'claude-fable-5-1', cost_usd: null, ...tok },
+  ], { coveredDays: 1 });
+  assert.equal(rr.anchoredTurns, 2);
+  assert.equal(rr.estimatedTurns, 1, 'only the priceable fable-5-1 turn is an estimate');
+  assert.equal(rr.excludedTurns, 1);
+  assert.deepEqual(rr.excludedModels, { 'claude-fable-6': 1 });
+});
+
+test('fableAttribution: an unanchored partner Fable turn adds no dollars to the partner row', () => {
+  const tok = { input_tokens: 200_000, output_tokens: 50_000, cache_read_tokens: 100_000, cache_write_tokens: 100_000 };
+  const a = fableAttribution([{ ts: '2026-09-27T12:00:00Z', model: 'bedrock/anthropic.claude-fable-5-1-v1:0', cost_usd: null, ...tok }], 'pro');
+  const p = a.byBilling.partner_platform;
+  assert.equal(p.turns, 1);
+  assert.equal(p.usd, 0);
+  assert.equal(p.anchored_turns, 0);
+  assert.equal(p.excluded_turns, 1);
+  assert.equal(a.total, 0);
 });

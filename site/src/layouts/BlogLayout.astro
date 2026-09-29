@@ -1,6 +1,7 @@
 ---
 import BaseLayout from './BaseLayout.astro';
 import CodeBlock from '../components/CodeBlock.astro';
+import { INSTALL_CMD } from '../config';
 import HookBand from '../components/HookBand.astro';
 
 interface Props {
@@ -18,7 +19,7 @@ const dateStr = pubDate.toLocaleDateString('en-US', { year: 'numeric', month: 'l
 
 <BaseLayout title={`${title} — WTClaude`} description={description} ogType="article" jsonLd={jsonLd}>
   <article class="mx-auto max-w-[720px] px-5 py-16">
-    <a href="/blog" class="text-sm font-medium text-amber-deep hover:text-amber">← Blog</a>
+    <a href="/blog/" class="text-sm font-medium text-amber-deep hover:text-amber">← Blog</a>
 
     {
       draftProse && (
@@ -40,7 +41,7 @@ const dateStr = pubDate.toLocaleDateString('en-US', { year: 'numeric', month: 'l
     <div class="mt-12 rounded-2xl border border-ink/10 bg-card p-6 text-center shadow-sm">
       <p class="font-head text-lg">Track your real numbers.</p>
       <div class="mx-auto mt-4 max-w-sm">
-        <CodeBlock code="npx wtclaude setup" track="readiness_cta" />
+        <CodeBlock code={INSTALL_CMD} track="readiness_cta" />
       </div>
     </div>
   </article>
@@ -138,5 +139,28 @@ const dateStr = pubDate.toLocaleDateString('en-US', { year: 'numeric', month: 'l
   .prose-body pre code {
     background: none;
     padding: 0;
+  }
+  /* Tables scroll inside their own box on narrow screens instead of widening the page
+     (QA-0928-116: a 5-column table pushed the July pricing post to 465px at 390). */
+  .prose-body table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+    border-collapse: collapse;
+    margin: 1.25rem 0;
+    font-size: 0.95rem;
+    line-height: 1.5;
+  }
+  .prose-body th,
+  .prose-body td {
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid rgba(26, 25, 21, 0.1);
+    text-align: left;
+    vertical-align: top;
+  }
+  .prose-body th {
+    color: var(--color-ink);
+    font-weight: 600;
+    border-bottom-color: rgba(26, 25, 21, 0.2);
   }
 </style>

@@ -17,6 +17,6 @@ export function registerToday(program) {
     // so this is a display change, not a data change. Gated on isDualPoolActive()
     // (honors dual_pool_override), so it stays dormant until the flip.
     if (isDualPoolActive(today)) o.byPool = true;
-    emitSummary(`Today (${today})`, today, today, o);
+    emitSummary(`Today (${today})`, today, today, o, { span: 1 });
   });
 }

@@ -18,10 +18,10 @@ export default function CopyCommand({ command, label = 'Copy', className = '' })
   return (
     <button
       onClick={copy}
-      className={`inline-flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-1.5 font-mono text-xs text-[var(--accent)] hover:border-[var(--accent)] transition-colors ${className}`}
+      className={`inline-flex items-center gap-2 min-w-0 max-w-full rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-1.5 font-mono text-xs text-[var(--accent)] hover:border-[var(--accent)] transition-colors ${className}`}
       title={`Copy: ${command}`}
     >
-      <span className="truncate max-w-[18rem]">{command}</span>
+      <span className="truncate max-w-[10rem] sm:max-w-[18rem]">{command}</span>
       <span className="text-[var(--muted)] not-italic shrink-0">{copied ? '✓ copied' : label}</span>
     </button>
   );

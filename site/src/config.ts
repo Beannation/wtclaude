@@ -8,7 +8,7 @@ export const DUAL_POOL_ACTIVATION_DATE = '2026-06-15T00:00:00-04:00';
 
 /**
  * JUNE-15 BANNER GATE (PM, June 16, 2026). Anthropic PAUSED the Agent-SDK billing
- * split before June 15 — it did not take effect (Help Center art. 15036540). The
+ * split on June 15, before it took effect (Help Center art. 15036540). The
  * June15Banner auto-flips to "the split is live," which is now false, so it must not
  * render. Mirrors the Fable pattern: the component + both span variants are kept intact
  * for a one-line restore (flip to true + redeploy) if a revised split lands.
@@ -158,10 +158,19 @@ export const GUARDIAN_PRICE = {
 export const CAPTURE_ENDPOINT = import.meta.env.PUBLIC_CAPTURE_ENDPOINT ?? '';
 export const CAPTURE_METHOD: 'POST' = 'POST';
 
+/**
+ * The recommended install (QA-0928-44): a global install, then setup. Under `npx` with no
+ * global install, `wtclaude setup` won't point Claude Code's statusline at the npx cache
+ * (npm can prune it) and asks for exactly these two commands instead.
+ */
+export const INSTALL_STEPS = ['npm i -g wtclaude', 'wtclaude setup'] as const;
+/** Both steps as one copyable block, one command per line. */
+export const INSTALL_CMD = INSTALL_STEPS.join('\n');
+
 /** Canonical links. Socials are the live WTClaude brand profiles (PM-WEB-015). */
 export const LINKS = {
   github: 'https://github.com/Beannation/wtclaude',
   x: 'https://x.com/getwtclaude',
   telegram: 'https://t.me/wtclaude_news',
-  install: 'npx wtclaude setup',
+  install: INSTALL_CMD,
 };

@@ -614,3 +614,38 @@ test('opus-5 stays fully priced and is described as history, not as the default 
   assert.ok(!/deprecated|retired\b(?! entries)/i.test(m.note.replace(/nothing we publish may call Opus 5 deprecated or retired/i, '')),
     'the note may only mention deprecation to forbid it');
 });
+
+// QA-0928-148: partner-platform ids were only partly normalised. Bedrock's
+// `-v1:0` version suffix and its `us.`/`eu.`/`apac.`… inference-profile prefixes,
+// and Vertex's `@YYYYMMDD` suffix, each missed the exact key: the -v1:0 and
+// @date ids fell to the opus family fallback (and logged every turn), and the
+// us.anthropic. id resolved to nothing with no provider. They must resolve to
+// the right entry, carry the partner provider, and stay unpriceable.
+test('QA-0928-148: Bedrock -v1:0 / inference-profile prefixes and Vertex @date resolve exactly, flagged partner', () => {
+  const cases = [
+    // [id,                                               key,          provider]
+    ['bedrock/anthropic.claude-opus-5-5-v1:0',            'opus-5-5',   'bedrock'],
+    ['anthropic.claude-opus-5-5-v1:0',                    'opus-5-5',   'bedrock'],
+    ['us.anthropic.claude-opus-5-5-v1:0',                 'opus-5-5',   'bedrock'],
+    ['eu.anthropic.claude-sonnet-5-v1:0',                 'sonnet-5',   'bedrock'],
+    ['apac.anthropic.claude-haiku-4-5-20251001-v1:0',     'haiku-4-5',  'bedrock'],
+    ['global.anthropic.claude-fable-5-1-v1:0',            'fable-5-1',  'bedrock'],
+    ['bedrock/us.anthropic.claude-opus-5-5-v2',           'opus-5-5',   'bedrock'],
+    ['claude-opus-5-5@20260922',                          'opus-5-5',   'vertex'],
+    ['vertex_ai/claude-opus-5-5@20260922',                'opus-5-5',   'vertex_ai'],
+    ['claude-fable-5-1@20260901',                         'fable-5-1',  'vertex'],
+  ];
+  for (const [id, key, provider] of cases) {
+    const parsed = parseModelId(id);
+    assert.equal(parsed.key, key, `parseModelId("${id}").key`);
+    assert.equal(parsed.provider, provider, `parseModelId("${id}").provider`);
+    const r = getModelEntry(id);
+    assert.ok(r, `${id} must resolve`);
+    assert.equal(r.key, key, `${id} resolved to ${r.key}`);
+    assert.equal(r.fallback, false, `${id} must resolve exactly, never by the opus family fallback`);
+    assert.equal(r.priceable, false, `${id} is partner-served — its first-party rate is indicative only`);
+  }
+  // First-party ids are untouched: the -1 of fable-5-1 and the date strip still behave.
+  assert.deepEqual(parseModelId('claude-fable-5-1'), { provider: null, key: 'fable-5-1' });
+  assert.deepEqual(parseModelId('claude-opus-5-5-20260922[1m]'), { provider: null, key: 'opus-5-5' });
+});

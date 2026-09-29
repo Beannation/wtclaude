@@ -154,10 +154,14 @@ const jsonLd = [
           id="audit-seats"
           type="number"
           min="1"
+          max="100000"
+          step="1"
           inputmode="numeric"
           placeholder="e.g. 24"
-          class="mt-2 w-full rounded-lg border border-ink/15 bg-surface px-3 py-2 text-sm text-ink placeholder:text-warm focus-visible:outline-2 focus-visible:outline-amber"
+          aria-describedby="audit-seats-msg"
+          class="mt-2 w-full rounded-lg border border-ink/15 bg-surface px-3 py-2 text-sm text-ink placeholder:text-warm focus-visible:outline-2 focus-visible:outline-amber aria-[invalid=true]:border-alert"
         />
+        <p id="audit-seats-msg" class="mt-1 text-xs text-alert empty:hidden" aria-live="polite" data-seats-msg></p>
       </div>
 
       <details class="rounded-2xl border border-ink/10 bg-card p-4 shadow-sm">
@@ -173,6 +177,7 @@ const jsonLd = [
           data-audit-paste-go
           class="mt-2 rounded-lg bg-ink px-4 py-2 text-sm font-semibold text-surface transition hover:bg-ink/85"
         >Audit pasted CSV →</button>
+        <p class="mt-2 text-xs text-alert empty:hidden" role="status" aria-live="polite" data-paste-msg></p>
       </details>
     </div>
 
@@ -223,23 +228,32 @@ const jsonLd = [
     <div class="mt-10 border-t border-ink/10 pt-8">
       <p class="font-mono text-xs uppercase tracking-wide text-warm">Keep reading</p>
       <ul class="mt-3 space-y-2 text-sm">
-        <li><a href="/blog/how-to-run-a-claude-team-spend-audit" class="font-medium text-amber-deep hover:text-amber">How to run a Claude Team spend audit →</a></li>
-        <li><a href="/blog/claude-team-seat-pricing-premium-vs-standard" class="font-medium text-amber-deep hover:text-amber">Claude Team seat pricing: Premium vs Standard →</a></li>
-        <li><a href="/blog/state-of-claude-pricing-july-2026" class="font-medium text-amber-deep hover:text-amber">The state of Claude pricing — July 2026 →</a></li>
-        <li><a href="/business" class="font-medium text-amber-deep hover:text-amber">WTClaude for Business (the full product) →</a></li>
+        <li><a href="/blog/how-to-run-a-claude-team-spend-audit/" class="font-medium text-amber-deep hover:text-amber">How to run a Claude Team spend audit →</a></li>
+        <li><a href="/blog/claude-team-seat-pricing-premium-vs-standard/" class="font-medium text-amber-deep hover:text-amber">Claude Team seat pricing: Premium vs Standard →</a></li>
+        <li><a href="/blog/state-of-claude-pricing-july-2026/" class="font-medium text-amber-deep hover:text-amber">The state of Claude pricing — July 2026 →</a></li>
+        <li><a href="/business/" class="font-medium text-amber-deep hover:text-amber">WTClaude for Business (the full product) →</a></li>
       </ul>
     </div>
   </section>
 
   <HookBand />
 
-  <style>
-    /* Print-to-PDF (offline) — show only the report, hide chrome/intake/hero/hookband. */
+  <style is:global>
+    /* Print-to-PDF (offline) — show only the report, hide chrome/intake/hero/hookband.
+       GLOBAL on purpose (QA-0928-112): a scoped <style> gets data-astro-cid selectors that never
+       match the Nav/Footer/BaseLayout elements. Every rule is gated on body.audit-printing. */
     @media print {
-      body.audit-printing > :not(main) {
+      body.audit-printing > :not(main),
+      body.audit-printing #site-nav {
         display: none !important;
       }
       body.audit-printing main > :not(.audit-results-section) {
+        display: none !important;
+      }
+      /* Screen-only inside the report: the lead-save notice app.ts prepends, and the
+         download / share / start-over rows (render.ts marks them data-no-print). */
+      body.audit-printing [data-lead-status],
+      body.audit-printing [data-no-print] {
         display: none !important;
       }
       body.audit-printing main {

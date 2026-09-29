@@ -15,10 +15,20 @@
 //
 // LAUNCH-CRITICAL SAFE-FAIL CONTRACT (build-spec non-negotiables / kickoff §3):
 //   This runs on every status update. It must NEVER break or slow the user's
-//   Claude Code. Every path is wrapped so ANY error/timeout fails silently and
-//   fast (<50ms), the process always exits 0, and a tracker bug can never
-//   degrade the editor. One-line disable: set WTCLAUDE_DISABLE=1 (env) or
+//   Claude Code. Every path is wrapped so ANY error fails silently and fast,
+//   the process always exits 0, and a tracker bug can never degrade the
+//   editor. One-line disable: set WTCLAUDE_DISABLE=1 (env) or
 //   "disabled": true in ~/.wtclaude/config.json.
+//
+// TIME BUDGET (restated for QA-0928-145): Node's own cold start is ~40 ms on
+//   an idle machine before a line of ours runs, so no Node collector can
+//   finish in an absolute "<50 ms". The budget is the collector's OWN overhead
+//   over bare `node -e ''`: target <= 25 ms, constant in the session file's
+//   size. Hence: no child processes (git branch comes from .git/HEAD), only the
+//   session file's tail is read, config.json is read once, and the rate sheet
+//   is parsed only when a turn needs it (a first turn or model change, a Fable
+//   turn, an older CC's speed inference). Claude Code cancels an in-flight run
+//   when a newer update arrives, so a slow tick costs a status refresh.
 //
 // DEFENSIVE PARSING: the payload schema has churned (model id, fast-mode field,
 // flat→nested tokens). We read the documented nested shape first, fall back to
@@ -26,13 +36,13 @@
 // "unexpected payload" note rather than crash.
 // ───────────────────────────────────────────────────────────────────────────
 
-import { readFileSync, appendFileSync } from 'node:fs';
-import { execFileSync } from 'node:child_process';
+import { readFileSync, appendFileSync, openSync, readSync, fstatSync, closeSync, statSync, renameSync, unlinkSync } from 'node:fs';
 import { createHash } from 'node:crypto';
-import { ensureDataDirs, sessionPath, CONFIG_FILE, WTCLAUDE_DIR } from '../utils/paths.js';
+import { ensureDataDirs, sessionPath, isValidSessionId, CONFIG_FILE, WTCLAUDE_DIR } from '../utils/paths.js';
 import { expectedCost } from '../utils/cost.js';
 import { getModelEntry, getLatestPricing, normalizeModel } from '../utils/pricing.js';
-import { join } from 'node:path';
+import { join, dirname, resolve, isAbsolute } from 'node:path';
+import { formatContext } from '../utils/statusline-format.js';
 
 // ── helpers ─────────────────────────────────────────────────────────────────
 
@@ -49,19 +59,94 @@ function readConfig() {
   try { return JSON.parse(readFileSync(CONFIG_FILE, 'utf8')); } catch { return {}; }
 }
 
-function getLastRecord(sessionFile) {
-  let data;
-  try { data = readFileSync(sessionFile, 'utf8'); } catch { return null; }
-  const lines = data.trim().split('\n').filter(Boolean);
-  if (lines.length === 0) return null;
-  return safeJSON(lines[lines.length - 1]);
+// The session file's tail: the last VALID record (`prev`), the last record
+// carrying a numeric cost anchor (`anchor`, usually prev itself), the file size
+// and whether it ends in a newline.
+//
+//  • Tail only (QA-0928-145/147): the whole file used to be read and split on
+//    every tick — 23 ms at 50 MB. The last 64 KB almost always holds the last
+//    record; the window grows only when it doesn't (a >64 KB line) or when an
+//    anchored payload needs the last anchor from further back (unanchored
+//    rows, which real data lacks).
+//  • Last VALID record (QA-0928-13): a truncated last line (a crash mid-append)
+//    used to read as "no previous record", so the next payload was booked as
+//    turn 1 with the full cumulative — a double count. Walk back past it.
+const TAIL_BYTES = 64 * 1024;
+
+function readSessionTail(file, needAnchor) {
+  const out = { prev: null, anchor: null, size: 0, endsWithNewline: true };
+  let fd;
+  try { fd = openSync(file, 'r'); } catch { return out; }
+  try {
+    out.size = fstatSync(fd).size;
+    if (out.size === 0) return out;
+    for (let window = TAIL_BYTES; ; window *= 4) {
+      const start = Math.max(0, out.size - window);
+      const buf = Buffer.allocUnsafe(out.size - start);
+      readSync(fd, buf, 0, buf.length, start);
+      out.endsWithNewline = buf[buf.length - 1] === 0x0a;
+      const lines = buf.toString('utf8').split('\n');
+      if (start > 0) lines.shift(); // the window may open mid-line
+      out.prev = null; out.anchor = null;
+      for (let i = lines.length - 1; i >= 0; i--) {
+        const rec = safeJSON(lines[i]);
+        if (!rec || typeof rec !== 'object' || Array.isArray(rec)) continue;
+        if (!out.prev) out.prev = rec;
+        if (typeof rec.cumulative_cost_usd === 'number') { out.anchor = rec; break; }
+        if (!needAnchor) break;
+      }
+      if (out.anchor || (out.prev && !needAnchor) || start === 0) return out;
+    }
+  } catch {
+    return out;
+  } finally {
+    closeSync(fd);
+  }
 }
 
+// Serialise the final re-read + append of one session across overlapping
+// collector runs (QA-0928-151: two runs started together both booked the same
+// interval in 34 of 40 forced trials). The critical section is ~1 ms. On
+// contention we wait in 2 ms steps for up to ~50 ms, then skip this update —
+// safe, because cost is cumulative: the next update books what this one
+// carried. A lock older than 2 s is a leftover from a killed run and is taken
+// over; if no lock can be created at all, the append goes ahead unlocked, so
+// locking can never stop capture.
+const SLEEP_CELL = new Int32Array(new SharedArrayBuffer(4));
+
+function withSessionLock(file, fn) {
+  const lock = `${file}.lock`;
+  for (let attempt = 0; attempt < 25; attempt++) {
+    let fd;
+    try {
+      fd = openSync(lock, 'wx');
+    } catch (err) {
+      if (err.code !== 'EEXIST') return fn();
+      const st = statSync(lock, { throwIfNoEntry: false });
+      if (st && Date.now() - st.mtimeMs > 2000) { try { unlinkSync(lock); } catch { /* raced */ } continue; }
+      Atomics.wait(SLEEP_CELL, 0, 0, 2);
+      continue;
+    }
+    try { return fn(); } finally {
+      closeSync(fd);
+      try { unlinkSync(lock); } catch { /* already gone */ }
+    }
+  }
+  return false; // still contended — skip this update
+}
+
+// Best-effort breadcrumb; never throws. Helps diagnose payload churn. Capped
+// (QA-0928-48): above 256 KB the log rotates to collector.log.1, so the pair
+// never exceeds ~512 KB. Callers pass key names or sizes, never raw payload
+// bytes — those start with the cwd, which is never stored raw.
+const LOG_CAP_BYTES = 256 * 1024;
+
 function logUnexpected(note, sample) {
-  // Best-effort breadcrumb; never throws. Helps diagnose payload churn.
   try {
-    const line = JSON.stringify({ ts: new Date().toISOString(), note, sample }) + '\n';
-    appendFileSync(join(WTCLAUDE_DIR, 'collector.log'), line);
+    const file = join(WTCLAUDE_DIR, 'collector.log');
+    const st = statSync(file, { throwIfNoEntry: false });
+    if (st && st.size > LOG_CAP_BYTES) renameSync(file, `${file}.1`);
+    appendFileSync(file, JSON.stringify({ ts: new Date().toISOString(), note, sample }) + '\n');
   } catch { /* swallow */ }
 }
 
@@ -104,6 +189,7 @@ function extract(payload) {
       'context_window.current_usage.cache_creation_input_tokens',
       'cache_creation_input_tokens',
     ], 0),
+    freshInput: pick(payload, ['context_window.current_usage.input_tokens'], 0),
     usedPercentage: pick(payload, ['context_window.used_percentage', 'used_percentage'], null),
     // cwd — never stored raw; only used to derive branch + salted project hash.
     cwd: pick(payload, ['cwd', 'workspace.current_dir', 'workspace.project_dir', 'current_dir'], null),
@@ -142,8 +228,9 @@ function extract(payload) {
 function detectUsagePool(config) {
   if (config.usage_pool_override) return config.usage_pool_override;
   // The statusline only renders in interactive Claude Code; headless agent runs
-  // (claude -p, Agent SDK, GitHub Actions) generally don't invoke it. Heuristic.
-  if (process.env.GITHUB_ACTIONS || process.env.CI === 'true') return 'agent_sdk';
+  // (claude -p, Agent SDK) don't invoke it. The old CI / GITHUB_ACTIONS env
+  // heuristic stamped interactive turns agent_sdk — a pool whose split is
+  // paused — whenever a shell exported CI=true (QA-0928-152), so it is gone.
   return 'interactive';
 }
 
@@ -218,20 +305,37 @@ function inferSpeedTier(modelId, tokenDeltas, costDelta) {
   return ratio >= 1.7 ? 'fast' : 'standard'; // 1.3–1.7 is uncertain → default standard
 }
 
-// Time-boxed git branch lookup; reuses the previous record when cwd is unchanged
-// (same project_hash) so we don't spawn git on every status update.
-function getGitBranch(cwd, projectHash, prev) {
-  if (!cwd) return null;
-  if (prev && prev.project_hash === projectHash && 'git_branch' in prev) return prev.git_branch;
+// Current git branch, read straight from .git/HEAD on every turn (QA-0928-50).
+// It used to spawn `git rev-parse` once per cwd stretch and reuse the answer,
+// so a mid-session checkout kept the old branch and one 40 ms timeout cached
+// null for the whole stretch. Reading HEAD is ~0.1 ms, needs no child process
+// (and so no Xcode git-shim dialog), and handles linked worktrees and
+// submodules, whose .git is a `gitdir:` file. A detached HEAD is null, as
+// `rev-parse --abbrev-ref` ('HEAD') was. Metadata only: any failure is null.
+function readGitBranch(cwd) {
+  if (typeof cwd !== 'string' || !isAbsolute(cwd)) return null;
   try {
-    const out = execFileSync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], {
-      cwd, timeout: 40, stdio: ['ignore', 'pipe', 'ignore'],
-    });
-    const branch = out.toString().trim();
-    return branch && branch !== 'HEAD' ? branch : null;
-  } catch {
-    return null; // not a git repo, git missing, or timed out — metadata only
-  }
+    let dir = cwd;
+    for (let depth = 0; depth < 64; depth++) {
+      const dotGit = join(dir, '.git');
+      const st = statSync(dotGit, { throwIfNoEntry: false });
+      if (st) {
+        let gitDir = dotGit;
+        if (st.isFile()) {
+          const m = /^gitdir:\s*(.+?)\s*$/m.exec(readFileSync(dotGit, 'utf8'));
+          if (!m) return null;
+          gitDir = resolve(dir, m[1]);
+        }
+        const head = readFileSync(join(gitDir, 'HEAD'), 'utf8').trim();
+        const ref = /^ref:\s*refs\/heads\/(.+)$/.exec(head);
+        return ref ? ref[1] : null;
+      }
+      const parent = dirname(dir);
+      if (parent === dir) return null;
+      dir = parent;
+    }
+  } catch { /* unreadable repo metadata — no branch */ }
+  return null;
 }
 
 function resolveCostCenter(config, projectHash, gitBranch) {
@@ -256,13 +360,103 @@ function classifyTask(toolNames) {
 
 // ── main ─────────────────────────────────────────────────────────────────────
 
-function collect() {
+// A cumulative cost below half the last anchored cumulative is a counter
+// RESET, not a correction (QA-0928-12). Claude Code restarts
+// cost.total_cost_usd when a session is resumed (seen in real data: a large
+// cumulative dropping to $0.00 inside one session_id); clamping that drop to $0 lost every dollar until the
+// new cumulative climbed past the old one, and the status line showed the
+// stale figure. The 50% bar keeps a small downward recompute — or a stale
+// payload from an overlapping run — from being booked twice.
+const RESET_RATIO = 0.5;
+
+// FIXED 2026-09-28 (RC): the ratio alone can't tell a restart from a stale
+// payload — a stale reading below half was booked as a reset (counted twice),
+// and a restart whose first reading stayed at or above half was clamped (lost).
+// cost.total_duration_ms is wall-clock time since Claude Code's process
+// started, and it restarts with the cost counter (a real reset in a
+// large local corpus did exactly that), so `reading time − duration` dates the
+// process. When the duration fell too: a process that started after the last
+// anchored reading (within a second's slack) is a RESTART, booked in full;
+// the same process means an older payload arriving late — STALE, skipped.
+// Without duration figures on both sides, the 50% rule stands.
+const RESTART_SLACK_MS = 1000;
+
+function classifyDrop(now, base, cur, anchor, nowMs) {
+  const dNow = cur.cumDurationMs, dPrev = anchor ? anchor.cumulative_duration_ms : null;
+  const prevAt = anchor && anchor.ts ? Date.parse(anchor.ts) : NaN;
+  if (Number.isFinite(dNow) && Number.isFinite(dPrev) && Number.isFinite(prevAt) && dNow < dPrev) {
+    const startShift = (nowMs - dNow) - (prevAt - dPrev);
+    return startShift >= dPrev - RESTART_SLACK_MS ? 'reset' : 'stale';
+  }
+  return now < base * RESET_RATIO ? 'reset' : 'clamp';
+}
+
+// Per-turn deltas of this payload against the session's last valid record.
+// Returns { skip } when nothing should be written.
+function computeDeltas(prev, anchor, cur, nowMs = Date.now()) {
+  if (!prev) {
+    // First update for this session — cumulative IS the first turn. But the
+    // session-start payload (nothing billed, nothing used) is not a turn
+    // (QA-0928-49): almost every real session opened with a $0 / 0-token row
+    // that pushed the real first turn to turn 2.
+    const unused = cur.cumInput === 0 && cur.cumOutput === 0 && cur.cumCacheRead === 0 && cur.cumCacheWrite === 0;
+    if (unused && !(cur.cumCost > 0)) return { skip: true };
+    return {
+      turn: 1, counterReset: false,
+      input: cur.cumInput, output: cur.cumOutput,
+      cacheRead: cur.cumCacheRead, cacheWrite: cur.cumCacheWrite,
+      cost: cur.cumCost,
+    };
+  }
+
+  // Math.max guards /compact resets, context-occupancy non-monotonicity, and
+  // session resumption (build-spec §5: "handle new sessions / model switches /
+  // /compact / resume"). Tokens may be occupancy (their semantics are BUILD-014).
+  const input = Math.max(0, cur.cumInput - (prev.cumulative_input ?? 0));
+  const output = Math.max(0, cur.cumOutput - (prev.cumulative_output ?? 0));
+  const cacheRead = Math.max(0, cur.cumCacheRead - (prev.cumulative_cache_read ?? 0));
+  const cacheWrite = Math.max(0, cur.cumCacheWrite - (prev.cumulative_cache_write ?? 0));
+
+  // Cost: null when this payload has no anchor (QA-0928-52 — readers then
+  // label the turn an estimate instead of a billing-grade $0). Otherwise the
+  // delta against the last ANCHORED row, walking back past unanchored ones
+  // (QA-0928-146); with no anchor anywhere yet, this reading counts in full.
+  //
+  // Compare LIKE FOR LIKE. `cumulative_cost_usd` was written through round6(),
+  // so subtracting it from the raw payload value leaves a sub-microcent residue
+  // on an unchanged payload — enough to defeat the duplicate guard below, which
+  // then writes a row whose own cost rounds to $0. In a real local corpus those
+  // phantom rows were a sizeable share of all records, every one of them
+  // carrying a cumulative identical to its predecessor, with no counter-examples.
+  let cost = null;
+  let counterReset = false;
+  if (cur.cumCost != null) {
+    const now = round6(cur.cumCost);
+    const base = anchor ? anchor.cumulative_cost_usd : null;
+    if (base == null) cost = now;
+    else if (now < base) {
+      const kind = classifyDrop(now, base, cur, anchor, nowMs);
+      if (kind === 'stale') return { skip: true };   // an older reading than the one we have
+      if (kind === 'reset') { cost = now; counterReset = true; }
+      else cost = 0;                                  // a small downward recompute
+    } else cost = now - base;
+  }
+
+  // Duplicate status update (nothing changed) — don't write. A reset is always
+  // written, even at $0 with unchanged tokens: it is the new baseline.
+  if (!counterReset && input === 0 && output === 0 && cacheRead === 0 && cacheWrite === 0 && !(cost > 0)) {
+    return { skip: true };
+  }
+  return { turn: (prev.turn ?? 0) + 1, counterReset, input, output, cacheRead, cacheWrite, cost };
+}
+
+function collect(config) {
   const raw = readStdin();
   if (!raw) return; // nothing piped — nothing to do
 
   const payload = safeJSON(raw);
   if (!payload || typeof payload !== 'object') {
-    logUnexpected('unparseable payload', raw.slice(0, 200));
+    logUnexpected('unparseable payload', { length: raw.length });
     return;
   }
 
@@ -271,170 +465,183 @@ function collect() {
     logUnexpected('payload missing session_id', Object.keys(payload));
     return;
   }
-  if (f.cumulativeCost == null && f.cumInput === 0 && f.cumOutput === 0) {
+
+  const cur = {
+    cumInput: Number(f.cumInput) || 0,
+    cumOutput: Number(f.cumOutput) || 0,
+    cumCacheRead: Number(f.cumCacheRead) || 0,
+    cumCacheWrite: Number(f.cumCacheWrite) || 0,
+    // A finite numeric string ("0.75") is accepted as the anchor (QA-0928-146).
+    cumCost: finiteOrNull(f.cumulativeCost),
+    // Dates the Claude Code process, to tell a restart from a stale payload.
+    cumDurationMs: finiteOrNull(f.cumDurationMs),
+  };
+  const ctx = contextTokens(f);
+
+  if (!isValidSessionId(f.sessionId)) {
+    // A path separator or '..' would write outside sessions/ (QA-0928-150).
+    logUnexpected('invalid session_id — not recorded', { length: String(f.sessionId).length });
+    emitStatus(cur.cumCost, ctx);
+    return;
+  }
+  if (cur.cumCost == null && cur.cumInput === 0 && cur.cumOutput === 0) {
     // Neither the cost anchor nor any tokens are present — likely a new/renamed
     // schema. Record a breadcrumb but don't crash or write a junk turn.
     logUnexpected('no cost anchor and no tokens', Object.keys(payload));
+    emitStatus(null, ctx);
+    return;
   }
 
-  ensureDataDirs();
-  const config = readConfig();
   const file = sessionPath(f.sessionId);
-  const prev = getLastRecord(file);
-
-  // ── deltas ──
-  const cumInput = Number(f.cumInput) || 0;
-  const cumOutput = Number(f.cumOutput) || 0;
-  const cumCacheRead = Number(f.cumCacheRead) || 0;
-  const cumCacheWrite = Number(f.cumCacheWrite) || 0;
-  const cumCost = typeof f.cumulativeCost === 'number' ? f.cumulativeCost : null;
-
-  let deltaInput, deltaOutput, deltaCacheRead, deltaCacheWrite, deltaCost, turn;
-
-  if (prev) {
-    // Math.max guards /compact resets, context-occupancy non-monotonicity, and
-    // session resumption (build-spec §5: "handle new sessions / model switches /
-    // /compact / resume"). Cost is monotonic-cumulative; tokens may be occupancy.
-    deltaInput = Math.max(0, cumInput - (prev.cumulative_input ?? 0));
-    deltaOutput = Math.max(0, cumOutput - (prev.cumulative_output ?? 0));
-    deltaCacheRead = Math.max(0, cumCacheRead - (prev.cumulative_cache_read ?? 0));
-    deltaCacheWrite = Math.max(0, cumCacheWrite - (prev.cumulative_cache_write ?? 0));
-    // Compare LIKE FOR LIKE. `prev.cumulative_cost_usd` was written through
-    // round6(), so subtracting it from the raw payload value leaves a
-    // sub-microcent residue on an unchanged payload — enough to defeat the
-    // duplicate guard below, which then writes a row whose own cost rounds to
-    // $0. That produced 3,432 phantom rows in a 24,751-record local corpus
-    // (13.9%), every one of them carrying a cumulative identical to its
-    // predecessor, and zero counter-examples. They cost nothing but they
-    // inflated the denominator of every per-turn metric.
-    deltaCost = cumCost != null && typeof prev.cumulative_cost_usd === 'number'
-      ? Math.max(0, round6(cumCost) - prev.cumulative_cost_usd)
-      : 0;
-    turn = (prev.turn ?? 0) + 1;
-
-    // Duplicate status update (nothing changed) — re-emit status, don't write.
-    if (deltaInput === 0 && deltaOutput === 0 && deltaCacheRead === 0 && deltaCacheWrite === 0 && deltaCost === 0) {
-      emitStatus(prev.cumulative_cost_usd, cumInput + cumOutput + cumCacheRead + cumCacheWrite);
-      return;
-    }
-  } else {
-    // First update for this session — cumulative IS the first turn.
-    deltaInput = cumInput;
-    deltaOutput = cumOutput;
-    deltaCacheRead = cumCacheRead;
-    deltaCacheWrite = cumCacheWrite;
-    deltaCost = cumCost ?? 0;
-    turn = 1;
-  }
+  const needAnchor = cur.cumCost != null;
+  let tail = readSessionTail(file, needAnchor);
+  let d = computeDeltas(tail.prev, tail.anchor, cur);
+  // The status line always shows THIS payload's figure — never a stale one.
+  if (d.skip) { emitStatus(cur.cumCost, ctx); return; }
 
   // ── day-one fields ──
-  const salt = config.edit_hash_salt || config.anonymous_id || 'wtclaude';
-  const projectHash = f.cwd ? shortHash(salt, f.cwd) : null;
-  const gitBranch = getGitBranch(f.cwd, projectHash, prev);
+  // No per-install salt (setup never ran, or config.json is unreadable) means
+  // no project_hash and no branch (QA-0928-149): the old fallback to the public
+  // constant 'wtclaude' — or to the anonymous id the server receives — let a
+  // guessed path be confirmed against the hash.
+  const salt = config.edit_hash_salt || null;
+  const projectHash = salt && f.cwd ? shortHash(salt, f.cwd) : null;
+  const gitBranch = salt ? readGitBranch(f.cwd) : null;
   const costCenter = resolveCostCenter(config, projectHash, gitBranch);
   const usagePool = detectUsagePool(config);
-  const tokenDeltas = {
-    input_tokens: deltaInput, output_tokens: deltaOutput,
-    cache_read_tokens: deltaCacheRead, cache_write_tokens: deltaCacheWrite,
-  };
-  const { tier: speedTier, source: speedTierSource } = resolveSpeedTier(f.fastMode, f.modelId, tokenDeltas, deltaCost);
-  const billingBasis = detectBillingBasis(usagePool, speedTier, f.modelId, config);
-
-  // ── BUILD-023: per-turn deltas for the cumulative v2 counters ──
-  // Math.max guards /compact resets, session resume, and counter non-monotonicity
-  // (same discipline as the token/cost deltas above).
-  const cumLinesAdded = numOrNull(f.cumLinesAdded);
-  const cumLinesRemoved = numOrNull(f.cumLinesRemoved);
-  const cumDurationMs = numOrNull(f.cumDurationMs);
-  const cumApiDurationMs = numOrNull(f.cumApiDurationMs);
-  const deltaLinesAdded = monotonicDelta(cumLinesAdded, prev && prev.cumulative_lines_added);
-  const deltaLinesRemoved = monotonicDelta(cumLinesRemoved, prev && prev.cumulative_lines_removed);
-  const deltaDurationMs = monotonicDelta(cumDurationMs, prev && prev.cumulative_duration_ms);
-  const deltaApiDurationMs = monotonicDelta(cumApiDurationMs, prev && prev.cumulative_api_duration_ms);
   const taskCategory = classifyTask(f.toolNames);
   const toolNames = Array.isArray(f.toolNames) ? f.toolNames.map(String) : [];
   const editTargetHash = null; // edit target not exposed in the payload — confirm via live capture (BUILD live-verify)
 
-  // Flag (don't crash on) an unrecognized model id so the pricing config gets updated.
-  const resolved = getModelEntry(f.modelId);
-  if (!resolved) logUnexpected('unrecognized model id (cost still anchored on payload)', f.modelId);
-  else if (resolved.fallback) logUnexpected('model id hit opus-* family fallback — add explicit pricing entry/alias', f.modelId);
+  const buildRecord = (d, prev) => {
+    const tokenDeltas = {
+      input_tokens: d.input, output_tokens: d.output,
+      cache_read_tokens: d.cacheRead, cache_write_tokens: d.cacheWrite,
+    };
+    const { tier: speedTier, source: speedTierSource } = resolveSpeedTier(f.fastMode, f.modelId, tokenDeltas, d.cost);
+    const billingBasis = detectBillingBasis(usagePool, speedTier, f.modelId, config);
 
-  const record = {
-    ts: new Date().toISOString(),
-    session_id: f.sessionId,
-    turn,
-    model: f.modelId,
-    // HONESTY FLAG (B2). `model` is the session's CONFIGURED model, taken from
-    // the payload's `model.id` — documented as "Current model identifier and
-    // display name". It is NOT the model that actually served the response.
-    // Anthropic's Cookbook is explicit that serving-model analytics must come
-    // from `usage.iterations` ("Analytics recorded against the requested model
-    // will be wrong whenever a fallback is used"), and the statusline payload
-    // carries no `iterations` field and no serving-model field of any kind
-    // (verified against the statusline docs, 2026-08-24). So a fallback-served
-    // turn is attributed here to the requested model, and we cannot see that it
-    // happened. Recording the provenance is the honest thing we CAN do.
-    model_source: 'session_setting',
-    input_tokens: deltaInput,
-    output_tokens: deltaOutput,
-    cache_read_tokens: deltaCacheRead,
-    cache_write_tokens: deltaCacheWrite,
-    tool_names: toolNames,
-    cumulative_input: cumInput,
-    cumulative_output: cumOutput,
-    cumulative_cache_read: cumCacheRead,
-    cumulative_cache_write: cumCacheWrite,
-    // ── billing-grade headline cost (the anchor) ──
-    cost_usd: round6(deltaCost),
-    cumulative_cost_usd: cumCost != null ? round6(cumCost) : null,
-    // ── classification / labeling ──
-    speed_tier: speedTier,
-    speed_tier_source: speedTierSource, // BUILD-022: 'payload' (billing-grade) | 'inferred' (older CC fallback)
-    usage_pool: usagePool,
-    billing_basis: billingBasis,
-    // Plan-conditional Fable reading for this turn; null on non-Fable turns.
-    // 'unknown' means no plan is configured — surfaces must show both readings.
-    fable_billing: fableBillingFor(f.modelId, config),
-    used_percentage: f.usedPercentage ?? null,
-    // ── grouping / identity (no-migration discipline) ──
-    project_hash: projectHash,
-    git_branch: gitBranch,
-    cost_center: costCenter,
-    device_id: config.device_id ?? null,
-    task_category: taskCategory,
-    edit_target_hash: editTargetHash,
-    user_identifier: config.user_identifier ?? config.anonymous_id ?? null,
-    // ── BUILD-023: statusline data surface v2 (capture-only; views are Phase 1 Guardian) ──
-    // Per-turn deltas + cumulative counters. All null on CC versions predating the field.
-    lines_added: deltaLinesAdded,
-    lines_removed: deltaLinesRemoved,
-    cumulative_lines_added: cumLinesAdded,
-    cumulative_lines_removed: cumLinesRemoved,
-    duration_ms: deltaDurationMs,            // wall-clock for this turn (cost.total_duration_ms delta)
-    api_duration_ms: deltaApiDurationMs,     // active API time this turn (the part that actually costs)
-    cumulative_duration_ms: cumDurationMs,
-    cumulative_api_duration_ms: cumApiDurationMs,
-    effort_level: f.effortLevel,             // effort.level (e.g. 'xhigh')
-    thinking_enabled: f.thinkingEnabled,     // thinking.enabled boolean
-    exceeds_200k_tokens: f.exceeds200k,      // long-context flag
-    cc_version: f.ccVersion,                 // Claude Code version that emitted this turn
-    // rate_limits snapshot — the shared overall plan limit (per GTM-005). Flattened
-    // for direct read by the limit gauge; never includes paths/content.
-    rate_limit_5h_pct: pick(f.rateLimits, ['five_hour.used_percentage'], null),
-    rate_limit_5h_resets_at: pick(f.rateLimits, ['five_hour.resets_at'], null),
-    rate_limit_7d_pct: pick(f.rateLimits, ['seven_day.used_percentage'], null),
-    rate_limit_7d_resets_at: pick(f.rateLimits, ['seven_day.resets_at'], null),
+    // ── BUILD-023: per-turn deltas for the cumulative v2 counters ──
+    // Math.max guards /compact resets, session resume, and counter non-monotonicity
+    // (same discipline as the token/cost deltas above).
+    const cumLinesAdded = numOrNull(f.cumLinesAdded);
+    const cumLinesRemoved = numOrNull(f.cumLinesRemoved);
+    const cumDurationMs = numOrNull(f.cumDurationMs);
+    const cumApiDurationMs = numOrNull(f.cumApiDurationMs);
+
+    return {
+      ts: new Date().toISOString(),
+      session_id: f.sessionId,
+      turn: d.turn,
+      model: f.modelId,
+      // HONESTY FLAG (B2). `model` is the session's CONFIGURED model, taken from
+      // the payload's `model.id` — documented as "Current model identifier and
+      // display name". It is NOT the model that actually served the response.
+      // Anthropic's Cookbook is explicit that serving-model analytics must come
+      // from `usage.iterations` ("Analytics recorded against the requested model
+      // will be wrong whenever a fallback is used"), and the statusline payload
+      // carries no `iterations` field and no serving-model field of any kind
+      // (verified against the statusline docs, 2026-08-24). So a fallback-served
+      // turn is attributed here to the requested model, and we cannot see that it
+      // happened. Recording the provenance is the honest thing we CAN do.
+      model_source: 'session_setting',
+      input_tokens: d.input,
+      output_tokens: d.output,
+      cache_read_tokens: d.cacheRead,
+      cache_write_tokens: d.cacheWrite,
+      tool_names: toolNames,
+      cumulative_input: cur.cumInput,
+      cumulative_output: cur.cumOutput,
+      cumulative_cache_read: cur.cumCacheRead,
+      cumulative_cache_write: cur.cumCacheWrite,
+      // ── billing-grade headline cost (the anchor) ──
+      // null (not 0) when the payload carried no cost anchor (QA-0928-52).
+      cost_usd: d.cost != null ? round6(d.cost) : null,
+      cumulative_cost_usd: cur.cumCost != null ? round6(cur.cumCost) : null,
+      // The payload's cumulative restarted inside this session (QA-0928-12);
+      // cost_usd is then the new cumulative itself.
+      ...(d.counterReset ? { counter_reset: true } : {}),
+      // ── classification / labeling ──
+      speed_tier: speedTier,
+      speed_tier_source: speedTierSource, // BUILD-022: 'payload' (billing-grade) | 'inferred' (older CC fallback)
+      usage_pool: usagePool,
+      billing_basis: billingBasis,
+      // Plan-conditional Fable reading for this turn; null on non-Fable turns.
+      // 'unknown' means no plan is configured — surfaces must show both readings.
+      fable_billing: fableBillingFor(f.modelId, config),
+      used_percentage: f.usedPercentage ?? null,
+      // ── grouping / identity (no-migration discipline) ──
+      project_hash: projectHash,
+      git_branch: gitBranch,
+      cost_center: costCenter,
+      device_id: config.device_id ?? null,
+      task_category: taskCategory,
+      edit_target_hash: editTargetHash,
+      user_identifier: config.user_identifier ?? config.anonymous_id ?? null,
+      // ── BUILD-023: statusline data surface v2 (capture-only; views are Phase 1 Guardian) ──
+      // Per-turn deltas + cumulative counters. All null on CC versions predating the field.
+      lines_added: monotonicDelta(cumLinesAdded, prev && prev.cumulative_lines_added),
+      lines_removed: monotonicDelta(cumLinesRemoved, prev && prev.cumulative_lines_removed),
+      cumulative_lines_added: cumLinesAdded,
+      cumulative_lines_removed: cumLinesRemoved,
+      duration_ms: monotonicDelta(cumDurationMs, prev && prev.cumulative_duration_ms),             // wall-clock for this turn (cost.total_duration_ms delta)
+      api_duration_ms: monotonicDelta(cumApiDurationMs, prev && prev.cumulative_api_duration_ms),  // active API time this turn (the part that actually costs)
+      cumulative_duration_ms: cumDurationMs,
+      cumulative_api_duration_ms: cumApiDurationMs,
+      effort_level: f.effortLevel,             // effort.level (e.g. 'xhigh')
+      thinking_enabled: f.thinkingEnabled,     // thinking.enabled boolean
+      exceeds_200k_tokens: f.exceeds200k,      // long-context flag
+      cc_version: f.ccVersion,                 // Claude Code version that emitted this turn
+      // rate_limits snapshot — the shared overall plan limit (per GTM-005). Flattened
+      // for direct read by the limit gauge; never includes paths/content.
+      rate_limit_5h_pct: pick(f.rateLimits, ['five_hour.used_percentage'], null),
+      rate_limit_5h_resets_at: pick(f.rateLimits, ['five_hour.resets_at'], null),
+      rate_limit_7d_pct: pick(f.rateLimits, ['seven_day.used_percentage'], null),
+      rate_limit_7d_resets_at: pick(f.rateLimits, ['seven_day.resets_at'], null),
+    };
   };
 
-  appendFileSync(file, JSON.stringify(record) + '\n');
-  emitStatus(cumCost, cumInput + cumOutput + cumCacheRead + cumCacheWrite);
+  let record = buildRecord(d, tail.prev);
+
+  // Compare-and-append under the session lock (QA-0928-151): if another
+  // collector run appended since our read, recompute against its row so
+  // overlapping runs can't both book the same interval. Claude Code cancels
+  // in-flight runs, so this is rare.
+  ensureDataDirs();
+  const written = withSessionLock(file, () => {
+    const again = readSessionTail(file, needAnchor);
+    if (again.size !== tail.size) {
+      tail = again;
+      d = computeDeltas(tail.prev, tail.anchor, cur);
+      if (d.skip) return false;
+      record = buildRecord(d, tail.prev);
+    }
+    // Never glue a record onto a partial last line (QA-0928-13).
+    appendFileSync(file, (tail.endsWithNewline ? '' : '\n') + JSON.stringify(record) + '\n');
+    return true;
+  });
+
+  // Flag (don't crash on) an unrecognized or family-guessed model id so the
+  // pricing config gets updated — once per session and model, not once per
+  // turn (QA-0928-48: one real log held thousands of identical lines).
+  if (written && (!tail.prev || tail.prev.model !== f.modelId)) {
+    const resolved = getModelEntry(f.modelId);
+    if (!resolved) logUnexpected('unrecognized model id (cost still anchored on payload)', f.modelId);
+    else if (resolved.fallback) logUnexpected('model id hit opus-* family fallback — add explicit pricing entry/alias', f.modelId);
+  }
+  emitStatus(cur.cumCost, ctx);
 }
 
 function round6(n) { return Math.round(n * 1e6) / 1e6; }
 
 // Coerce to a finite number or null (BUILD-023: fields absent on older CC).
 function numOrNull(v) { return typeof v === 'number' && isFinite(v) ? v : null; }
+
+// Like numOrNull, but a finite numeric string counts too (the cost anchor).
+function finiteOrNull(v) {
+  if (typeof v === 'string' && v.trim() !== '') v = Number(v);
+  return numOrNull(v);
+}
 
 // Per-turn delta for a cumulative counter, clamped non-negative. Returns null
 // when the current cumulative is unavailable (field absent → no delta to record).
@@ -443,14 +650,27 @@ function monotonicDelta(cum, prevCum) {
   return Math.max(0, cum - (typeof prevCum === 'number' ? prevCum : 0));
 }
 
-function emitStatus(cumulativeCost, totalTokens) {
-  // Short status string rendered back into Claude Code's status line.
+// Tokens currently in the context window — the same input-only sum Claude Code
+// uses for its own used_percentage. Per the statusline docs (read 2026-09-28),
+// context_window.total_input_tokens already IS input + cache_creation +
+// cache_read from the most recent API response, so nothing is added to it.
+// (BUILD-018: the old figure added total_output and the current_usage cache
+// fields on top — counting cached tokens twice — and called a context snapshot
+// "tok", as if it were tokens used this session.)
+function contextTokens(f) {
+  const total = Number(f.cumInput) || 0;
+  if (total > 0) return total;
+  return (Number(f.freshInput) || 0) + (Number(f.cumCacheRead) || 0) + (Number(f.cumCacheWrite) || 0);
+}
+
+function emitStatus(cumulativeCost, ctxTokens) {
+  // Short status string rendered back into Claude Code's status line: the
+  // session's billing-grade cost, then the current context size (omitted before
+  // the first API response).
   try {
     const costStr = typeof cumulativeCost === 'number' ? `$${cumulativeCost.toFixed(2)}` : '$—';
-    const tokStr = totalTokens >= 1_000_000
-      ? `${(totalTokens / 1_000_000).toFixed(1)}M`
-      : totalTokens >= 1_000 ? `${(totalTokens / 1_000).toFixed(0)}K` : `${totalTokens}`;
-    process.stdout.write(`wtclaude · ${costStr} · ${tokStr} tok`);
+    const ctx = formatContext(ctxTokens);
+    process.stdout.write(`wtclaude · ${costStr}${ctx ? ` · ${ctx}` : ''}`);
   } catch { /* never block the status line on a write error */ }
 }
 
@@ -463,7 +683,7 @@ function main() {
   if (config && config.disabled === true) return;
 
   try {
-    collect();
+    collect(config || {});
   } catch (err) {
     // A tracker that breaks the editor is worse than no tracker. Swallow
     // everything, leave a breadcrumb, and exit clean.

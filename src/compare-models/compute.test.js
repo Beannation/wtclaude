@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { computeComparison, repriceSurface, COMPARE_MODELS, CAVEATS } from './compute.js';
+import { computeComparison, repriceSurface, COMPARE_MODELS, CAVEATS, USD_WITHHELD_REASON } from './compute.js';
 
 // One turn = exactly 1M input + 1M output tokens, no cache, so re-pricing at a
 // model's $in/$out rate is trivially checkable by hand.
@@ -40,14 +40,16 @@ test('compare-models never applies the cancelled Sonnet-5 step-up', () => {
   }
 });
 
-test('per-surface split renders: Code billing-grade, Cowork estimate, Chat excluded', () => {
+test('per-surface split renders: Code re-priced estimate, Cowork estimate, Chat excluded', () => {
   const cmp = computeComparison({
     codeTurns: [turn('opus-4-8')],
     coworkTurns: [],
     today: '2026-07-15',
     days: 30,
   });
-  assert.equal(cmp.surfaces.code.grade, 'billing-grade');
+  // Decision 4 (2026-09-28): re-priced figures are never billing-grade — the
+  // recorded Code tokens are context occupancy (BUILD-014), not billed tokens.
+  assert.equal(cmp.surfaces.code.grade, 'estimate');
   assert.equal(cmp.surfaces.code.present, true);
   assert.equal(cmp.surfaces.cowork.grade, 'estimate');
   assert.equal(cmp.surfaces.cowork.present, false); // no cowork data => not fabricated
@@ -182,4 +184,68 @@ test('the monthly delta is on the same scale as the monthly figures it sits betw
     assert.ok(Math.abs(m.monthly_delta_vs_baseline_usd - (m.monthly_usd - s.baseline_monthly_usd)) < 1e-6, m.key);
     assert.ok(Math.abs(m.monthly_delta_vs_baseline_usd - m.delta_vs_baseline_usd * 3) < 1e-6, `${m.key}: 30/10 scaling`);
   }
+});
+
+// ───────────────────────────────────────────────────────────────────────────
+// BUILD-018, Peter's decision 4 (2026-09-28). The Code surface's recorded
+// tokens are context-window occupancy, not billed tokens (BUILD-014), so a
+// token × rate re-price of them came out 3.5-7x below the billing-grade spend
+// for the same window (QA-0928-21) while being labelled "billing-grade tokens"
+// and "what you actually run". Until the collector re-shape, the Code surface
+// shows percentage differences only, beside the real billed total.
+// ───────────────────────────────────────────────────────────────────────────
+
+test('decision 4: the Code surface withholds every re-priced dollar figure and keeps the % deltas', () => {
+  const cmp = computeComparison({
+    codeTurns: [turn('claude-opus-5-5'), turn('claude-sonnet-5')],
+    coworkTurns: [turn('claude-sonnet-5')],
+    today: '2026-09-28', days: 30,
+    billed: { usd: 123.45, anchored_usd: 123.45, estimated_usd: 0, anchored_turns: 2, estimated_turns: 0 },
+  });
+  const code = cmp.surfaces.code;
+  assert.equal(code.usd_withheld, true);
+  assert.equal(code.withheld_reason, USD_WITHHELD_REASON);
+  assert.equal(code.baseline_window_usd, null);
+  assert.equal(code.baseline_monthly_usd, null);
+  for (const m of code.models) {
+    assert.deepEqual([m.window_usd, m.monthly_usd, m.delta_vs_baseline_usd, m.monthly_delta_vs_baseline_usd], [null, null, null, null], m.key);
+    assert.equal(typeof m.delta_pct, 'number', `${m.key} keeps its % difference`);
+  }
+  // Mix = Opus 5.5 ($24) + Sonnet 5 ($12) = $36; all-Sonnet = $24 -> -33%.
+  assert.equal(code.models.find(m => m.key === 'sonnet-5').delta_pct, -33);
+  // The billed total rides beside the percentages, untouched.
+  assert.deepEqual(code.billed, { usd: 123.45, anchored_usd: 123.45, estimated_usd: 0, anchored_turns: 2, estimated_turns: 0 });
+  // The combined total mixes Code in, so it withholds too; Cowork keeps its estimate.
+  assert.equal(cmp.total.usd_withheld, true);
+  assert.equal(cmp.total.baseline_monthly_usd, null);
+  assert.equal(cmp.surfaces.cowork.usd_withheld, undefined);
+  assert.equal(round(cmp.surfaces.cowork.baseline_monthly_usd), 12);
+});
+
+test('QA-0928-22: a surface projects from the days its data covers, and says how many', () => {
+  // One day of data, asked about 1, 7 or 30 days: the same monthly figure.
+  const monthly = [1, 7, 30].map(days => computeComparison({
+    coworkTurns: [turn('claude-sonnet-5')], today: '2026-09-28', days, coveredDays: { cowork: 1 },
+  }).surfaces.cowork);
+  for (const s of monthly) {
+    assert.equal(s.covered_days, 1);
+    assert.equal(round(s.baseline_monthly_usd), 360, '$12 in one day -> $360/mo');
+  }
+  // 3 days of data in a 30-day window divides by 3, not 30.
+  const three = computeComparison({ coworkTurns: [turn('claude-sonnet-5')], today: '2026-09-28', days: 30, coveredDays: { cowork: 3 } });
+  assert.equal(round(three.surfaces.cowork.baseline_monthly_usd), 120);
+  // Absent a coverage figure, the requested window is the basis (unchanged).
+  const plain = computeComparison({ coworkTurns: [turn('claude-sonnet-5')], today: '2026-09-28', days: 30 });
+  assert.equal(plain.surfaces.cowork.covered_days, 30);
+  assert.equal(round(plain.surfaces.cowork.baseline_monthly_usd), 12);
+});
+
+test('the surface caveat is true: no billing-grade re-price, Cowork logs named, helper calls disclosed', () => {
+  const surfaces = CAVEATS[CAVEATS.length - 1];
+  assert.doesNotMatch(surfaces, /Code is billing-grade|audit-log tokens/, 'both halves of the old line are false now');
+  assert.match(surfaces, /billed total is billing-grade/);
+  assert.match(surfaces, /shown as percentages, not dollars/);
+  assert.match(surfaces, /tokens from Cowork’s local logs × rate/);
+  assert.match(surfaces, /web search and fetch/, 'QA-0928-81: the helper-model gap is labelled');
+  assert.doesNotMatch(CAVEATS.join(' '), /costUSD|total_cost_usd/);
 });

@@ -1,11 +1,27 @@
-import { getSessionsForDateRange } from '../utils/sessions.js';
-import { computeTurnCost, formatCost, formatTokens } from '../utils/cost.js';
+import { getSessionsForDateRange, summarizeTurns } from '../utils/sessions.js';
+import { turnCostBasis, formatCost, formatTokens } from '../utils/cost.js';
+import { moneyWithBasis, excludedLines, tokensAll, basisTag, inputSideTokens } from '../utils/format.js';
 import { localDate } from '../utils/time.js';
 
+// CORRECTED 2026-09-28 (BUILD-018). The stored per-turn tokens are context
+// occupancy deltas (BUILD-014), not billed tokens, while the per-turn cost is
+// the billed anchor. So the debrief no longer reports a "cache hit rate" or a
+// causal CLAUDE.md tip on those tokens (QA-0928-85), labels the costliest
+// turn's tokens as context growth (QA-0928-87), and says which token fields
+// its total sums — all four, as `blocks` does (QA-0928-174). The cache-read
+// share is over the input side only (output is never cached), each token
+// counted once, and says so rather than borrowing the four-field "recorded
+// tokens".
+//
+// QA-0928-55 (ledger handoff): "Total cost:" was unlabelled and summed every
+// turn through computeTurnCost, fallback-priced unanchored turns included. It is
+// now summarizeTurns' total — the one `today` shows: billing-grade anchor plus
+// labelled estimate, turns we cannot price left out and named — with its basis
+// badge, and the costliest turn says when its cost is an estimate.
 export function registerDebrief(program) {
   program
     .command('debrief')
-    .description('End-of-day summary with costliest turn and tip')
+    .description('End-of-day summary with the costliest turn')
     .action(() => {
       const today = localDate(); // local calendar date (QA-BUG-10)
       const sessions = getSessionsForDateRange(today, today);
@@ -16,15 +32,14 @@ export function registerDebrief(program) {
       }
 
       const allTurns = sessions.flatMap(s => s.turns);
-      let totalCost = 0;
+      const total = summarizeTurns(allTurns);
       let costliestTurn = null;
-      let costliestCost = 0;
+      let costliest = null;
 
       for (const t of allTurns) {
-        const c = computeTurnCost(t);
-        totalCost += c;
-        if (c > costliestCost) {
-          costliestCost = c;
+        const b = turnCostBasis(t); // an excluded turn is $0 here: never "costliest"
+        if (b.usd > (costliest ? costliest.usd : 0)) {
+          costliest = b;
           costliestTurn = t;
         }
       }
@@ -33,28 +48,35 @@ export function registerDebrief(program) {
       console.log('  ========================');
       console.log(`  Sessions:     ${sessions.length}`);
       console.log(`  Turns:        ${allTurns.length}`);
-      console.log(`  Total cost:   ${formatCost(totalCost)}`);
-      console.log(`  Total tokens: ${formatTokens(allTurns.reduce((s, t) => s + t.input_tokens + t.output_tokens, 0))}`);
+      // Every turn left out (no priceable model, no anchor): no $0 figure.
+      console.log(`  Total cost:   ${basisTag(total).priced ? moneyWithBasis(total.cost, total) : '—  (not priced — see below)'}`);
+      for (const l of excludedLines(total)) console.log(l);
+      console.log(`  Tokens:       ${formatTokens(tokensAll(total))} recorded (input + output + cache read + cache write)`);
       console.log('');
 
       if (costliestTurn) {
+        const basis = costliest.basis === 'billing-grade'
+          ? 'billing-grade'
+          : 'estimated — Claude Code sent no cost for this turn';
         console.log(`  Costliest turn: #${costliestTurn.turn} (${costliestTurn.model})`);
-        console.log(`    Cost: ${formatCost(costliestCost)}`);
-        console.log(`    Input: ${formatTokens(costliestTurn.input_tokens)} | Output: ${formatTokens(costliestTurn.output_tokens)}`);
-        console.log(`    Cache read: ${formatTokens(costliestTurn.cache_read_tokens)} | Cache write: ${formatTokens(costliestTurn.cache_write_tokens)}`);
+        console.log(`    Cost: ${formatCost(costliest.usd)} (${basis})`);
+        console.log('    Recorded tokens (context growth, not billed tokens):');
+        console.log(`      Input: ${formatTokens(costliestTurn.input_tokens || 0)} | Output: ${formatTokens(costliestTurn.output_tokens || 0)}`);
+        console.log(`      Cache read: ${formatTokens(costliestTurn.cache_read_tokens || 0)} | Cache write: ${formatTokens(costliestTurn.cache_write_tokens || 0)}`);
       }
 
-      const totalInput = allTurns.reduce((s, t) => s + t.input_tokens + t.cache_read_tokens + t.cache_write_tokens, 0);
-      const cacheReads = allTurns.reduce((s, t) => s + t.cache_read_tokens, 0);
-      const cacheRate = totalInput > 0 ? ((cacheReads / totalInput) * 100).toFixed(0) : 0;
+      // Input side counted once per turn (RC 2026-09-28): the stored input
+      // already includes cache reads and writes, so the old sum of all three
+      // counted them twice. The label says so rather than naming the three
+      // fields: adding the Input, Cache read and Cache write lines printed
+      // above would repeat that double count.
+      const contextTokens = allTurns.reduce((a, t) => a + inputSideTokens(t), 0);
+      const cacheReads = total.cache_read_tokens;
+      const share = contextTokens > 0 ? ((cacheReads / contextTokens) * 100).toFixed(0) : 0;
 
       console.log('');
-      console.log(`  Cache hit rate: ${cacheRate}%`);
-      if (cacheRate < 30) {
-        console.log('  Tip: A CLAUDE.md file in your project root improves cache hits significantly.');
-      } else if (cacheRate > 60) {
-        console.log('  Tip: Great cache efficiency! Your CLAUDE.md and project context are working well.');
-      }
+      console.log(`  Cache-read share of recorded input-side tokens: ${share}%`);
+      console.log('    (input side, each token counted once; context occupancy, not a hit rate)');
       console.log('');
     });
 }

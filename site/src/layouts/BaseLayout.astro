@@ -18,6 +18,8 @@ interface Props {
   heroDark?: boolean;
   /** Page-level JSON-LD object(s). Organization is always emitted site-wide on top of these. */
   jsonLd?: object | object[];
+  /** Keep the page out of the index: robots noindex, and no canonical / og:url (the 404 page). */
+  noIndex?: boolean;
 }
 const {
   title,
@@ -27,6 +29,7 @@ const {
   noNavPad = false,
   heroDark = false,
   jsonLd,
+  noIndex = false,
 } = Astro.props;
 
 // Organization site-wide (§4A) + any page-level schema, de-duped into one list.
@@ -49,7 +52,7 @@ const umamiId = import.meta.env.PUBLIC_UMAMI_WEBSITE_ID;
     <link rel="mask-icon" href="/assets/wtclaude-mark.svg" color="#E8943A" />
     <link rel="apple-touch-icon" href="/assets/wtclaude-app-icon-light.svg" />
     <meta name="theme-color" content="#1A1915" />
-    <link rel="canonical" href={canonical} />
+    {noIndex ? <meta name="robots" content="noindex" /> : <link rel="canonical" href={canonical} />}
 
     <title>{title}</title>
     <meta name="description" content={description} />
@@ -58,7 +61,7 @@ const umamiId = import.meta.env.PUBLIC_UMAMI_WEBSITE_ID;
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:type" content={ogType} />
-    <meta property="og:url" content={canonical} />
+    {!noIndex && <meta property="og:url" content={canonical} />}
     <meta property="og:image" content={ogUrl} />
     <meta name="twitter:card" content="summary_large_image" />
 

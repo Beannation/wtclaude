@@ -10,8 +10,9 @@
  * browser. Parsing the file fires NO network request.
  */
 import { CAPTURE_ENDPOINT, CAPTURE_METHOD } from '../../config';
+import { auditLeadBody, EMAIL_RE, type LeadBody } from '../lead-contract';
 import { parseSpendReport } from './parse';
-import { computeHooks } from './hooks';
+import { computeHooks, parseSeatCount } from './hooks';
 import {
   buildReportCsv,
   emailGate,
@@ -21,8 +22,6 @@ import {
 } from './render';
 import { SAMPLE_CSV, SAMPLE_ORG, SAMPLE_SEAT_COUNT } from './sampleData';
 import type { ColumnAvailability, Hooks, SpendRow } from './types';
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 type Mode = 'real' | 'sample';
 type View = 'headline' | 'report' | 'wrong' | 'error' | 'demo-gate';
@@ -36,6 +35,9 @@ interface State {
 }
 
 const state: State = { rows: null, columns: null, hooks: null, mode: 'real', view: 'headline' };
+
+/** The last lead POST's outcome, so a re-render (seat change) keeps a failure notice visible. */
+let lastLead: { body: LeadBody; failed: boolean } | null = null;
 
 /** Campaign attribution (B) — read once per page load, threaded onto every tracked event so
  * campaign sources stay attributable without touching the lead payload's strict key surface. */
@@ -60,11 +62,17 @@ function el<T extends HTMLElement>(sel: string): T | null {
   return document.querySelector<T>(sel);
 }
 
+/** The seat-count field, validated (QA-0928-192): bad values are explained under the field, not used. */
 function seatCountInput(): number | null {
-  const raw = el<HTMLInputElement>('#audit-seats')?.value?.trim();
-  if (!raw) return null;
-  const n = parseInt(raw, 10);
-  return Number.isFinite(n) && n > 0 ? n : null;
+  const { seats, error } = parseSeatCount(el<HTMLInputElement>('#audit-seats')?.value || '');
+  const input = el<HTMLInputElement>('#audit-seats');
+  const msg = el<HTMLElement>('[data-seats-msg]');
+  if (input) {
+    if (error) input.setAttribute('aria-invalid', 'true');
+    else input.removeAttribute('aria-invalid');
+  }
+  if (msg) msg.textContent = error || '';
+  return seats;
 }
 
 function results(): HTMLElement | null {
@@ -80,8 +88,37 @@ function setResults(html: string, { scroll = true } = {}): void {
 }
 
 // ---------------------------------------------------------------- views
-function renderHeadlineView(): void {
+/**
+ * A seat-count change is waiting to be drawn (see bindSeatRefresh). Every render draws from the
+ * current state.hooks, so any render satisfies it.
+ */
+let seatRefreshPending = false;
+
+/**
+ * Draw a held seat-count change now. download() calls this first: the redraw waits for the press
+ * to produce its click, and when that click is Download PDF, window.print() would otherwise print
+ * the page as it was before the new seat count (RC check BUILD-018).
+ */
+function flushSeatRefresh(): void {
+  if (!seatRefreshPending || !state.hooks) return;
+  if (state.view === 'headline') renderHeadlineView({ refresh: true });
+  else if (state.view === 'report') renderReportView({ scroll: false });
+  seatRefreshPending = false;
+}
+
+/**
+ * `refresh` (a seat-count change): swap only the headline. The gate below keeps its node, so a
+ * typed email, the reminder tick and focus survive, and nothing scrolls (RC check BUILD-018 —
+ * rebuilding the gate under the pointer lost the Unlock click and wiped the email).
+ */
+function renderHeadlineView({ refresh = false } = {}): void {
   if (!state.hooks) return;
+  seatRefreshPending = false;
+  const headline = refresh ? results()?.querySelector<HTMLElement>('.audit-headline') : null;
+  if (headline && results()?.querySelector('#audit-gate')) {
+    headline.outerHTML = renderHeadline(state.hooks);
+    return;
+  }
   const gate = `<div id="audit-gate" class="mx-auto mt-10 max-w-xl rounded-2xl border border-ink/10 bg-card p-6 shadow-sm">
     ${emailGate({
       tag: 'spend_audit',
@@ -95,12 +132,15 @@ function renderHeadlineView(): void {
   track('audit_headline_view');
 }
 
-function renderReportView(): void {
+function renderReportView({ scroll = true } = {}): void {
   if (!state.hooks) return;
+  seatRefreshPending = false;
   setResults(
     renderFullReport(state.hooks, { sample: state.mode === 'sample', org: SAMPLE_ORG }),
+    { scroll },
   );
   state.view = 'report';
+  if (lastLead?.failed) showLeadStatus('failed');
 }
 
 // ---------------------------------------------------------------- ingest
@@ -121,7 +161,7 @@ function ingest(text: string, mode: Mode): void {
     setResults(
       `<div class="rounded-2xl border border-alert/40 bg-alert/[0.06] p-6 text-sm text-ink/75">
         <p class="font-head text-base text-alert">We couldn't read that as a Spend Report</p>
-        <p class="mt-2">${parsed.detail.replace(/</g, '&lt;')}</p>
+        <p class="mt-2">${parsed.detail.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</p>
         <button type="button" data-audit-reset class="mt-4 rounded-lg bg-ink px-4 py-2 text-sm font-semibold text-surface hover:bg-ink/85">Try another file →</button>
       </div>`,
     );
@@ -154,6 +194,7 @@ function reset(): void {
   state.hooks = null;
   state.mode = 'real';
   state.view = 'headline';
+  lastLead = null;
   const r = results();
   if (r) {
     r.innerHTML = '';
@@ -196,19 +237,20 @@ async function handleGateSubmit(form: HTMLFormElement): Promise<void> {
   track(tag === 'spend_audit_demo' ? 'audit_demo_unlock' : 'audit_unlock');
 
   // Fire the lead (email + opt-in only) in the background (never blocks the reveal).
-  void postLead({ email, tag, rerun });
+  // The honeypot value really rides along so the endpoint's bot check works (QA-0928-194).
+  void postLead(
+    auditLeadBody({
+      email,
+      tag,
+      source: window.location.pathname,
+      honeypot: honeypot?.value || '',
+      rerun,
+    }),
+  );
 }
 
-async function postLead(opts: { email: string; tag: string; rerun: boolean }): Promise<void> {
+async function postLead(payload: LeadBody): Promise<void> {
   if (!state.hooks) return;
-  const payload = {
-    email: opts.email,
-    tag: opts.tag,
-    source: window.location.pathname,
-    website: '', // honeypot empty for humans
-    consent: false,
-    monthly_rerun: opts.rerun,
-  };
 
   // Log the exact body locally so anyone can verify what leaves the browser: ONLY
   // email + tag + source + the monthly-rerun flag. We deliberately send NO spend
@@ -218,20 +260,54 @@ async function postLead(opts: { email: string; tag: string; rerun: boolean }): P
   console.info('[audit lead] payload (email + prefs only) →', payload);
 
   if (!CAPTURE_ENDPOINT) return; // local dev / no endpoint: nothing stored, already logged
+  lastLead = { body: payload, failed: false };
+  let ok = false;
   try {
-    await fetch(CAPTURE_ENDPOINT, {
+    const res = await fetch(CAPTURE_ENDPOINT, {
       method: CAPTURE_METHOD,
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify(payload),
     });
+    ok = res.ok;
   } catch {
-    /* lead delivery is best-effort; the report is already on screen */
+    ok = false;
   }
+  // QA-0928-30: a rejected lead used to look like success. The report stays on screen either
+  // way; a failure gets a small, non-blocking notice with a retry.
+  lastLead.failed = !ok;
+  showLeadStatus(ok ? 'saved' : 'failed');
+}
+
+/** Non-blocking lead notice at the top of the report ('saved' clears a previous failure). */
+function showLeadStatus(kind: 'failed' | 'saved' | 'saving'): void {
+  const report = el<HTMLElement>('#audit-results .audit-report');
+  let note = report?.querySelector<HTMLElement>('[data-lead-status]') || null;
+  if (kind === 'saved') {
+    if (note) {
+      note.className = 'mb-4 rounded-xl border border-success/30 bg-success/10 px-4 py-3 text-sm text-ink/75';
+      note.textContent = 'Saved — thanks.';
+    }
+    return;
+  }
+  if (!report) return;
+  if (!note) {
+    note = document.createElement('p');
+    note.setAttribute('data-lead-status', '');
+    note.setAttribute('role', 'status');
+    note.setAttribute('aria-live', 'polite');
+    report.prepend(note);
+  }
+  note.className = 'mb-4 rounded-xl border border-alert/40 bg-alert/[0.06] px-4 py-3 text-sm text-ink/75';
+  note.innerHTML =
+    kind === 'saving'
+      ? 'Saving your email…'
+      : 'We couldn’t save your email — <button type="button" data-lead-retry class="font-semibold text-amber-deep underline hover:text-amber">try again</button>. Your report is unaffected.';
 }
 
 // ---------------------------------------------------------------- download (offline)
 function download(kind: 'csv' | 'pdf'): void {
   if (!state.hooks) return;
+  flushSeatRefresh(); // the PDF prints the page, so the page must show the seat count the CSV uses
   const sample = state.mode === 'sample';
   const stamp = new Date().toISOString().slice(0, 10);
   const base = sample ? 'SAMPLE-claude-spend-audit' : `claude-spend-audit-${stamp}`;
@@ -270,7 +346,7 @@ function download(kind: 'csv' | 'pdf'): void {
 
 // ---------------------------------------------------------------- share card (Variant A —
 // generic, figure-free, identifier-free; smb-audit-landing-seo-and-share-card.md Part 2)
-const SHARE_URL = 'https://wtclaude.com/business/audit?utm_source=share&utm_medium=social&utm_campaign=smb_audit';
+const SHARE_URL = 'https://wtclaude.com/business/audit/?utm_source=share&utm_medium=social&utm_campaign=smb_audit';
 const SHARE_TITLE = 'I ran the free Claude Team spend audit';
 const SHARE_TEXT =
   '8 checks on your Anthropic Spend Report — over-tiered seats, model-mix waste, and more. Free, in your browser, nothing uploaded.';
@@ -352,6 +428,12 @@ function bindOnce(): void {
       if ((e.target as HTMLElement).closest('[data-no-pick]')) return;
       fileInput?.click();
     });
+    // role="button" + tabindex="0" promise keyboard activation (QA-0928-115).
+    dz.addEventListener('keydown', (e) => {
+      if (e.target !== dz || (e.key !== 'Enter' && e.key !== ' ')) return;
+      e.preventDefault(); // Space would otherwise scroll the page
+      fileInput?.click();
+    });
   }
 
   fileInput?.addEventListener('change', () => {
@@ -362,7 +444,13 @@ function bindOnce(): void {
   // ---- paste ----
   el<HTMLButtonElement>('[data-audit-paste-go]')?.addEventListener('click', () => {
     const text = el<HTMLTextAreaElement>('#audit-paste')?.value || '';
-    if (text.trim()) ingest(text, 'real');
+    const msg = el<HTMLElement>('[data-paste-msg]');
+    if (!text.trim()) {
+      if (msg) msg.textContent = 'Paste your CSV first.'; // QA-0928-198: a blank paste used to do nothing
+      return;
+    }
+    if (msg) msg.textContent = '';
+    ingest(text, 'real');
   });
 
   // ---- sample (ungated headline) + demo door (email-gated full report) ----
@@ -387,12 +475,7 @@ function bindOnce(): void {
   });
 
   // ---- seat count recompute (only meaningful after a real upload) ----
-  el<HTMLInputElement>('#audit-seats')?.addEventListener('change', () => {
-    if (!state.rows) return;
-    recompute();
-    if (state.view === 'headline') renderHeadlineView();
-    else if (state.view === 'report') renderReportView();
-  });
+  bindSeatRefresh();
 
   // ---- delegated handlers (forms/buttons rendered into #audit-results) ----
   document.addEventListener('submit', (e) => {
@@ -400,6 +483,18 @@ function bindOnce(): void {
     if (!form) return;
     e.preventDefault();
     void handleGateSubmit(form);
+  });
+
+  // The gate's "valid email" error clears as soon as you type, as CaptureForm's does (QA-0928-193).
+  document.addEventListener('input', (e) => {
+    const input = (e.target as HTMLElement)?.closest<HTMLInputElement>('form[data-audit-gate] input[name="email"]');
+    if (!input) return;
+    input.removeAttribute('aria-invalid');
+    const status = input.form?.querySelector<HTMLElement>('[data-status]');
+    if (status) {
+      status.textContent = '';
+      status.className = 'text-sm';
+    }
   });
 
   document.addEventListener('click', (e) => {
@@ -413,9 +508,63 @@ function bindOnce(): void {
       reset();
       return;
     }
+    if (t.closest('[data-lead-retry]') && lastLead) {
+      showLeadStatus('saving');
+      void postLead(lastLead.body);
+    }
   });
 
   bindShareOnce(document);
+}
+
+/**
+ * Seat-count changes (RC check BUILD-018). The field commits on blur, and the blur usually comes
+ * from pressing something else — often the gate's Unlock button. The numbers are recomputed at
+ * once (so that click reveals the new seat count), but redrawing is held until the press has
+ * produced its click: redrawing mid-press moved the page under the pointer and the click was lost.
+ * With no press in progress (keyboard), it redraws straight away. Either way the gate is kept.
+ */
+function bindSeatRefresh(): void {
+  let pressing = false;
+  let pressTimer: ReturnType<typeof setTimeout> | undefined;
+
+  const endPress = () => {
+    clearTimeout(pressTimer);
+    pressing = false;
+    flushSeatRefresh();
+  };
+
+  document.addEventListener('pointerdown', () => {
+    clearTimeout(pressTimer);
+    pressing = true;
+  }, true);
+  // The click (and the submit it triggers) follows the release; redraw after it. On touch the
+  // click can trail the release, so the fallback waits; a press that never clicks (a drag, a
+  // scroll) still redraws.
+  document.addEventListener('pointerup', () => {
+    clearTimeout(pressTimer);
+    pressTimer = setTimeout(endPress, 800);
+  }, true);
+  document.addEventListener('pointercancel', () => {
+    clearTimeout(pressTimer);
+    pressTimer = setTimeout(endPress, 0);
+  }, true);
+  window.addEventListener('blur', endPress); // the window lost focus mid-press: no release is coming
+  document.addEventListener('click', () => {
+    if (!pressing) return;
+    clearTimeout(pressTimer);
+    pressTimer = setTimeout(endPress, 0); // after the click's own handlers and its form submit
+  });
+
+  el<HTMLInputElement>('#audit-seats')?.addEventListener('change', () => {
+    if (!state.rows) {
+      seatCountInput(); // validate + explain even before an upload
+      return;
+    }
+    recompute();
+    seatRefreshPending = true;
+    if (!pressing) flushSeatRefresh();
+  });
 }
 
 function readFile(file: File): void {
@@ -456,7 +605,7 @@ export function initSampleStatic(): void {
       download(dl.dataset.auditDownload === 'pdf' ? 'pdf' : 'csv');
       return;
     }
-    if (t.closest('[data-audit-reset]')) window.location.href = '/business/audit';
+    if (t.closest('[data-audit-reset]')) window.location.href = '/business/audit/';
   });
 
   bindShareOnce(document);

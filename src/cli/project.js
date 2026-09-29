@@ -1,8 +1,9 @@
 import { getSessionsForDateRange, summarizeTurns } from '../utils/sessions.js';
-import { formatUsageSummary } from '../utils/format.js';
+import { formatUsageSummary, costBasisJson, BASIS_CSV_COLUMNS, basisCsvFields } from '../utils/format.js';
 import { resolveCurrency } from '../utils/currency.js';
 import { listProjectHashes } from '../utils/projects.js';
-import { round, output } from './_summary.js';
+import { round, output, resolveRange, emptyRangeLine, matchId, reportAmbiguous, withReadNote } from './_summary.js';
+import { hasAnyData } from '../utils/firstrun.js';
 import { toCSV } from '../utils/export.js';
 import { localDate } from '../utils/time.js';
 import { SCHEMA_VERSION } from '../utils/schema.js';
@@ -24,15 +25,32 @@ export function registerProject(program) {
     .option('--until <date>', 'End date (YYYY-MM-DD)')
     .action((hash, opts) => {
       const o = opts || {};
-      const start = o.since || '1970-01-01';
-      const end = o.until || localDate(); // local calendar date (QA-BUG-10)
+      // Same validation and bounds handling as today/week/month (QA-0928-57);
+      // the default stays all-time, ending on the local calendar date (QA-BUG-10).
+      let start, end;
+      try {
+        ({ startStr: start, endStr: end } = resolveRange('1970-01-01', localDate(), o));
+      } catch (err) {
+        console.error(`\n  ${err.message}\n`);
+        process.exitCode = 1;
+        return;
+      }
       const sessions = getSessionsForDateRange(start, end);
       const allTurns = sessions.flatMap(s => s.turns);
 
       if (!hash) {
         const known = listProjectHashes(allTurns);
         if (o.json) { output(JSON.stringify({ schema_version: SCHEMA_VERSION, projects: known }, null, 2), o); return; }
-        if (known.length === 0) { output('\n  No projects recorded yet.\n', o); return; }
+        if (o.csv) { // QA-0928-65: --csv was advertised but printed the text list
+          output(toCSV(known, [{ key: 'project_hash' }, { key: 'turns' }, { key: 'git_branch' }, { key: 'last_ts' }]), o);
+          return;
+        }
+        if (known.length === 0) {
+          // QA-0928-59: with data outside the range, say so plainly.
+          const ranged = (o.since || o.until) && hasAnyData();
+          output(`\n  ${ranged ? emptyRangeLine(start, end, 'projects') : 'No projects recorded yet.'}\n`, o);
+          return;
+        }
         const lines = ['\n  Known projects (salted hashes — raw paths are never stored)', '  ' + '='.repeat(56)];
         for (const p of known) {
           lines.push(`  ${p.project_hash.padEnd(14)} ${String(p.turns).padStart(5)} turns  ${(p.git_branch || '—')}`);
@@ -42,7 +60,18 @@ export function registerProject(program) {
         return;
       }
 
-      const turns = allTurns.filter(t => t.project_hash && (t.project_hash === hash || t.project_hash.startsWith(hash)));
+      // Exact hash, else a unique prefix (QA-0928-63): an ambiguous prefix used to
+      // sum every matching project under the first one's label.
+      const m = matchId(hash, listProjectHashes(allTurns).map(p => p.project_hash));
+      if (m.error === 'ambiguous') { reportAmbiguous('project', hash, m.matches, o); return; }
+      const turns = m.id ? allTurns.filter(t => t.project_hash === m.id) : [];
+      // An id no project matches, in any range, is an input error, as for
+      // `session` (RC 2026-09-28); a known project with nothing in the range
+      // is not.
+      if (!m.id) {
+        const ever = matchId(hash, listProjectHashes(getSessionsForDateRange('0000-01-01', '9999-12-31').flatMap(s => s.turns)).map(p => p.project_hash));
+        if (ever.error === 'none') process.exitCode = 1;
+      }
       if (turns.length === 0) {
         if (o.json) { output(JSON.stringify({ schema_version: SCHEMA_VERSION, project_hash: hash, turns: 0 }, null, 2), o); return; }
         output(`\n  No usage for project "${hash}".\n`, o);
@@ -57,9 +86,10 @@ export function registerProject(program) {
       if (o.json) {
         output(JSON.stringify({
           schema_version: SCHEMA_VERSION,
-          project_hash: turns[0].project_hash,
+          project_hash: m.id,
           range: { since: start, until: end },
           cost_usd: round(summary.cost),
+          cost_basis: costBasisJson(summary), // QA-0928-55
           sessions: summary.session_count,
           turns: summary.turn_count,
           tokens: { input: summary.input_tokens, output: summary.output_tokens, cache_read: summary.cache_read_tokens, cache_write: summary.cache_write_tokens },
@@ -68,9 +98,11 @@ export function registerProject(program) {
         return;
       }
       if (o.csv) {
-        output(toCSV([{ project_hash: turns[0].project_hash, cost_usd: round(summary.cost), sessions: summary.session_count, turns: summary.turn_count }]), o);
+        output(toCSV([{ project_hash: m.id, cost_usd: round(summary.cost), sessions: summary.session_count, turns: summary.turn_count, ...basisCsvFields(summary) }], [
+          { key: 'project_hash' }, { key: 'cost_usd' }, { key: 'sessions' }, { key: 'turns' }, ...BASIS_CSV_COLUMNS,
+        ]), o);
         return;
       }
-      output(formatUsageSummary(`Project ${turns[0].project_hash}`, summary, cur), o);
+      output(withReadNote(formatUsageSummary(`Project ${m.id}`, summary, cur)), o);
     });
 }

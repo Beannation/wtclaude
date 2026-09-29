@@ -180,25 +180,34 @@ export function getFablePromoCredits() {
   };
 }
 
-// Plan key (pro | max_5x | max_20x) if the user set one at setup; else null.
+// Plan key (pro | max_5x | max_20x | team_* | enterprise_*) for any accepted
+// spelling, or null when the value names no plan. One table for the config
+// value and the `--plan` flags (whatif, fable), so they accept the same words
+// (QA-0928-170/172).
+const PLAN_ALIASES = {
+  pro: 'pro',
+  max5: 'max_5x', max_5x: 'max_5x', max5x: 'max_5x',
+  max20: 'max_20x', max_20x: 'max_20x', max20x: 'max_20x',
+  // Team tiers entered the rate sheet on 2026-08-24. They matter here because
+  // Fable bills differently on Standard (usage credits) than on Premium
+  // (included, up to 50% of the weekly limit).
+  team: 'team_standard', team_standard: 'team_standard', team_std: 'team_standard',
+  team_premium: 'team_premium', team_prem: 'team_premium',
+  enterprise_standard: 'enterprise_standard', ent_standard: 'enterprise_standard',
+  enterprise_premium: 'enterprise_premium', ent_premium: 'enterprise_premium',
+};
+
+export function normalizePlanKey(raw) {
+  if (raw == null || raw === '') return null;
+  return PLAN_ALIASES[String(raw).toLowerCase().replace(/[\s-]/g, '_')] || null;
+}
+
+// Plan key if the user set one at setup; else null.
 export function getPlanKey() {
   const c = loadConfig();
   const raw = c.plan || c.plan_tier || null;
   if (!raw) return null;
-  const norm = String(raw).toLowerCase().replace(/[\s-]/g, '_');
-  const map = {
-    pro: 'pro',
-    max5: 'max_5x', max_5x: 'max_5x', max5x: 'max_5x',
-    max20: 'max_20x', max_20x: 'max_20x', max20x: 'max_20x',
-    // Team tiers entered the rate sheet on 2026-08-24. They matter here because
-    // Fable bills differently on Standard (usage credits) than on Premium
-    // (included, up to 50% of the weekly limit).
-    team: 'team_standard', team_standard: 'team_standard', team_std: 'team_standard',
-    team_premium: 'team_premium', team_prem: 'team_premium',
-    enterprise_standard: 'enterprise_standard', ent_standard: 'enterprise_standard',
-    enterprise_premium: 'enterprise_premium', ent_premium: 'enterprise_premium',
-  };
-  return map[norm] || raw;
+  return normalizePlanKey(raw) || raw;
 }
 
 // Whole-day countdown to a YYYY-MM-DD target. Negative once past.

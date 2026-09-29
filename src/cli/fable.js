@@ -2,12 +2,14 @@ import { getSessionsForDateRange } from '../utils/sessions.js';
 import { fableDailyRunRate, fableAttribution } from '../utils/fablepool.js';
 import {
   getPlanKey, getFableBilling, getFablePromoCredits, getFablePermanentSince,
-  isFableAvailable, getFableUnavailableNote, daysUntil,
+  isFableAvailable, getFableUnavailableNote, daysUntil, normalizePlanKey,
 } from '../utils/config.js';
 import { formatCost, formatTokens } from '../utils/cost.js';
+import { excludedLines } from '../utils/format.js';
 import { getRates, cacheReadMultiplier } from '../utils/pricing.js';
-import { output, daysAgo } from './_summary.js';
+import { output } from './_summary.js';
 import { localDate } from '../utils/time.js';
+import { parseDaysOption, windowStart, splitHistory, coveredDays, projectionNote, windowLabel } from '../utils/window.js';
 import { SCHEMA_VERSION } from '../utils/schema.js';
 
 // `wtclaude fable` — what your Fable usage costs, or would cost.
@@ -39,6 +41,10 @@ import { SCHEMA_VERSION } from '../utils/schema.js';
 // proved the statusline reports a non-zero notional Fable cost at the real rates
 // (cache reads and thinking tokens already baked in). Token math is only the
 // fallback for anchor-less records, and it understates thinking-heavy turns.
+// An anchor-less turn we cannot price (an unknown Fable id, a partner-platform
+// id) gets no figure: it is named under "Not priced", as `today` names it
+// (RC 2026-09-28, QA-0928-54), and a partner row with no anchored turn shows
+// "—" rather than a first-party guess.
 
 const ESTIMATE_LABEL = 'at standard API list rates; bundle discounts up to 30% and promos not reflected';
 
@@ -47,10 +53,18 @@ export function registerFable(program) {
     .command('fable')
     .description('What your Fable usage costs — included on Max/Team-Premium, usage credits on Pro/Team-Standard (labeled estimate)')
     .option('--json', 'Output machine-readable JSON')
-    .option('--days <n>', 'Look-back window for the run-rate', '7')
+    .option('--days <n>', 'Look-back window for the run-rate', parseDaysOption, 7)
     .option('--plan <plan>', 'Override the configured plan (pro, max5, max20, team_standard, team_premium)')
     .action((opts) => {
       const o = opts || {};
+
+      // QA-0928-170: an unknown --plan used to fall through as itself, print
+      // "no plan is configured", and report plan_known: true. Refuse it.
+      if (o.plan != null && !normalizePlanKey(o.plan)) {
+        console.error(`\n  Unknown plan "${o.plan}". Try one of: ${PLAN_CHOICES.join(', ')}.\n`);
+        process.exitCode = 1;
+        return;
+      }
 
       if (!isFableAvailable()) {
         if (o.json) {
@@ -65,13 +79,16 @@ export function registerFable(program) {
         return;
       }
 
-      const lookback = Math.max(1, parseInt(o.days, 10) || 7);
-      const start = daysAgo(lookback - 1);
+      const lookback = o.days;
       const today = localDate(); // local calendar date (QA-BUG-10)
-      const turns = getSessionsForDateRange(start, today).flatMap(s => s.turns);
-      const rr = fableDailyRunRate(turns);
+      // All history in one read: the look-back, plus the first tracked day, so
+      // the run-rate divides by the days the data covers (QA-0928-73).
+      const history = splitHistory(getSessionsForDateRange('0000-01-01', today), windowStart(lookback), today);
+      const turns = history.sessions.flatMap(s => s.turns);
+      const covered = coveredDays(lookback, history.firstDate, today) ?? lookback;
+      const rr = fableDailyRunRate(turns, { coveredDays: covered });
 
-      const planKey = o.plan ? normalizePlanFlag(o.plan) : getPlanKey();
+      const planKey = o.plan ? normalizePlanKey(o.plan) : getPlanKey();
       const billing = getFableBilling(planKey);
       const attribution = fableAttribution(turns, planKey);
       const projectedMonthly = rr.avgPerDay * 30;
@@ -85,13 +102,17 @@ export function registerFable(program) {
         output(JSON.stringify({
           schema_version: SCHEMA_VERSION,
           estimate: true, method: 'linear-runrate-anchored', lookback_days: lookback,
-          plan: planKey, plan_known: !!planKey,
+          covered_days: covered,
+          plan: planKey, plan_known: billing !== 'unknown',
           fable_billing: billing,
           fable_permanent_since: getFablePermanentSince(),
           fable_days_with_data: rr.days,
           fable_turns: rr.fableTurns,
+          partner_platform_turns: rr.partnerTurns,
           anchored_turns: rr.anchoredTurns,
           estimated_turns: rr.estimatedTurns,
+          excluded_turns: rr.excludedTurns,
+          excluded_models: rr.excludedModels,
           fable_usd_in_window: round(rr.sum),
           avg_fable_usd_per_day: round(rr.avgPerDay),
           projected_monthly_fable_usd: round(projectedMonthly),
@@ -140,8 +161,13 @@ export function registerFable(program) {
         lines.push('  eligible for Fable promotional credits.');
       } else {
         lines.push('  Fable has been permanent and plan-conditional since July 20, 2026,');
-        lines.push('  so what it costs you depends on your plan — and no plan is configured,');
-        lines.push('  so both readings are shown below. Set one with `wtclaude setup`.');
+        if (planKey) {
+          lines.push(`  so what it costs you depends on your plan — and your configured plan`);
+          lines.push(`  "${planKey}" is not one we recognise, so both readings are shown below.`);
+        } else {
+          lines.push('  so what it costs you depends on your plan — and no plan is configured,');
+          lines.push('  so both readings are shown below. Set one with `wtclaude setup`.');
+        }
         lines.push('');
         lines.push('    Max · Team Premium · Ent Premium  included, up to 50% of the weekly');
         lines.push('                                      limit — no bill');
@@ -149,16 +175,18 @@ export function registerFable(program) {
       }
       lines.push('');
 
-      if (rr.fableTurns === 0) {
+      if (rr.fableTurns === 0 && rr.partnerTurns === 0) {
         lines.push('  No Fable turns in the look-back window, so there is nothing to');
-        lines.push('  measure yet. Select it with /model fable (Claude Code 2.1.170+).');
+        lines.push('  measure yet. Select it with /model fable (Claude Code 2.1.170+;');
+        lines.push('  from 2.1.257 that selects Fable 5.1, the default Fable model).');
         lines.push('');
         lines.push(...promoLines(promo, new Date(), Object.keys(rr.models), today));
         output(lines.join('\n'), o);
         return;
       }
 
-      lines.push(`  Look-back:         last ${lookback} days (${rr.days} with Fable use, ${rr.fableTurns} turn${rr.fableTurns === 1 ? '' : 's'})`);
+      const allFable = rr.fableTurns + rr.partnerTurns;
+      lines.push(`  Look-back:         ${windowLabel(lookback)} (${allFable} Fable turn${allFable === 1 ? '' : 's'})`);
       lines.push('');
 
       // Money, split by how each turn ACTUALLY billed. A single blended figure
@@ -172,11 +200,21 @@ export function registerFable(program) {
         usage_credits:       'usage credits (estimate)',
         org_conditional:     'usage credits IF your org enabled Fable (estimate)',
       };
-      const order = ['usage_credits', 'org_conditional', 'included_weekly', 'included_historical', 'unknown'];
+      const order = ['usage_credits', 'org_conditional', 'included_weekly', 'included_historical', 'partner_platform', 'unknown'];
       let charged = 0;
       for (const kind of order) {
         const b = attribution.byBilling[kind];
         if (!b || b.turns === 0) continue;
+        if (kind === 'partner_platform') {
+          // QA-0928-78: served through a partner platform, billed by it — never
+          // by the Claude plan, so never part of "Billed in window".
+          // RC: only anchored partner cost is shown; with no anchor there is no
+          // figure to give (the turns are named under "Not priced" below).
+          const via = Object.keys(b.providers).join(' / ');
+          const amt = b.anchored_turns > 0 ? formatCost(b.usd) : '—';
+          lines.push(`  ${amt.padEnd(10)} ${b.turns} turn${b.turns === 1 ? '' : 's'} — billed by ${via}, not your Claude plan`);
+          continue;
+        }
         if (kind === 'unknown') {
           lines.push(`  ${formatCost(b.usd).padEnd(10)} ${b.turns} turn${b.turns === 1 ? '' : 's'} after Jul-20 — depends on your plan:`);
           lines.push('               · Max / Team Premium / Ent Premium: included, no charge');
@@ -191,16 +229,22 @@ export function registerFable(program) {
         lines.push(`  Billed in window:  ${formatCost(charged)} in usage credits,`);
         lines.push(`                     ${ESTIMATE_LABEL}.`);
       }
-      lines.push(`  Run-rate:          ${formatCost(rr.avgPerDay)}/day · ${formatCost(projectedMonthly)}/month at Fable list`);
-      lines.push('                     rates (≈ avg × 30, estimate). Whether that is a bill');
-      lines.push('                     or included usage is the plan question above.');
-      lines.push(`  Fable tokens:      ${formatTokens(rr.tokens.input)} in · ${formatTokens(rr.tokens.output)} out · ${formatTokens(rr.tokens.cacheRead)} cache-read`);
+      if (rr.fableTurns > 0) {
+        lines.push(`  Run-rate:          ${formatCost(rr.avgPerDay)}/day · ${formatCost(projectedMonthly)}/month at Fable list rates`);
+        const note = `(≈ avg × 30, estimate; ${projectionNote(covered, lookback)}). Whether that is a bill or included usage is the plan question above.`;
+        for (const l of wrap(note, 54)) lines.push('                     ' + l);
+        lines.push(`  Fable tokens:      ${formatTokens(rr.tokens.input)} in · ${formatTokens(rr.tokens.output)} out · ${formatTokens(rr.tokens.cacheRead)} cache-read`);
+      }
 
       if (rr.estimatedTurns > 0) {
         lines.push('');
         lines.push(`  ${rr.estimatedTurns} of ${rr.fableTurns} turns had no cost anchor — those use token × rate math,`);
         lines.push('  which understates thinking-heavy turns. Thinking cannot be disabled');
         lines.push('  on Fable.');
+      }
+      if (rr.excludedTurns > 0) {
+        lines.push('');
+        lines.push(...excludedLines({ excluded_turns: rr.excludedTurns, excluded_models: rr.excludedModels }));
       }
 
       lines.push('');
@@ -263,12 +307,22 @@ export function promoLines(promo, now, modelKeys, today) {
   return lines;
 }
 
-// The Fable models this window actually contains, newest first. Falls back to
-// the current default Fable model when the window holds no Fable turns (or only
-// unrecognised Fable ids), so the rate line is never blank and never invented.
+// The Fable models this window actually contains that the rate sheet prices,
+// newest first. Falls back to the current default Fable model only when the
+// window holds no Fable turns at all.
+//
+// FIXED 2026-09-28 (QA-0928-78): a window of only unrecognised Fable ids (a
+// future claude-fable-6) also fell back to Fable 5.1, so the rate line and
+// the JSON pricing assumption stated Fable 5.1 rates for a model we do not
+// know. Those ids now get no rate, and say so (unknownFableKeys).
 function fableModelKeys(models) {
-  const seen = Object.keys(models || {}).filter(k => getRates(`claude-${k}`));
-  return seen.length > 0 ? seen.sort().reverse() : ['fable-5-1'];
+  const all = Object.keys(models || {});
+  if (all.length === 0) return ['fable-5-1'];
+  return all.filter(k => getRates(`claude-${k}`)).sort().reverse();
+}
+
+function unknownFableKeys(models) {
+  return Object.keys(models || {}).filter(k => !getRates(`claude-${k}`));
 }
 
 const MODEL_LABEL = { 'fable-5-1': 'Fable 5.1', 'fable-5': 'Fable 5' };
@@ -279,12 +333,17 @@ const labelFor = k => MODEL_LABEL[k] || k;
 // hard-coded "$1 cached" overstates a Fable 5.1 user's cached input by 4x.
 function fableRateLines(models) {
   const keys = fableModelKeys(models);
-  return keys.map(k => {
+  const lines = keys.map(k => {
     const r = getRates(`claude-${k}`, 'standard');
     const cached = r.input * cacheReadMultiplier(`claude-${k}`);
     const rate = `$${r.input}/MTok in ($${cached}/MTok cached) and $${r.output}/MTok out`;
     return keys.length === 1 ? `${rate}.` : `${labelFor(k).padEnd(10)} ${rate}`;
   });
+  for (const k of unknownFableKeys(models)) {
+    lines.push(`list rates — ${k} is not in this version's rate sheet, so no rate is shown`);
+    lines.push('(if it is new: npm i -g wtclaude@latest).');
+  }
+  return lines;
 }
 
 function fableRateTable(models) {
@@ -302,21 +361,26 @@ function fableRateTable(models) {
 }
 
 function fableRateAssumption(models) {
-  return 'Fable list rates, per model: ' + fableModelKeys(models).map(k => {
+  const known = fableModelKeys(models).map(k => {
     const t = fableRateTable(models)[k];
     return `${labelFor(k)} $${t.input_per_mtok}/MTok in, $${t.cache_read_per_mtok}/MTok cached, $${t.output_per_mtok}/MTok out`;
-  }).join('; ');
+  });
+  const unknown = unknownFableKeys(models).map(k => `${k} not in this version's rate sheet`);
+  return 'Fable list rates, per model: ' + [...known, ...unknown].join('; ');
 }
 
-function normalizePlanFlag(raw) {
-  const norm = String(raw).toLowerCase().replace(/[\s-]/g, '_');
-  const map = {
-    pro: 'pro', max5: 'max_5x', max_5x: 'max_5x', max20: 'max_20x', max_20x: 'max_20x',
-    team: 'team_standard', team_standard: 'team_standard',
-    team_premium: 'team_premium',
-    enterprise_standard: 'enterprise_standard', enterprise_premium: 'enterprise_premium',
-  };
-  return map[norm] || norm;
+// The plans `--plan` accepts, in canonical form (aliases such as max5 also work).
+const PLAN_CHOICES = ['pro', 'max_5x', 'max_20x', 'team_standard', 'team_premium', 'enterprise_standard', 'enterprise_premium'];
+
+// Word-wrap a sentence to `width` columns.
+function wrap(text, width) {
+  const out = [];
+  let line = '';
+  for (const w of text.split(' ')) {
+    if (line && (line + ' ' + w).length > width) { out.push(line); line = w; } else line = line ? line + ' ' + w : w;
+  }
+  if (line) out.push(line);
+  return out;
 }
 
 function round(n) { return typeof n === 'number' ? Math.round(n * 1e6) / 1e6 : n; }

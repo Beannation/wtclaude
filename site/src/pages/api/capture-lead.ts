@@ -8,13 +8,17 @@
  *   3. Resend: send the "you're on the list" welcome email  (ONLY on a brand-new subscribe)
  *   4. Listmonk: add subscriber to the WTClaude list         (feature-flagged OFF until deployed)
  *
- * Built to the LIVE form contract (CaptureForm.astro), NOT the runbook draft:
- *   { email, tag, source, website (honeypot), consent }
- *   - consent -> optInMarketing,  tag -> source,  signupDate = server time (form sends no ts)
+ * Built to the shared lead contract (lib/lead-contract.ts — CaptureForm.astro + the spend audit):
+ *   { email, tag, source, website (honeypot), consent?, monthly_rerun? }
+ *   - consent -> optInMarketing (only CaptureForm asks, so only it sends it; absent = leave
+ *     an existing opt-in alone; an audit tag's consent is ignored — the audit never asks),
+ *     tag -> source,  signupDate = server time (form sends no ts)
+ *   - monthly_rerun (audit reminder opt-in) -> tag suffix `_monthly_rerun` (no new CRM field);
+ *     once stored, later submits keep the suffix (repeatSubmitPatch)
  *
  * Hard rules:
  *   - Every credential comes from env. Nothing hardcoded.
- *   - Data surface is email + opt-in + tag/source only. Any other field is rejected (400).
+ *   - Data surface is email + opt-ins + tag/source only. Any other field is rejected (400).
  *   - The client never sees an internal error: on a CRM failure we still 200 (and log loudly)
  *     so the UX succeeds and the lead stays recoverable from the function logs.
  *   - The CRM write and the welcome email are independent; one failing must not block the other.
@@ -27,6 +31,7 @@ import guardianHtml from '../../emails/confirm-guardian.html?raw';
 import businessHtml from '../../emails/confirm-business.html?raw';
 import financeHtml from '../../emails/confirm-finance.html?raw';
 import companionHtml from '../../emails/confirm-companion.html?raw';
+import { checkLead, repeatSubmitPatch } from '../../lib/lead-contract';
 
 // This route is on-demand (not prerendered) — it must run as a Vercel Function.
 export const prerender = false;
@@ -46,10 +51,6 @@ const LISTMONK_URL = process.env.LISTMONK_URL || '';
 const LISTMONK_API_USER = process.env.LISTMONK_API_USER || '';
 const LISTMONK_API_TOKEN = process.env.LISTMONK_API_TOKEN || '';
 const LISTMONK_WTCLAUDE_LIST_ID = process.env.LISTMONK_WTCLAUDE_LIST_ID || '';
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-// The ONLY keys the live form sends. Anything else is rejected — keeps the data surface tight.
-const ALLOWED_KEYS = new Set(['email', 'tag', 'source', 'website', 'consent']);
 
 /**
  * COPY — verbatim from GTM's authored confirmation emails
@@ -79,7 +80,8 @@ no spam in between.
 
 While you wait, the free tracker is live right now:
 
-    npx wtclaude setup
+    npm i -g wtclaude
+    wtclaude setup
 
 — WTClaude · independent, not affiliated with Anthropic`,
   },
@@ -136,7 +138,8 @@ ready — no spam.
 If you live in the terminal, the free command-line tracker is available right
 now:
 
-    npx wtclaude setup
+    npm i -g wtclaude
+    wtclaude setup
 
 — WTClaude · independent, not affiliated with Anthropic`,
   },
@@ -215,7 +218,7 @@ async function findOrCreatePerson(email: string) {
 }
 
 async function upsertBusinessContact(args: {
-  personId: string; email: string; tag: string; source: string; consent: boolean;
+  personId: string; email: string; tag: string; source: string; consent: boolean | undefined;
 }) {
   const { personId, email, tag, source, consent } = args;
   const filter = `personId[eq]:${personId},businessId[eq]:${WTCLAUDE_BUSINESS_ID}`;
@@ -223,11 +226,9 @@ async function upsertBusinessContact(args: {
   const existing = firstRecord(found, BIZ_CONTACT_PATH) || firstRecord(found, 'businessContacts');
 
   if (existing?.id) {
-    // Repeat submit — refresh opt-in / source if changed; never touch stage or original signupDate.
-    const patch: Record<string, unknown> = {};
-    if (existing.optInMarketing !== consent) patch.optInMarketing = consent;
-    const newSource = tag || source || '';
-    if (newSource && existing.source !== newSource) patch.source = newSource;
+    // Repeat submit — refresh source, and the opt-in only on an explicit consent answer (the
+    // audit sends none); never touch stage or original signupDate. Shared + unit-tested.
+    const patch = repeatSubmitPatch(existing, { tag, source, consent });
     if (Object.keys(patch).length) {
       await twenty(`${BIZ_CONTACT_PATH}/${existing.id}`, { method: 'PATCH', body: patch });
     }
@@ -304,21 +305,20 @@ export const POST = async ({ request, clientAddress }: { request: Request; clien
   if (rateLimited(ip)) return json({ error: 'slow down' }, 429);
 
   const data = await request.json().catch(() => null);
-  if (!data || typeof data !== 'object') return json({ error: 'invalid body' }, 400);
 
-  // Strict surface — reject any unexpected key rather than silently ignoring it.
-  const extra = Object.keys(data).filter((k) => !ALLOWED_KEYS.has(k));
-  if (extra.length) return json({ error: `unexpected fields: ${extra.join(', ')}` }, 400);
-
+  // Shared contract (lib/lead-contract.ts): strict key allow-list, honeypot, email shape/length,
+  // and the monthly-rerun opt-in folded into the tag.
+  const lead = checkLead(data);
+  if (lead.kind === 'reject') {
+    // Logged (reason only, never the address) so a client/contract drift shows up in the
+    // function logs instead of silently dropping leads (QA-0928-30).
+    console.warn('[capture] REJECTED', lead.status, lead.error);
+    return json({ error: lead.error }, lead.status);
+  }
   // Honeypot — bots fill the off-screen "website" field. Pretend success, store nothing.
-  if (data.website && String(data.website).trim() !== '') return json({ ok: true });
+  if (lead.kind === 'bot') return json({ ok: true });
 
-  const email = String(data.email || '').trim().toLowerCase();
-  if (!email || !EMAIL_RE.test(email)) return json({ error: 'valid email required' }, 400);
-
-  const tag = data.tag ? String(data.tag).slice(0, 64) : '';
-  const source = data.source ? String(data.source).slice(0, 256) : '';
-  const consent = data.consent === true;
+  const { email, tag, source, consent } = lead;
 
   // --- CRM write (source of truth). On failure: log the lead + still 200. ---
   let isNewSubscribe = false;

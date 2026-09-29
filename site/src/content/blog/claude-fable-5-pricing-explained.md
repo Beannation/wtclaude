@@ -2,6 +2,7 @@
 title: "Claude Fable 5 Pricing Explained: The Free Window, Usage Credits, and the June 23 Cliff"
 description: "Claude Fable 5 launched June 9, 2026, was suspended June 12, and returned July 1. A record of its brief free window — and how Fable bills now that its pricing is permanent and plan-conditional."
 pubDate: 2026-06-09
+updatedDate: 2026-09-27
 author: "Peter Bean"
 readingTime: "7 min read"
 ---
@@ -50,14 +51,14 @@ The trap was never the price. It's the *habit*. Two free weeks is exactly long e
 
 ## Why this collides with the June 15 billing split
 
-The timing looked genuinely awkward at the time, and it is worth recording why it did not play out. The Fable free window straddled **[the announced June 15 dual-pool billing change](/blog/the-june-15-split)**, which would have split Claude Code usage into Interactive and Agent-SDK credit pools. Neither change landed: the pool split was paused and has never taken effect, and Fable was suspended before its cliff date.
+The timing looked genuinely awkward at the time, and it is worth recording why it did not play out. The Fable free window straddled **[the announced June 15 dual-pool billing change](/blog/the-june-15-split/)**, which would have split Claude Code usage into Interactive and Agent-SDK credit pools. Neither change landed: the pool split was paused and has never taken effect, and Fable was suspended before its cliff date.
 
-The underlying advice outlasted both. Understand how [Claude Code billing actually works](/blog/claude-code-billing-explained), and know your real numbers before a billing rule changes rather than after.
+The underlying advice outlasted both. Understand how [Claude Code billing actually works](/blog/claude-code-billing-explained/), and know your real numbers before a billing rule changes rather than after.
 
 ## What to actually do
 
 - **Notice what you're defaulting to.** If you switch everything to Fable and forget, the billing rule is a surprise. If you switch consciously, it's a decision. That held then and it holds now — the rule is just your plan rather than a date.
-- **Know your real spend.** Whatever you use to track Claude Code cost, make sure it's giving you a number you trust — [an estimate that drifts from your bill is worse than useless right before a price change](/blog/is-claude-code-cost-accurate).
+- **Know your real spend.** Whatever you use to track Claude Code cost, make sure it's giving you a number you trust — [an estimate that drifts from your bill is worse than useless right before a price change](/blog/is-claude-code-cost-accurate/).
 
 Fable 5 is an excellent model. Go in with your eyes open: on Max, Team Premium and Enterprise Premium it is included up to 50% of your weekly limit; on Pro and Team Standard it draws usage credits from the first token.
 
@@ -99,4 +100,4 @@ Yes. WTClaude recognizes Fable 5 in terminal Claude Code and reads its cost bill
 
 ---
 
-*WTClaude is a free, open-source, billing-grade cost tracker for Claude Code. Whatever you run — and whatever Anthropic ships next — see your real number: `npx wtclaude setup`, then `wtclaude compare`.*
+*WTClaude is a free, open-source, billing-grade cost tracker for Claude Code. Whatever you run — and whatever Anthropic ships next — see your real number: `npm i -g wtclaude`, `wtclaude setup`, then `wtclaude compare`.*

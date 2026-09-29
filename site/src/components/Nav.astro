@@ -10,10 +10,10 @@ const { heroDark = false } = Astro.props;
 
 // Slim, fixed, transparent → backdrop-blur on scroll. Mobile: hamburger.
 const navLinks = [
-  { href: '/features', label: 'Features' },
-  { href: '/compare', label: 'Compare' },
-  { href: '/docs', label: 'Docs' },
-  { href: '/blog', label: 'Blog' },
+  { href: '/features/', label: 'Features' },
+  { href: '/compare/', label: 'Compare' },
+  { href: '/docs/', label: 'Docs' },
+  { href: '/blog/', label: 'Blog' },
   { href: LINKS.github, label: 'GitHub', external: true, track: 'cta_github' },
 ];
 ---
@@ -25,7 +25,7 @@ const navLinks = [
   data-hero-dark={heroDark ? 'true' : 'false'}
 >
   <nav class="mx-auto flex max-w-6xl items-center justify-between px-5 py-3.5">
-    <a href="/" class="flex items-center gap-2 text-ink" aria-label="WTClaude home">
+    <a href="/" class="nav-home flex items-center gap-2 text-ink" aria-label="WTClaude home">
       <Mark class="h-8 w-8" />
       <span class="font-mono text-lg font-bold tracking-tight">
         <span class="text-amber">WT</span><span class="wordmark-ink text-ink">Claude</span>
@@ -38,7 +38,7 @@ const navLinks = [
         navLinks.map((l) => (
           <a
             href={l.href}
-            class="text-sm font-medium text-ink/75 transition hover:text-ink"
+            class="nav-link text-sm font-medium text-ink/75 transition hover:text-ink"
             {...(l.external ? { target: '_blank', rel: 'noopener' } : {})}
             data-track={l.track}
           >
@@ -48,13 +48,13 @@ const navLinks = [
       }
       {
         SHOW_DASHBOARD_LINK && (
-          <a href="/dashboard" class="text-sm font-medium text-ink/75 transition hover:text-ink">
+          <a href="/dashboard" class="nav-link text-sm font-medium text-ink/75 transition hover:text-ink">
             Dashboard
           </a>
         )
       }
       <a
-        href="/docs"
+        href="/docs/"
         class="rounded-lg bg-amber px-4 py-2 text-sm font-semibold text-ink shadow-sm transition hover:bg-amber-deep hover:text-white"
         data-track="cta_get_started"
       >
@@ -68,6 +68,7 @@ const navLinks = [
       class="inline-flex items-center justify-center rounded-md p-2 text-ink md:hidden"
       aria-label="Open menu"
       aria-expanded="false"
+      aria-controls="site-menu"
       data-menu-toggle
     >
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
@@ -75,7 +76,7 @@ const navLinks = [
   </nav>
 
   <!-- mobile menu -->
-  <div class="hidden border-t border-ink/10 bg-surface/95 backdrop-blur md:hidden" data-menu>
+  <div id="site-menu" class="hidden border-t border-ink/10 bg-surface/95 backdrop-blur md:hidden" data-menu>
     <div class="mx-auto flex max-w-6xl flex-col gap-1 px-5 py-3">
       {
         navLinks.map((l) => (
@@ -89,8 +90,15 @@ const navLinks = [
           </a>
         ))
       }
+      {
+        SHOW_DASHBOARD_LINK && (
+          <a href="/dashboard" class="rounded-md px-2 py-2.5 text-base font-medium text-ink/80 hover:bg-ink/5">
+            Dashboard
+          </a>
+        )
+      }
       <a
-        href="/docs"
+        href="/docs/"
         class="mt-1 rounded-lg bg-amber px-4 py-2.5 text-center text-base font-semibold text-ink"
         data-track="cta_get_started"
       >
@@ -101,13 +109,16 @@ const navLinks = [
 </header>
 
 <style is:global>
-  /* Transparent nav over a dark hero: light text until the user scrolls. */
-  [data-nav].on-dark a,
+  /* Transparent nav over a dark hero: light text until the user scrolls. Scoped to the bar's
+     own text (logo, desktop text links, toggle) — NOT the light mobile-menu panel's links or
+     the amber CTA, which keep ink so they stay readable (QA-0928-108). */
+  [data-nav].on-dark .nav-home,
+  [data-nav].on-dark .nav-link,
   [data-nav].on-dark .wordmark-ink,
   [data-nav].on-dark [data-menu-toggle] {
     color: var(--color-surface);
   }
-  [data-nav].on-dark a:hover {
+  [data-nav].on-dark .nav-link:hover {
     color: #fff;
   }
 </style>
@@ -132,9 +143,17 @@ const navLinks = [
 
     const toggle = document.querySelector<HTMLButtonElement>('[data-menu-toggle]');
     const menu = document.querySelector<HTMLElement>('[data-menu]');
-    toggle?.addEventListener('click', () => {
-      const open = menu?.classList.toggle('hidden');
-      toggle.setAttribute('aria-expanded', String(open === false));
+    const setOpen = (open: boolean) => {
+      menu?.classList.toggle('hidden', !open);
+      toggle?.setAttribute('aria-expanded', String(open));
+      toggle?.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+    };
+    toggle?.addEventListener('click', () => setOpen(menu?.classList.contains('hidden') ?? false));
+    // Esc closes the open menu and hands focus back to the toggle (QA-0928-196).
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape' || !menu || menu.classList.contains('hidden')) return;
+      setOpen(false);
+      toggle?.focus();
     });
   }
   initNav();

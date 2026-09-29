@@ -3,9 +3,10 @@ import { agentDailyRunRate } from '../utils/agentpool.js';
 import { loadConfig, getPlanKey, isDualPoolActive, AGENT_SDK_POOL_PAUSED_NOTE } from '../utils/config.js';
 import { getLatestPricing } from '../utils/pricing.js';
 import { formatCost } from '../utils/cost.js';
+import { costBasisBadge, costBasisJson, excludedLines } from '../utils/format.js';
 import { output } from './_summary.js';
-import { daysAgo } from './_summary.js';
 import { localDate } from '../utils/time.js';
+import { parseDaysOption, windowStart, splitHistory, coveredDays, projectionNote, windowLabel } from '../utils/window.js';
 import { SCHEMA_VERSION } from '../utils/schema.js';
 
 // `wtclaude forecast` — Agent-SDK-pool spend forecast.
@@ -20,24 +21,32 @@ import { SCHEMA_VERSION } from '../utils/schema.js';
 //
 // EXPLICITLY a labeled estimate/forecast: usage_pool is a heuristic and this is a
 // simple linear run-rate, NOT the Phase-1 predictive/plan-fit engine. We project
-// the recent agent-pool daily average across the month and compare to the plan's
-// included Agent-SDK credits. No recommendations, no anomaly detection.
+// the recent agent-pool daily average across the month; only if a split ever
+// takes effect (agent_sdk_pool.activated) is that compared with an included
+// credit allowance (QA-0928-118). No recommendations, no anomaly detection.
+//
+// FIXED 2026-09-28 (RC, QA-0928-54): the run-rate sums priced agent turns only
+// (agentpool.js), the recorded spend carries the basis `today` would give it,
+// and unanchored turns on a model we cannot price are named, never projected.
 
 export function registerForecast(program) {
   program
     .command('forecast')
-    .description('Estimate Agent-SDK credit spend vs included credits + June-15 countdown (labeled estimate)')
+    .description('Agent-SDK spend forecast (split paused; labeled estimate)')
     .option('--json', 'Output machine-readable JSON')
-    .option('--days <n>', 'Look-back window for the run-rate', '7')
+    .option('--days <n>', 'Look-back window for the run-rate', parseDaysOption, 7)
     .action((opts) => {
       const o = opts || {};
-      const lookback = Math.max(1, parseInt(o.days, 10) || 7);
-      const start = daysAgo(lookback - 1);
+      const lookback = o.days; // validated: a bad value is a usage error, never a silent clamp (QA-0928-74)
       const today = localDate(); // local calendar date (QA-BUG-10)
-      const turns = getSessionsForDateRange(start, today).flatMap(s => s.turns);
-      const rr = agentDailyRunRate(turns);
+      // The look-back plus the first tracked day: the run-rate divides by the
+      // days the data covers, not the days with agent spend (QA-0928-73).
+      const history = splitHistory(getSessionsForDateRange('0000-01-01', today), windowStart(lookback), today);
+      const turns = history.sessions.flatMap(s => s.turns);
+      const covered = coveredDays(lookback, history.firstDate, today) ?? lookback;
+      const rr = agentDailyRunRate(turns, { coveredDays: covered });
 
-      const projectedMonthly = rr.avgPerDay * 30;
+      const projectedMonthly = (rr.avgPerDay ?? 0) * 30;
       const cfg = loadConfig();
       const planKey = getPlanKey();
       const pricing = getLatestPricing();
@@ -49,8 +58,11 @@ export function registerForecast(program) {
         output(JSON.stringify({
           schema_version: SCHEMA_VERSION,
           estimate: true, method: 'linear-runrate', lookback_days: lookback,
+          covered_days: covered,
           agent_days_with_data: rr.days,
-          avg_agent_usd_per_day: round(rr.avgPerDay),
+          agent_turns: rr.agentTurns,
+          agent_cost_basis: costBasisJson(rr.basis),
+          avg_agent_usd_per_day: round(rr.avgPerDay ?? 0),
           projected_monthly_agent_usd: round(projectedMonthly),
           plan: planKey,
           agent_sdk_split_active: splitActive,
@@ -68,11 +80,17 @@ export function registerForecast(program) {
         lines.push('  The Agent-SDK credit split announced for June 15, 2026 is PAUSED.');
         lines.push('  SDK, `claude -p` and third-party usage still draw your subscription\'s');
         lines.push('  ordinary usage limits, not a separate credit pool.');
-        lines.push('');
-        lines.push('  The spend below is real and billing-grade; what is paused is the');
-        lines.push('  separate wallet it would have been billed to.');
       }
       lines.push('');
+      if (rr.days === 0 && rr.basis.excluded_turns > 0 && rr.basis.anchored_turns + rr.basis.estimated_turns === 0) {
+        const n = rr.basis.excluded_turns;
+        lines.push(`  ${n} agent-pool turn${n === 1 ? '' : 's'} in the look-back could not be priced, so there is nothing`);
+        lines.push('  to forecast.');
+        lines.push(...excludedLines(rr.basis));
+        lines.push('');
+        output(lines.join('\n'), o);
+        return;
+      }
       if (rr.days === 0) {
         lines.push('  No turns in the look-back window were recorded against the Agent-SDK');
         lines.push('  pool, so there is nothing to forecast. Interactive Claude Code turns');
@@ -82,8 +100,26 @@ export function registerForecast(program) {
         output(lines.join('\n'), o);
         return;
       }
-      lines.push(`  Look-back:        last ${lookback} days (${rr.days} with agent-pool spend)`);
-      lines.push(`  Avg agent/day:    ${formatCost(rr.avgPerDay)}  (estimate)`);
+      // FIXED 2026-09-28 (QA-0928-171): "The spend below is real and
+      // billing-grade" printed above lines marked (estimate) — and above
+      // "No turns …" when nothing followed. One label, only when there is spend.
+      // RC 2026-09-28: the sentence states the recorded spend's real basis.
+      const badge = costBasisBadge(rr.basis);
+      if (badge.label === 'billing-grade') {
+        lines.push('  Recorded agent-pool spend is billing-grade; the per-day average and');
+        lines.push('  monthly projection are estimates.');
+      } else if (badge.label === 'estimated') {
+        lines.push('  Recorded agent-pool spend is a list-rate estimate (Claude Code sent no');
+        lines.push('  cost for these turns); the per-day average and monthly projection are');
+        lines.push('  estimates too.');
+      } else {
+        lines.push(`  Recorded agent-pool spend is ${badge.label} at list rates;`);
+        lines.push('  the per-day average and monthly projection are estimates.');
+      }
+      lines.push('');
+      lines.push(`  Look-back:        ${windowLabel(lookback)} (${rr.days} with agent-pool spend)`);
+      lines.push(`  Recorded spend:   ${badge.tilde ? '~' : ''}${formatCost(rr.sum)}`);
+      lines.push(`  Avg agent/day:    ${formatCost(rr.avgPerDay)}  (estimate; ${projectionNote(covered, lookback)})`);
       lines.push(`  Projected/month:  ${formatCost(projectedMonthly)}  (≈ avg × 30, estimate)`);
       if (splitActive && included != null) {
         const overage = projectedMonthly - included;
@@ -96,6 +132,7 @@ export function registerForecast(program) {
       } else {
         lines.push('  Set your plan at `wtclaude setup` to compare against included credits.');
       }
+      lines.push(...excludedLines(rr.basis));
       lines.push('');
       lines.push('  Estimate only — simple linear run-rate; usage_pool is heuristic.');
       lines.push('');

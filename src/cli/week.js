@@ -9,6 +9,6 @@ export function registerWeek(program) {
   ).action((opts) => {
     const startStr = daysAgo(6);
     const endStr = localDate(); // local calendar date (QA-BUG-10)
-    emitSummary(`Last 7 days (${startStr} to ${endStr})`, startStr, endStr, opts);
+    emitSummary(`Last 7 days (${startStr} to ${endStr})`, startStr, endStr, opts, { span: 7 });
   });
 }

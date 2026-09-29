@@ -2,6 +2,10 @@
 // clicking the active chip clears it. `facets` is the distinct-values map from
 // derive.facets(); `value` is the active filter object; `onChange` sets it.
 
+import { HASHED_BRANCH_NOTE, branchDimLabel } from '../lib/derive';
+
+// Synced branches are salted hashes since 0.3.2 (QA-0928-05), so the branch
+// chips are labelled as hashes (branchDimLabel), never as branch names.
 const GROUPS = [
   { key: 'branch', label: 'Branch' },
   { key: 'cost_center', label: 'Cost center' },
@@ -20,9 +24,11 @@ export default function FilterChips({ facets, value, onChange }) {
       {GROUPS.map((g) => {
         const opts = facets[g.key] || [];
         if (opts.length <= 1) return null;
+        const label = g.key === 'branch' ? branchDimLabel(opts) : g.label;
+        const hashed = label === 'Branch (hashed)';
         return (
           <div key={g.key} className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs text-[var(--faint)] uppercase tracking-wide w-24 shrink-0">{g.label}</span>
+            <span className="text-xs text-[var(--faint)] uppercase tracking-wide w-32 shrink-0" title={hashed ? HASHED_BRANCH_NOTE : undefined}>{label}</span>
             {opts.map((v) => {
               const active = value[g.key] === v;
               const display = g.key === 'device_id' ? (facets.deviceLabels?.[v] || v) : v;

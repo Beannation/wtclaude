@@ -11,7 +11,8 @@ Most Claude Code trackers read the local session logs (the JSONL files), which d
 ## See your own gap
 
 ```bash
-npx wtclaude setup
+npm i -g wtclaude
+wtclaude setup
 wtclaude compare
 ```
 
@@ -28,10 +29,13 @@ WTClaude reads the **statusline** — the same cumulative, finalized data behind
 ## Install
 
 ```bash
-npx wtclaude setup
+npm i -g wtclaude
+wtclaude setup
 ```
 
-This does three things:
+Install globally: Claude Code runs the collector on every status update, so it needs a stable path. (`npx wtclaude setup` runs from npm's temporary cache, so setup won't point Claude Code there; it tells you to install globally instead.)
+
+`wtclaude setup` does three things:
 1. Creates the `~/.wtclaude/` data directory
 2. Adds the statusline collector to your Claude Code settings
 3. You're done — start a new Claude Code session
@@ -57,7 +61,7 @@ wtclaude whatif --plan
 # What if you'd used a different model?
 wtclaude whatif --model haiku
 
-# End-of-day summary with costliest turn and tips
+# End-of-day summary: total cost with its basis, costliest turn, cache-read share of input-side tokens
 wtclaude debrief
 ```
 
@@ -81,14 +85,45 @@ wtclaude sync --enable
 # Push on demand, any time
 wtclaude sync
 
-# Status: on/off, last sync, your anonymous ID
+# Status: on/off, last sync, the start of your anonymous ID
 wtclaude sync --status
 
-# Turn it back off (your local data and config are kept)
+# Turn it back off (your local data and config are kept; data already synced stays in the cloud)
 wtclaude sync --disable
 ```
 
-Before anything leaves your machine, `--enable` shows a preview of exactly what's uploaded: **counts, flags, and salted hashes only — never prompts, code, file names, or project paths.** Nothing uploads until you confirm (use `--enable --yes` for non-interactive setups). Once enabled, WTClaude also pushes opportunistically in the background when your local data changes — debounced and non-blocking. Set `WTCLAUDE_NO_AUTOSYNC=1` to disable just the background push, or `wtclaude sync --disable` to stop sync entirely.
+Before anything leaves your machine, `--enable` shows a preview of exactly what's uploaded. Nothing uploads until you confirm (use `--enable --yes` for non-interactive setups). Each per-turn record carries only:
+
+- Turn number and timestamp
+- Model id (e.g. claude-opus-5-5)
+- Token counts: input, output, cache read and cache write, per turn and running totals
+- Context-window use %
+- Cost: the billing-grade figure, or a list-rate estimate for a turn without one
+- Speed tier, usage pool and billing basis
+- Git branch names, as salted hashes
+- Project folder, as a salted hash (never the path)
+- Cost-center labels you set
+- Device id (random, one per install)
+- Task category and edit-target hash (salted)
+- Lines added and removed
+- Durations: wall-clock and API time
+- Effort, thinking and long-context flags
+- Claude Code version
+- Rate-limit % and reset times
+
+Also sent:
+
+- Your anonymous id, with every upload (it is the key to your cloud row)
+- Session ids (the random id Claude Code gives each session)
+- Per-session totals: tokens, cost, turn counts, models used, start and end time
+- Badges you have earned, with the date
+- Your leaderboard-sharing setting (on or off), once you set it
+
+Never sent: prompts, responses, code, file contents, file names, folder paths, raw branch names, your email. Branch names are hashed with a random per-install salt that stays on your machine (without one, no branch is sent); your local records keep branch names as they are.
+
+Once enabled, WTClaude also pushes opportunistically in the background when your local data changes — debounced and non-blocking. Set `WTCLAUDE_NO_AUTOSYNC=1` to disable just the background push, or `wtclaude sync --disable` to stop sync entirely. Turning sync off doesn't delete what was already uploaded, and deleting it isn't self-serve yet. Don't post your anonymous id anywhere public: it opens your dashboard.
+
+Your anonymous id is the key to your cloud data, so the CLI shows only its first 8 characters, except in the dashboard link it prints when no browser opens. `wtclaude dashboard` opens the dashboard and links that browser for you.
 
 <details>
 <summary><strong>Advanced / self-host</strong></summary>
@@ -138,6 +173,29 @@ answer because Anthropic hasn't stated them: **[docs/DATA-NOTES.md](docs/DATA-NO
 ├── sessions/{session_id}.ndjson   # Per-turn records
 ├── daily/{YYYY-MM-DD}.json        # Daily aggregates
 └── comparisons/{date}.json        # Cached JSONL comparisons
+```
+
+## Development
+
+```bash
+npm ci
+npm test          # the CLI and collector suite (src/ and bin/), Node 18 or newer
+```
+
+`npm test` needs only the root install and runs on any Node the CLI supports
+(`engines: >=18`), from any shell, Windows `cmd.exe` included: `bin/run-tests.js`
+lists the test files itself. Extra flags pass through
+(`npm test -- --test-name-pattern=sync`), and file paths replace the list
+(`npm test -- src/sync/index.test.js`). The tests never read your own `~/.claude`
+or `~/.wtclaude`: each one runs against a scratch home directory.
+
+The dashboard (`web/`) and the website (`site/`) have their own suites.
+`npm run test:all` runs all three. It needs Node 22.18 or newer (the site tests
+import TypeScript directly) and the web and site dependencies:
+
+```bash
+npm ci --prefix web && npm ci --prefix site
+npm run test:all
 ```
 
 ## License

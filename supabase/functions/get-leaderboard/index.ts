@@ -6,6 +6,16 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, content-type",
 };
 
+const json = (b: unknown, status = 200) =>
+  new Response(JSON.stringify(b), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+// BUILD-018 (QA-0928-128): the ranking is computed in SQL (leaderboard_totals,
+// migration 009) over opted-in users only, grouped per user, ordered and
+// limited there — no row-capped read of every user's daily rows. `period` must
+// be weekly or monthly (400 otherwise); `limit` is clamped to 1..100 (default 50).
+// Periods start on the current UTC week's Monday / the month's 1st.
+const PERIODS = new Set(["weekly", "monthly"]);
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -19,87 +29,31 @@ serve(async (req) => {
 
     const url = new URL(req.url);
     const period = url.searchParams.get("period") || "weekly";
-    const limit = parseInt(url.searchParams.get("limit") || "50", 10);
+    if (!PERIODS.has(period)) return json({ error: "period must be weekly or monthly" }, 400);
+    const n = parseInt(url.searchParams.get("limit") || "", 10);
+    const limit = Number.isFinite(n) ? Math.min(100, Math.max(1, n)) : 50;
 
     // Calculate period start
     const now = new Date();
     let periodStart: string;
 
     if (period === "weekly") {
-      const dayOfWeek = now.getDay();
       const monday = new Date(now);
-      monday.setDate(now.getDate() - ((dayOfWeek + 6) % 7));
+      monday.setUTCDate(now.getUTCDate() - ((now.getUTCDay() + 6) % 7));
       periodStart = monday.toISOString().slice(0, 10);
     } else {
-      periodStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+      periodStart = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}-01`;
     }
 
-    // Get opted-in users' daily summaries for this period
-    const { data: summaries, error } = await supabase
-      .from("daily_summaries")
-      .select(`
-        user_id,
-        total_input_tokens,
-        total_output_tokens,
-        total_cache_read,
-        total_cache_write,
-        session_count,
-        turn_count
-      `)
-      .gte("date", periodStart)
-      .order("date", { ascending: false });
-
+    // [{ rank, user_id, total_tokens, session_count, turn_count }]
+    const { data, error } = await supabase.rpc("leaderboard_totals", {
+      p_period_start: periodStart,
+      p_limit: limit,
+    });
     if (error) throw error;
 
-    // Aggregate by user
-    const byUser: Record<string, any> = {};
-    for (const s of summaries || []) {
-      if (!byUser[s.user_id]) {
-        byUser[s.user_id] = {
-          user_id: s.user_id,
-          total_tokens: 0,
-          session_count: 0,
-          turn_count: 0,
-        };
-      }
-      const u = byUser[s.user_id];
-      const tokens = s.total_input_tokens + s.total_output_tokens +
-                     s.total_cache_read + s.total_cache_write;
-      u.total_tokens += tokens;
-      u.session_count += s.session_count;
-      u.turn_count += s.turn_count;
-    }
-
-    // Filter to sharing-enabled users only
-    const userIds = Object.keys(byUser);
-    if (userIds.length === 0) {
-      return new Response(JSON.stringify({ leaderboard: [], period, periodStart }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const { data: sharedUsers } = await supabase
-      .from("users")
-      .select("id")
-      .in("id", userIds)
-      .eq("sharing_enabled", true);
-
-    const sharedSet = new Set((sharedUsers || []).map((u: any) => u.id));
-
-    const leaderboard = Object.values(byUser)
-      .filter((u: any) => sharedSet.has(u.user_id))
-      .sort((a: any, b: any) => b.total_tokens - a.total_tokens)
-      .slice(0, limit)
-      .map((u: any, i: number) => ({ rank: i + 1, ...u }));
-
-    return new Response(
-      JSON.stringify({ leaderboard, period, periodStart }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return json({ leaderboard: data || [], period, periodStart });
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return json({ error: (err as Error).message }, 500);
   }
 });

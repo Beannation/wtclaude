@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { readdirSync, readFileSync, statSync, mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join, dirname, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
@@ -95,6 +96,31 @@ const BANNED = [
   },
 ];
 
+// ADDED 2026-09-28 (BUILD-018, QA-0928-129). Shapes the full-product clickthrough
+// found live on shipped surfaces. Each one was true of no code path when found.
+BANNED.push(
+  {
+    pattern: /\[billing-grade tokens\]|what you actually run/i,
+    why: 'compare-models / whatif re-price RECORDED tokens, which do not reproduce the billed total (QA-0928-21, Peter decision 4: % differences only). Nothing re-priced is billing-grade or "what you actually run".',
+  },
+  {
+    pattern: /counts\/flags\s*\+\s*salted hashes only|\bONLY these aggregates\b/i,
+    why: 'Sync uploads per-turn records (model, timestamps, tokens, cost, branch HASH, cost-center label, device id …), not "counts/flags + salted hashes only" or aggregates (QA-0928-05). Previews are built from SYNC_TURN_FIELDS.',
+  },
+  {
+    pattern: /june[- ]?1[45][^.\n]{0,30}\b(countdown|readiness report)\b/i,
+    why: 'The Agent-SDK pool split announced for 2026-06-15 is PAUSED; no countdown or dated readiness report may be presented as live (QA-0928-75).',
+  },
+  {
+    pattern: /\breads?\s+the\s+credential|never\s+lose\s+it|recruiter[^.\n]{0,20}badge/i,
+    why: 'No code reads a Claude credential (QA-0928-119); the cloud copy has no restore path (QA-0928-120); no Recruiter badge or install attribution exists (QA-0928-40).',
+  },
+  {
+    pattern: /\bis\s+coming\b[^.\n]{0,40}\b(delet|private)|private\s+way\s+to\s+ask[^.\n]{0,40}coming/i,
+    why: 'No promise of a deletion route that does not exist (QA-0928-42/126). Say what is true today: deleting the cloud copy is not self-serve yet.',
+  },
+);
+
 // ADDED 2026-09-27 (BUILD-017). "Sonnet 5 is the Claude Code default" has been
 // FALSE on every current-facing surface since Claude Code 2.1.280 (2026-09-22):
 // Opus 5.5 is the default model on every paid plan, and Pro / Team Standard
@@ -174,9 +200,17 @@ test('honesty gate: no banned claim shapes in the CLI help text users actually r
   // Command descriptions are the most-read strings in the product and the
   // easiest to forget. `fable`'s description carried "the ~July-19 Fable cliff"
   // until 2026-08-24.
-  const help = execFileSync(process.execPath, [join(ROOT, 'bin', 'wtclaude.js'), '--help'], {
-    encoding: 'utf8', env: { ...process.env, WTCLAUDE_DISABLE: '1' },
-  });
+  // A scratch HOME / data dir: the help run never touches the real ~/.wtclaude.
+  const home = mkdtempSync(join(tmpdir(), 'wtc-honesty-'));
+  let help;
+  try {
+    help = execFileSync(process.execPath, [join(ROOT, 'bin', 'wtclaude.js'), '--help'], {
+      encoding: 'utf8',
+      env: { ...process.env, WTCLAUDE_DISABLE: '1', WTCLAUDE_NO_AUTOSYNC: '1', HOME: home, CLAUDE_CONFIG_DIR: join(home, '.claude'), WTCLAUDE_DIR: join(home, '.wtclaude') },
+    });
+  } finally {
+    rmSync(home, { recursive: true, force: true });
+  }
   const hits = [];
   for (const { pattern, why } of BANNED) {
     const m = help.match(pattern);
@@ -305,4 +339,53 @@ test('honesty gate (site) self-test: the scope can fail — a planted stale line
   assert.ok(!SONNET_DEFAULT.test(stripAstroNonShipping('---\n// Sonnet 5 is the new default\n---\n<p>{/* Sonnet 5 is the default */}ok</p>')),
     'non-shipping comments are exempt');
   assert.ok(SONNET_DEFAULT.test('<!-- Sonnet 5 is the default -->'), 'HTML comments ship, so they are scanned');
+});
+
+// ── BUILD-018 (QA-0928-129): the gate covers every surface a user reads ─────
+// Until 0.3.2 the full BANNED list ran only over shipped CLI strings; the
+// dashboard got one rule and the README and the site's email templates none.
+// The site's pages carry their own gate (site/src/site-copy.test.js, which runs
+// in `npm test` from 0.3.2) because Astro conditionals decide what renders.
+function bannedHits(text, where) {
+  const hits = [];
+  for (const { pattern, why } of BANNED) {
+    const m = text.match(pattern);
+    if (m) hits.push(`${where}: matched /${pattern.source}/ on "${m[0]}"\n      WHY BANNED: ${why}`);
+  }
+  return hits;
+}
+
+test('honesty gate: no banned claim shapes in the dashboard', () => {
+  const hits = dashboardFiles().flatMap((file) => bannedHits(stripComments(readFileSync(file, 'utf8')), relative(ROOT, file)));
+  assert.deepEqual(hits, [], `\n  Honesty gate failed (dashboard):\n    ${hits.join('\n    ')}\n`);
+});
+
+test('honesty gate: no banned claim shapes in the README (shipped in the npm tarball)', () => {
+  const hits = bannedHits(readFileSync(join(ROOT, 'README.md'), 'utf8'), 'README.md');
+  assert.deepEqual(hits, [], `\n  Honesty gate failed (README):\n    ${hits.join('\n    ')}\n`);
+});
+
+test('honesty gate: no banned claim shapes in the site email templates', () => {
+  const dir = join(ROOT, 'site', 'src', 'emails');
+  const hits = readdirSync(dir).filter((n) => n.endsWith('.html'))
+    .flatMap((n) => bannedHits(readFileSync(join(dir, n), 'utf8'), `site/src/emails/${n}`));
+  assert.deepEqual(hits, [], `\n  Honesty gate failed (emails):\n    ${hits.join('\n    ')}\n`);
+});
+
+test('honesty gate self-test: each BUILD-018 rule catches the live shape it was written for', () => {
+  const planted = [
+    'Your mix  $1,234.56/mo  (baseline — what you actually run)',
+    'Code (terminal)  [billing-grade tokens]',
+    'It would send counts/flags + salted hashes only',
+    'if you opt in, ONLY these aggregates are shared',
+    'vs included credits + June-15 countdown',
+    'setup reads the credential Claude already wrote',
+    'a backup in the cloud, so you never lose it',
+    "You'll earn the \"Recruiter\" badge when someone installs",
+    'a private way to ask for deletion is coming',
+  ];
+  for (const line of planted) {
+    assert.ok(BANNED.some(({ pattern }) => pattern.test(line)), `no rule catches: ${line}`);
+  }
+  assert.ok(!BANNED.some(({ pattern }) => pattern.test('Deleting it isn\'t self-serve yet.')), 'the true replacement passes');
 });

@@ -21,9 +21,12 @@ import { fileURLToPath } from 'node:url';
 
 const BIN = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'bin', 'wtclaude.js');
 
+// Hermetic: HOME defaults to the fixture's data dir (never the developer's
+// real ~/.claude or ~/.wtclaude); a test that needs its own HOME passes it.
 function run(args, env, cwd) {
+  const home = env.HOME || env.WTCLAUDE_DIR;
   const res = spawnSync(process.execPath, [BIN, ...args], {
-    env: { ...process.env, WTCLAUDE_NO_AUTOSYNC: '1', ...env }, cwd, encoding: 'utf8',
+    env: { ...process.env, WTCLAUDE_NO_AUTOSYNC: '1', HOME: home, CLAUDE_CONFIG_DIR: join(home, '.claude'), ...env }, cwd, encoding: 'utf8',
   });
   return res.stdout + res.stderr;
 }
@@ -80,6 +83,11 @@ function claudeHomeWith(model) {
   const claude = join(home, '.claude');
   mkdirSync(join(claude, 'projects', 'p'), { recursive: true });
   writeFileSync(join(claude, 'CLAUDE.md'), 'Always-loaded house rules. '.repeat(400));
+  // The dead weight priced below is a never-invoked skill: CLAUDE.md is always
+  // loaded but not invocable, so `waste` no longer judges it (QA-0928-71).
+  mkdirSync(join(claude, 'skills', 'house-style'), { recursive: true });
+  writeFileSync(join(claude, 'skills', 'house-style', 'SKILL.md'),
+    `---\nname: house-style\ndescription: ${'Applies the house style to every document. '.repeat(60)}\n---\n`);
   const entries = [0, 1, 2].map(i => JSON.stringify({
     type: 'assistant', timestamp: recentTs(1 + i), sessionId: 's1',
     message: { id: `m${i}`, role: 'assistant', model, content: [{ type: 'text', text: 'ok' }],
@@ -155,7 +163,7 @@ test('compare-models: the Cowork exclusion notice never claims a billing-grade a
     assert.match(cowork, /The one turn on this surface was excluded/, 'the <synthetic> line is not counted');
     assert.doesNotMatch(cowork, /<synthetic>/);
     assert.doesNotMatch(cowork, /billing-grade anchor|wtclaude today|headline cost/, `Cowork is an estimate:\n${cowork}`);
-    assert.match(cowork, /Cowork figures are an estimate from your audit log/);
+    assert.match(cowork, /Cowork figures are an estimate from Cowork’s local logs/);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

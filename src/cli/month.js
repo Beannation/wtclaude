@@ -9,6 +9,6 @@ export function registerMonth(program) {
   ).action((opts) => {
     const startStr = daysAgo(29);
     const endStr = localDate(); // local calendar date (QA-BUG-10)
-    emitSummary(`Last 30 days (${startStr} to ${endStr})`, startStr, endStr, opts);
+    emitSummary(`Last 30 days (${startStr} to ${endStr})`, startStr, endStr, opts, { span: 30 });
   });
 }

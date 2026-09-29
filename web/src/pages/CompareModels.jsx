@@ -1,8 +1,10 @@
 import { useDashboard } from '../lib/useDashboard';
 import { useApp } from '../context/AppContext';
 import { formatCost, formatTokens } from '../lib/format';
+import { costBasis, coveredDays, dailyView } from '../lib/derive';
 import {
   computeComparison, codeTurnsFromSessions, COMPARE_MODELS, CAVEATS, COMPARE_HONESTY_LINE,
+  windowDays, billedFromPayload, billedLabel, deltaTone, fmtPct, loadErrorView,
 } from '../lib/compareModels';
 import HonestyBadge from '../components/HonestyBadge';
 import EmptyState from '../components/EmptyState';
@@ -17,7 +19,10 @@ import { LinkPrompt } from './Overview';
 // "your mix" at Opus 5's rates with nothing on the page to say so. Excluding
 // without saying so would be the same error in a different shape, so the tile
 // names what it left out — and when EVERYTHING was left out, it says that rather
-// than "no usage".
+// than "no usage". The headline counts such a turn only when Claude Code
+// reported its cost (mirror of the CLI's exclusion notice, ledger reviewer
+// 2026-09-28); the synced session totals can't say which turns those were, so
+// the notice states the rule rather than a count.
 export function ExclusionNotice({ surface }) {
   const n = surface.unpriced_turn_count || 0;
   if (n === 0) return null;
@@ -34,42 +39,98 @@ export function ExclusionNotice({ surface }) {
       {m > 0 && <p className="font-mono">{ids.join(' · ')}</p>}
       <p>
         Either the model isn't in this dashboard's rate table yet, or it was served by a partner platform that
-        publishes its own rates. Your headline cost is unaffected — it is the cost figure Claude Code itself
-        reports.
+        publishes its own rates. Your headline cost still counts such a turn when Claude Code reported its cost;
+        a turn it sent no cost for is left out of the headline too.
       </p>
     </div>
   );
 }
 
-function deltaColor(usd) {
-  if (usd > 0) return 'text-[var(--rose)]'; // costs more
-  if (usd < 0) return 'text-[var(--accent)]'; // costs less
-  return 'text-[var(--muted)]'; // ~no-op
-}
+// Colour of a % difference. 0% is neutral — never the saving colour
+// (QA-0928-183); the tone comes from the shared lib so /whatif agrees.
+const TONE_CLASS = {
+  more: 'text-[var(--rose)]', // costs more
+  less: 'text-[var(--accent)]', // costs less
+  same: 'text-[var(--muted)]', // no change
+};
 
-function fmtDelta(usd, fc) {
-  if (Math.abs(usd) < 0.005) return '≈ $0 (no-op)';
-  return `${usd > 0 ? '+' : '−'}${fc(Math.abs(usd))}`;
+// BUILD-018 (decision 4, QA-0928-21/105): the Code card re-prices recorded
+// tokens that are context occupancy, not billed tokens, so it shows each
+// model's % difference against your mix re-priced — never re-priced dollars —
+// beside the real billed total for the window. The BILLING-GRADE badge that sat
+// over the re-priced figures now sits on the billed total only. Without
+// contract-B daily_local the days are UTC, and the label says so.
+export function BilledTotal({ billed, days, fc }) {
+  const tier = costBasis({ cost: billed.usd, anchored: billed.anchored_usd }).tier;
+  return (
+    <p className="text-sm text-[var(--muted)] mb-3 flex items-center gap-2 flex-wrap">
+      {billedLabel(billed, days)}:
+      <span className="text-[var(--text-strong)] font-mono">{fc(billed.usd)}</span>
+      <HonestyBadge tier={tier} />
+    </p>
+  );
 }
 
 export default function CompareModels() {
-  const { data, loading, error, linked } = useDashboard();
+  const { data, loading, error, errorInfo, linked } = useDashboard();
   const { currency } = useApp();
-  const fc = (v) => formatCost(v, currency);
 
   if (loading) return <p className="text-[var(--muted)]">Loading…</p>;
   if (!linked) return <LinkPrompt />;
-  if (error) return <EmptyState title="Couldn't load Compare Models" body={error} />;
+  if (error) {
+    // errorInfo, never the error text (see loadErrorView).
+    const e = loadErrorView(errorInfo, "Couldn't load Compare Models");
+    return <EmptyState title={e.title} body={e.body} command={e.command} details={e.details} />;
+  }
+  return <CompareModelsView data={data} currency={currency} />;
+}
 
-  const daily = data.daily_summaries || [];
-  const days = daily.length || 30;
+// Everything the page computes from a loaded payload, and all it renders from.
+// Pure, so CompareModels.test.js pins what the comparison carries: this page
+// withholds its dollar figures, so no rendered text shows the /mo basis.
+// `now` is for tests (default: the current time).
+// eslint-disable-next-line react-refresh/only-export-components
+export function comparisonFor(data, now) {
+  const days = windowDays(data);
+  const billed = billedFromPayload(data);
+  // In-window tokens where the server sends them (codeTurnsFromSessions).
   const codeTurns = codeTurnsFromSessions(data.sessions);
   // Cowork has no per-surface breakdown in the synced payload → empty (honest
   // placeholder, never fabricated). Chat is always excluded.
-  const cmp = computeComparison({ codeTurns, coworkTurns: [], days });
+  // The /mo basis is the Overview's and /whatif's (derive.coveredDays, RC 0.3.2):
+  // never the whole window for data that starts inside it.
+  const cmp = computeComparison({
+    codeTurns, coworkTurns: [], days,
+    coveredDays: { code: coveredDays(dailyView(data, now)).days },
+    billed,
+  });
+  return { days, billed, cmp };
+}
+
+// The page for a loaded payload. `now` is for tests (default: the current time).
+export function CompareModelsView({ data, currency, now }) {
+  const fc = (v) => formatCost(v, currency);
+  const { days, billed, cmp } = comparisonFor(data, now);
   const code = cmp.surfaces.code;
-  const cowork = cmp.surfaces.cowork;
   const chat = cmp.surfaces.chat;
+  const windowLabel = `the last ${days} day${days === 1 ? '' : 's'}`;
+
+  // QA-0928-93: a window with nothing synced says so, naming the window.
+  if (!code.present && code.unpriced_turn_count === 0 && billed.usd === 0) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-3 flex-wrap">
+          <h2 className="text-2xl font-bold text-[var(--text-strong)]">Compare Models</h2>
+          <HonestyBadge tier="estimate" />
+        </div>
+        <EmptyState
+          title={`No synced usage in ${windowLabel}`}
+          body="Nothing to re-price yet. Sync from the CLI on the machine you linked, then reload:"
+          command="wtclaude sync"
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -91,56 +152,53 @@ export default function CompareModels() {
           </span>
         ))}
         {' '}— holding your token counts fixed
-        and applying each model's rate. The delta is measured against your actual model mix, so
-        re-pricing a model you already run nets about $0.
+        and applying each model's rate. Each difference is measured against your mix, re-priced the same way,
+        so re-pricing a model you already run nets about 0%.
       </p>
 
       {/* Per-surface split — the honest unit. Each surface declares its own grade. */}
       <div className="space-y-4">
-        {/* CODE — billing-grade */}
+        {/* CODE — % differences beside the billed total (decision 4) */}
         <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
           <div className="flex items-center justify-between gap-3 mb-1 flex-wrap">
             <h3 className="text-[var(--text-strong)] font-semibold">Code (terminal)</h3>
-            <HonestyBadge tier="billing-grade" />
+            <HonestyBadge tier="estimate" label="re-priced estimate" />
           </div>
+          <BilledTotal billed={billed} days={days} fc={fc} />
           {code.present ? (
             <>
               <p className="text-xs text-[var(--muted)] mb-4">
                 {formatTokens(
                   code.tokens.input + code.tokens.output + code.tokens.cache_read + code.tokens.cache_write,
                 )}{' '}
-                tokens re-priced · your mix ≈{' '}
-                <span className="text-[var(--text)] font-mono">{fc(code.baseline_monthly_usd)}/mo</span>
+                recorded tokens (from the Claude Code status line) re-priced at each model's list rate
+                (token × rate) and compared with your mix, re-priced the same way.
               </p>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="text-left text-xs text-[var(--faint)] uppercase tracking-wide">
+                    <tr className="text-left text-xs text-[var(--muted)] uppercase tracking-wide">
                       <th className="py-2 pr-4 font-medium">Model</th>
-                      <th className="py-2 pr-4 font-medium text-right">Projected / mo</th>
-                      <th className="py-2 font-medium text-right">Δ vs your mix</th>
+                      <th className="py-2 font-medium text-right">vs your mix, re-priced</th>
                     </tr>
                   </thead>
                   <tbody>
                     {code.models.map((m) => (
                       <tr key={m.key} className="border-t border-[var(--border)]">
                         <td className="py-2.5 pr-4 text-[var(--text-strong)] font-medium">{m.label}</td>
-                        <td className="py-2.5 pr-4 text-right font-mono text-[var(--text)]">{fc(m.monthly_usd)}</td>
-                        <td className={`py-2.5 text-right font-mono ${deltaColor(m.monthly_delta_vs_baseline_usd)}`}>
-                          {fmtDelta(m.monthly_delta_vs_baseline_usd, fc)}
-                          {m.delta_pct !== 0 && Math.abs(m.monthly_delta_vs_baseline_usd) >= 0.005 && (
-                            <span className="text-[var(--faint)] ml-1">({m.delta_pct > 0 ? '+' : ''}{m.delta_pct}%)</span>
-                          )}
+                        <td className={`py-2.5 text-right font-mono ${TONE_CLASS[deltaTone(m.delta_pct)]}`}>
+                          {fmtPct(m.delta_pct)}
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
+              <p className="text-xs text-[var(--muted)] mt-3">{code.withheld_reason}</p>
             </>
           ) : code.unpriced_turn_count > 0 ? null : (
             <p className="text-[var(--muted)] text-sm mt-2">
-              No recorded terminal usage in this window yet.
+              No recorded terminal usage in {windowLabel}.
             </p>
           )}
           <ExclusionNotice surface={code} />
@@ -153,7 +211,7 @@ export default function CompareModels() {
             <HonestyBadge tier="estimate" />
           </div>
           <p className="text-[var(--muted)] text-sm mt-1">
-            Cowork cost is a labeled estimate (audit-log tokens × rate). The synced dashboard payload
+            Cowork cost is a labeled estimate (tokens from Cowork's local logs × rate). The synced dashboard payload
             doesn't carry a per-surface Cowork breakdown, so there's nothing to re-price here yet —
             we won't fabricate a number. Run the CLI to fold your Cowork surface into the comparison:
           </p>
@@ -174,8 +232,9 @@ export default function CompareModels() {
         </div>
       </div>
 
-      {/* VERBATIM under-block honesty line */}
-      <p className="text-xs text-[var(--faint)] max-w-3xl leading-relaxed">{COMPARE_HONESTY_LINE}</p>
+      {/* VERBATIM under-block honesty line. --muted, not --faint: honesty fine
+          print must be readable (QA-0928-186; --faint measured under 3:1). */}
+      <p className="text-xs text-[var(--muted)] max-w-3xl leading-relaxed">{COMPARE_HONESTY_LINE}</p>
 
       {/* Full caveats (mirror of CLI CAVEATS) */}
       <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">

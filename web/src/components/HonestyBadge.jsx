@@ -42,18 +42,30 @@ const TIERS = {
     cls: 'text-[var(--muted)] border-[var(--faint)] bg-transparent border-dashed',
     dot: '○',
   },
+  // Added 2026-09-28 (QA-0928-90): a figure Claude Code itself reports that is
+  // not a cost — the plan-limit percentages. Exact as of its reading, but not
+  // "billing-grade", which this project reserves for the anchored cost.
+  reported: {
+    label: 'as reported',
+    title: 'From a synced Claude Code status update — the percentages Claude Code reports, as of that reading. Not a cost figure.',
+    cls: 'text-[var(--indigo)] border-[var(--indigo)] bg-transparent border-solid',
+    dot: '◆',
+  },
 };
 
-export default function HonestyBadge({ tier = 'billing-grade', label, className = '' }) {
+// `title` overrides the tier's tooltip when the figure needs a more exact one
+// (e.g. a mixed figure's actual billing-grade share).
+export default function HonestyBadge({ tier = 'billing-grade', label, title, className = '' }) {
   const t = TIERS[tier] || TIERS['billing-grade'];
+  const tip = title || t.title;
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide align-middle ${t.cls} ${className}`}
-      title={t.title}
+      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide align-middle whitespace-nowrap ${t.cls} ${className}`}
+      title={tip}
     >
       <span aria-hidden="true">{t.dot}</span>
       {label || t.label}
-      <span className="sr-only"> ({t.title})</span>
+      <span className="sr-only"> ({tip})</span>
     </span>
   );
 }

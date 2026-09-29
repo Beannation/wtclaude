@@ -15,7 +15,7 @@ const fmt = (d: Date) => d.toLocaleDateString('en-US', { year: 'numeric', month:
       {
         posts.map((post) => (
           <li class="border-b border-ink/10 pb-8">
-            <a href={`/blog/${post.id}`} class="group block">
+            <a href={`/blog/${post.id}/`} class="group block">
               <h2 class="font-head text-xl text-ink group-hover:text-amber-deep">{post.data.title}</h2>
               <p class="mt-2 text-sm text-warm">
                 {fmt(post.data.pubDate)}

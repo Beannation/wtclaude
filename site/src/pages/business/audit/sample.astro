@@ -36,7 +36,7 @@ if (parsed.kind === 'ok') {
         When you run it for real, your spend file never leaves your browser.
       </p>
       <a
-        href="/business/audit"
+        href="/business/audit/"
         class="mt-7 inline-flex rounded-lg bg-amber px-5 py-2.5 text-sm font-semibold text-ink transition hover:bg-amber-deep hover:text-white"
       >Run my real audit →</a>
     </div>
@@ -44,12 +44,21 @@ if (parsed.kind === 'ok') {
 
   <section class="audit-results-section mx-auto max-w-4xl px-5 py-12" set:html={reportHtml} />
 
-  <style>
+  <style is:global>
+    /* GLOBAL on purpose (QA-0928-112) — scoped selectors never match the layout's header/footer.
+       Every rule is gated on body.audit-printing. */
     @media print {
-      body.audit-printing > :not(main) {
+      body.audit-printing > :not(main),
+      body.audit-printing #site-nav {
         display: none !important;
       }
       body.audit-printing main > :not(.audit-results-section) {
+        display: none !important;
+      }
+      /* Screen-only inside the report: the lead-save notice app.ts prepends, and the
+         download / share / start-over rows (render.ts marks them data-no-print). */
+      body.audit-printing [data-lead-status],
+      body.audit-printing [data-no-print] {
         display: none !important;
       }
       body.audit-printing main {

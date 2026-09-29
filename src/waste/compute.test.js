@@ -140,3 +140,99 @@ test('with nothing to re-read, the figure is a true $0 even when the rate is wit
   assert.equal(allUsed.monthly_usd, 0);
   assert.equal(allUsed.labels.monthly_usd, 'estimate');
 });
+
+// ───────────────────────────────────────────────────────────────────────────
+// QA-0928-20 (2026-09-28): every transcript turn was priced at the ONE dominant
+// model's rate — unknown and partner-served turns included — under a
+// billing-grade label, and the withhold check looked at the dominant model only.
+// Each model is now priced at its own rate and multiplier; an unpriceable model's
+// turns are left out of the figure and returned so the CLI can name them.
+// ───────────────────────────────────────────────────────────────────────────
+
+test('QA-0928-20: 60 Opus 5.5 turns are priced; 40 turns on an unknown Opus are excluded and named', () => {
+  const r = computeWaste({ items: [item('dead', 1_000_000)], usedIds: new Set(), turns: 100, days: 30,
+    modelTurns: { 'claude-opus-5-5': 60, 'claude-opus-6': 40 }, today: '2026-09-28' });
+  assert.equal(r.priced, true);
+  // 1M dead tokens x $4 x 0.05 = $0.20 per turn, x 60 priced turns only.
+  assert.equal(round(r.window_usd), 12);
+  assert.equal(r.priced_turns, 60);
+  assert.equal(r.excluded_turns, 40);
+  assert.deepEqual(r.excluded_models, [{ model: 'claude-opus-6', turns: 40, reason: 'family-fallback:opus-5-5' }]);
+});
+
+test('QA-0928-20: two priced models are each priced at their own rate and multiplier', () => {
+  const r = computeWaste({ items: [item('dead', 1_000_000)], usedIds: new Set(), turns: 100, days: 30,
+    modelTurns: { 'claude-opus-5-5': 60, 'claude-sonnet-5': 40 }, today: '2026-09-28' });
+  // Opus 5.5: $4 x 0.05 = $0.20/turn x 60 = $12. Sonnet 5: $2 x 0.10 = $0.20/turn x 40 = $8.
+  assert.equal(round(r.window_usd), 20);
+  assert.equal(r.excluded_turns, 0);
+  assert.deepEqual(r.models.map(m => [m.model, m.turns, m.input_rate, m.cache_read_multiplier]),
+    [['opus-5-5', 60, 4, 0.05], ['sonnet-5', 40, 2, 0.1]]);
+  // No single rate describes a mixed window.
+  assert.equal(r.input_rate, null);
+  assert.equal(r.cache_read_multiplier, null);
+});
+
+test('QA-0928-20: a partner-served id and turns with no model are excluded too, each with its reason', () => {
+  const r = computeWaste({ items: [item('dead', 1000)], usedIds: new Set(), turns: 70, days: 30,
+    modelTurns: { 'claude-sonnet-5': 50, 'vertex_ai/claude-opus-5-5': 15 }, today: '2026-09-28' });
+  assert.deepEqual(r.excluded_models, [
+    { model: 'vertex_ai/claude-opus-5-5', turns: 15, reason: 'partner-platform:vertex_ai' },
+    { model: null, turns: 5, reason: 'no-model' },
+  ]);
+  assert.equal(r.priced_turns, 50);
+});
+
+test('QA-0928-20: when no turn can be priced the figure is withheld, with the largest model\'s reason', () => {
+  const r = computeWaste({ items: [item('dead', 1000)], usedIds: new Set(), turns: 50, days: 30,
+    modelTurns: { 'claude-opus-6': 30, 'vertex_ai/claude-sonnet-5': 20 }, today: '2026-09-28' });
+  assert.equal(r.priced, false);
+  assert.equal(r.unpriced_reason, 'family-fallback:opus-5-5');
+  assert.equal(r.monthly_usd, null);
+  assert.equal(r.excluded_turns, 50);
+});
+
+// QA-0928-71 (2026-09-28): CLAUDE.md files are read every turn — they cannot be
+// invoked, so "no invocation in 30d" was always true of them and their tokens
+// always landed in the dead-weight dollar figure.
+test('QA-0928-71: CLAUDE.md rules are listed separately and kept out of dead weight and the $ figure', () => {
+  const rule = { id: 'rule:CLAUDE.md (user)', type: 'rule', name: 'CLAUDE.md (user)', source: '~/.claude', tokens: 400, chars: 1600 };
+  const r = computeWaste({ items: [item('dead', 1000), rule], usedIds: new Set(), turns: 10, days: 30,
+    model: 'claude-sonnet-5', today: '2026-09-28' });
+  assert.equal(r.dead_tokens, 1000, 'the rule\'s 400 tokens are not dead weight');
+  assert.equal(r.dead_count, 1);
+  assert.equal(r.judged_count, 1);
+  assert.equal(r.loaded_count, 2);
+  assert.equal(round(r.per_turn_usd), round(1000 / 1e6 * 2 * 0.1));
+  const listed = r.items.find(i => i.type === 'rule');
+  assert.equal(listed.used, null);
+  assert.equal(listed.verdict, 'ALWAYS-LOADED');
+  assert.match(listed.why, /always loaded — not invocable, so no invocation evidence/);
+  assert.deepEqual(r.instructions.map(i => i.id), ['rule:CLAUDE.md (user)']);
+  assert.equal(r.instruction_tokens, 400);
+});
+
+// A mixed window has no single rate: input_rate and cache_read_multiplier are
+// null there. Their labels said 'billing-grade' anyway — a label on a null.
+test('QA-0928-20: a mixed window labels its null single-model rate fields per-model, never billing-grade', () => {
+  const r = computeWaste({ items: [item('dead', 1_000_000)], usedIds: new Set(), turns: 100, days: 30,
+    modelTurns: { 'claude-opus-5-5': 60, 'claude-sonnet-5': 40 }, today: '2026-09-28' });
+  assert.equal(r.input_rate, null);
+  assert.equal(r.labels.input_rate, 'per-model');
+  assert.equal(r.labels.cache_read_multiplier, 'per-model');
+  // One model: unchanged (the web mirror and web-parity.test.js pin this shape).
+  const one = computeWaste({ items: [item('dead', 1000)], usedIds: new Set(), turns: 10, days: 30,
+    model: 'claude-sonnet-5', today: '2026-09-28' });
+  assert.equal(one.labels.input_rate, 'billing-grade');
+});
+
+test('computeWaste scales /mo by the covered days, not the requested window (RC, QA-0928-22)', () => {
+  const items = [{ id: 'skill:x', type: 'skill', name: 'x', tokens: 10_000 }];
+  const base = { items, usedIds: new Set(), turns: 100, model: 'claude-opus-5-5', days: 30 };
+  const oneDay = computeWaste({ ...base, coveredDays: 1 });
+  assert.equal(oneDay.covered_days, 1);
+  assert.ok(Math.abs(oneDay.monthly_usd - oneDay.window_usd * 30) < 1e-4);
+  const noBasis = computeWaste(base);
+  assert.equal(noBasis.covered_days, 30, 'no basis given: the window');
+  assert.ok(Math.abs(noBasis.monthly_usd - noBasis.window_usd) < 1e-9);
+});

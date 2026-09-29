@@ -4,17 +4,18 @@ import Mark from '../components/Mark.astro';
 import CodeBlock from '../components/CodeBlock.astro';
 import HonestyBadge from '../components/HonestyBadge.astro';
 import FeaturePill from '../components/FeaturePill.astro';
-import { CLOUD_LIVE, GUARDIAN_PRICE, SPLIT_LIVE, FABLE_AVAILABLE, FABLE_SUSPENDED_NOTE } from '../config';
+import { CLOUD_LIVE, GUARDIAN_PRICE, SPLIT_LIVE, FABLE_AVAILABLE, FABLE_SUSPENDED_NOTE, INSTALL_CMD } from '../config';
 
 // SEO — §6 verbatim.
 const title = 'WTClaude features — the most complete Claude Code tracker';
 const description = SPLIT_LIVE
-  ? 'Billing-grade accuracy, your whole usage picture, backup across machines, dual-pool readiness for June 15, and a dashboard to see it all. Free & open-source.'
-  : 'Billing-grade accuracy, your whole usage picture, backup across machines, readiness for Claude’s billing changes whenever they land, and a dashboard to see it all. Free & open-source.';
+  ? 'Billing-grade accuracy, your whole usage picture, sync across machines, dual-pool readiness for June 15, and a dashboard to see it all. Free & open-source.'
+  : 'Billing-grade accuracy, your whole usage picture, sync across machines, readiness for Claude’s billing changes whenever they land, and a dashboard to see it all. Free & open-source.';
 
 /**
  * §6 feature groups, verbatim copy. Status:
  *   'available' / 'soon'  → fixed states.
+ *   'paused'              → built, but waiting on something outside WTClaude (the paused split).
  *   'cloud'               → cloud-on item: render Available when CLOUD_LIVE (D-13 green),
  *                           else Coming soon. SAME flag as §5 — no second flag.
  *   'fable'               → Fable-backed item: render Available when FABLE_AVAILABLE, else
@@ -23,7 +24,7 @@ const description = SPLIT_LIVE
  * note  → shown in place of `body` only while the item resolves to Unavailable; `body` is the
  *         original/restore copy, kept verbatim so flipping the flag back returns it unchanged.
  */
-type FeatureStatus = 'available' | 'soon' | 'cloud' | 'fable';
+type FeatureStatus = 'available' | 'soon' | 'paused' | 'cloud' | 'fable';
 interface Feature {
   name: string;
   status: FeatureStatus;
@@ -65,7 +66,7 @@ const groups: Group[] = [
       {
         name: '`compare-models` (new)',
         status: 'available',
-        badge: 'billing-grade',
+        badge: 'estimate',
         body: 'Opus 5.5 vs Sonnet 5 vs Fable 5.1, re-priced from your own billing-grade usage. Per-surface split; every projection labeled estimate.',
       },
       {
@@ -99,8 +100,8 @@ const groups: Group[] = [
       {
         name: '`wtclaude waste` (new)',
         status: 'available',
-        badge: 'billing-grade',
-        body: 'Shows the always-loaded skills and rules you’re paying for but never use, with their real, billing-grade cache-read cost. A recommendation to review, never an automatic change.',
+        badge: 'estimate',
+        body: 'Shows the always-loaded skills and subagents you’re paying for but never use, with an estimate of what re-reading them costs at each model’s list cache-read rate. CLAUDE.md files are listed as always loaded but not judged. A recommendation to review, never an automatic change.',
       },
       {
         name: 'Session timeline',
@@ -125,17 +126,18 @@ const groups: Group[] = [
       {
         name: 'One-shot success rate',
         status: 'soon',
-        body: 'How often your edits land first try, no rework loop.',
+        body: 'How often your edits land first try, no rework loop. The `quality` command ships; the edit-target field it reads isn’t in current Claude Code payloads yet.',
       },
       {
         name: 'Multi-currency display',
-        status: 'soon',
+        status: 'available',
+        badge: 'estimate',
         body: 'See costs in your currency (the billing-grade figure stays in USD).',
       },
     ],
   },
   {
-    title: 'Backup & multi-machine',
+    title: 'Sync & multi-machine',
     subtitle: 'the robustness story',
     features: [
       {
@@ -144,9 +146,9 @@ const groups: Group[] = [
         body: 'Everything runs on your machine by default. Nothing leaves it unless you turn sync on.',
       },
       {
-        name: 'Opt-in cloud backup',
+        name: 'Opt-in cloud sync',
         status: 'cloud',
-        body: 'Back up your usage history to the cloud so you never lose it — opt-in, with a preview of exactly what syncs before it does.',
+        body: 'Sync your usage history to the cloud so you can see it on the dashboard and across machines — opt-in, with a preview of what syncs.',
       },
       {
         name: 'Multi-machine totals',
@@ -182,10 +184,10 @@ const groups: Group[] = [
     features: [
       {
         name: 'Dual-pool tracking',
-        status: 'available',
+        status: SPLIT_LIVE ? 'available' : 'paused',
         body: SPLIT_LIVE
           ? 'Interactive and Agent SDK Credits, tracked separately. Lights up automatically on June 15 — no reinstall.'
-          : 'Anthropic’s announced Agent-SDK billing split was paused before June 15. WTClaude’s dual-pool view is built and ready if a revised version returns — no reinstall.',
+          : 'Anthropic’s announced Agent-SDK billing split was paused on June 15, before it took effect. WTClaude’s dual-pool view is built and ready — if a revised version returns, it would light up with a WTClaude update.',
       },
       {
         name: 'Daily Agent-pool forecast',
@@ -193,18 +195,20 @@ const groups: Group[] = [
         badge: 'estimate',
         body: SPLIT_LIVE
           ? 'Projected agent-pool spend vs your included credits, with a countdown. (Billing-grade math, heuristic pool split — a forecast, not your exact bill.)'
-          : 'Projected agent-pool spend vs your included credits — a labeled estimate. (Billing-grade math, heuristic pool split — a forecast, not your exact bill.)',
+          : 'Projected agent-pool spend — a labeled estimate; if a revised split lands, it is compared against the credits that split includes. (Billing-grade math, heuristic pool split — a forecast, not your exact bill.)',
       },
       {
         name: SPLIT_LIVE ? 'June-14 Readiness Report' : 'Credits-enough readiness check',
-        status: 'available',
+        status: SPLIT_LIVE ? 'available' : 'paused',
         badge: 'estimate',
-        body: 'One line: are your credits enough, yes or no, and the one thing to do about it.',
+        body: SPLIT_LIVE
+          ? 'One line: are your credits enough, yes or no, and the one thing to do about it.'
+          : 'Paused with the split — there are no Agent-SDK credits to check today. If a revised split lands: one line, are the credits it includes enough, yes or no, and the one thing to do about it.',
       },
       {
         name: 'Overall plan limit gauge',
         status: 'available',
-        body: 'How close you are to your overall plan limit, with reset countdowns. (This is your shared plan-limit bucket, read live.)',
+        body: 'How close you are to your overall plan limit, with reset countdowns. (This is your shared plan-limit bucket, read from your latest Claude Code status update.)',
       },
       {
         name: 'Tracks Claude Fable',
@@ -248,7 +252,7 @@ const groups: Group[] = [
 
 // Resolve gated items to a concrete pill state from their single flag:
 //   cloud → CLOUD_LIVE,  fable → FABLE_AVAILABLE.
-const resolve = (s: FeatureStatus): 'available' | 'soon' | 'unavailable' =>
+const resolve = (s: FeatureStatus): 'available' | 'soon' | 'paused' | 'unavailable' =>
   s === 'cloud' ? (CLOUD_LIVE ? 'available' : 'soon')
   : s === 'fable' ? (FABLE_AVAILABLE ? 'available' : 'unavailable')
   : s;
@@ -275,16 +279,16 @@ const renderBody = (text: string) =>
         The most complete Claude Code tracker.
       </h1>
       <p class="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-surface/80">
-        One tool for everything: billing-grade accuracy, your full usage picture, backup and sync
+        One tool for everything: billing-grade accuracy, your full usage picture, sync
         across machines, a dashboard to see it all, and a tracker that’s ready
         {SPLIT_LIVE ? ' for the June 15 billing split' : ' for Claude’s billing changes, whenever they land'}. Free and open-source.
       </p>
 
       <div class="mx-auto mt-9 max-w-md">
-        <CodeBlock code="npx wtclaude setup" />
+        <CodeBlock code={INSTALL_CMD} />
         <div class="mt-4 flex items-center justify-center">
           <a
-            href="/docs"
+            href="/docs/"
             class="inline-flex items-center gap-1.5 rounded-lg border border-surface/30 px-5 py-2.5 text-sm font-semibold text-surface transition hover:bg-surface/10"
             data-track="cta_docs"
           >
@@ -331,7 +335,7 @@ const renderBody = (text: string) =>
         The most complete picture of your Claude Code usage. Free.
       </p>
       <div class="mx-auto mt-7 max-w-md">
-        <CodeBlock code="npx wtclaude setup" />
+        <CodeBlock code={INSTALL_CMD} />
       </div>
     </div>
   </section>

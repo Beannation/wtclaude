@@ -42,3 +42,27 @@ test('inventory degrades gracefully on a missing base dir', () => {
   const items = scanInventory({ baseDir: '/nonexistent-wtc-xyz', projectDir: '/nonexistent-wtc-prj' });
   assert.ok(Array.isArray(items));
 });
+
+// QA-0928-72 (2026-09-28): the transcripts honour CLAUDE_CONFIG_DIR but the
+// inventory hard-coded ~/.claude, so a relocated config reported nothing loaded.
+test('QA-0928-72: the inventory honours CLAUDE_CONFIG_DIR and labels its real location', () => {
+  const root = mkdtempSync(join(tmpdir(), 'wtc-ccd-'));
+  const proj = mkdtempSync(join(tmpdir(), 'wtc-prj-'));
+  const prev = process.env.CLAUDE_CONFIG_DIR;
+  try {
+    mkdirSync(join(root, 'skills', 'deploy'), { recursive: true });
+    writeFileSync(join(root, 'skills', 'deploy', 'SKILL.md'), '---\nname: deploy\ndescription: Ship it.\n---\n');
+    writeFileSync(join(root, 'CLAUDE.md'), 'Always write tests.');
+    process.env.CLAUDE_CONFIG_DIR = root;
+    const items = scanInventory({ projectDir: proj });
+    const deploy = items.find(i => i.id === 'skill:deploy');
+    assert.ok(deploy, 'a skill under CLAUDE_CONFIG_DIR is inventoried');
+    assert.equal(deploy.source, join(root, 'skills'), 'the label names the real root, not ~/.claude');
+    assert.ok(items.some(i => i.id === 'rule:CLAUDE.md (user)'));
+    assert.ok(!items.some(i => i.source.startsWith('~/.claude')));
+  } finally {
+    if (prev === undefined) delete process.env.CLAUDE_CONFIG_DIR; else process.env.CLAUDE_CONFIG_DIR = prev;
+    rmSync(root, { recursive: true, force: true });
+    rmSync(proj, { recursive: true, force: true });
+  }
+});

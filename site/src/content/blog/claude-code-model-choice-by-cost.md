@@ -2,6 +2,7 @@
 title: "Sonnet 5, Opus 5, or Fable 5? Choosing Your Claude Code Model by Cost"
 description: "Opus 5.5 is now the Claude Code default and the default opus, and Fable 5 is now plan-conditional — so your model choice just got harder. Here's the honest, cost-first way to decide, priced from your own real usage."
 pubDate: 2026-07-02
+updatedDate: 2026-09-27
 author: "Peter Bean"
 readingTime: "8 min read"
 faq:
@@ -26,7 +27,7 @@ Two things changed in Claude Code the same week, and together they made a questi
 
 So now you've got three serious options — **Opus 5, Sonnet 5, and Fable 5** — with different prices, different billing rules, and a tokenizer wrinkle that makes the sticker price misleading. Here's the honest, cost-first way to think about it. (We're a cost tracker, so this is about the dollars — not a claim about which model is "smarter.")
 
-<p class="rounded-lg border border-amber/30 bg-amber-light/40 px-4 py-3 text-sm"><a href="/business/audit" data-track="cta_spend_audit_blog_model_choice" class="font-semibold text-amber-deep hover:text-amber">Audit your team's Claude spend, free →</a></p>
+<p class="rounded-lg border border-amber/30 bg-amber-light/40 px-4 py-3 text-sm"><a href="/business/audit/" data-track="cta_spend_audit_blog_model_choice" class="font-semibold text-amber-deep hover:text-amber">Audit your team's Claude spend, free →</a></p>
 
 ## Sonnet 5: the new default, and cheaper per token — but read the asterisk
 
@@ -34,7 +35,7 @@ Sonnet 5 is **$2/$10 per million tokens** (input/output), and that's the standar
 
 Here's the asterisk that matters: **a lower per-token price is not the same as a lower bill.** Sonnet 5's tokenizer tends to emit *more* tokens for the same work — often around 30% more. So the same task can use more tokens on Sonnet 5 than the raw "$2 vs Opus" comparison implies, and the real per-task saving is smaller than the rate card suggests. It's still very likely cheaper for most work — just not by as much as the headline number, and not guaranteed on every task.
 
-The good news for tracking: this tokenizer difference doesn't dent your *cost* number at all. WTClaude prices Sonnet 5 off **the model's own reported token counts** (and, in terminal Code, off Anthropic's own computed cost), so more tokens simply show up as more tokens — no re-calibration, no drift. ([Why a cost tracker can still disagree with your bill.](/blog/is-claude-code-cost-accurate))
+The good news for tracking: this tokenizer difference doesn't dent your *cost* number at all. WTClaude prices Sonnet 5 off **the model's own reported token counts** (and, in terminal Code, off Anthropic's own computed cost), so more tokens simply show up as more tokens — no re-calibration, no drift. ([Why a cost tracker can still disagree with your bill.](/blog/is-claude-code-cost-accurate/))
 
 ## Fable 5 is back — and what it costs depends on your plan
 
@@ -46,7 +47,7 @@ Fable 5 returned July 1. The billing works like this:
 
 Two honest notes. First, "included" is a **share of your weekly limit, not free-unlimited** — it's up to half of that limit, not an allowance on top of it. Second, any "what Fable will cost me" number is a **labeled estimate**: it depends on your plan and your usage, and it assumes the $10/$50 credit rate holds. We can't see how much of your weekly limit you're burning, so we don't pretend to know exactly how much the 50% share covers — we show *what your Fable usage would cost as credits*, clearly labeled.
 
-(If you're keeping a mental map of Claude's billing changes, this Fable allowance is its own thing — separate from the Agent-SDK pool split that was announced earlier and then paused. Different wallets; don't let anyone blur them. [Here's the plain billing explainer.](/blog/claude-code-billing-explained))
+(If you're keeping a mental map of Claude's billing changes, this Fable allowance is its own thing — separate from the Agent-SDK pool split that was announced earlier and then paused. Different wallets; don't let anyone blur them. [Here's the plain billing explainer.](/blog/claude-code-billing-explained/))
 
 ## The choice is now genuinely hard — so price it against *your* usage
 
@@ -55,7 +56,8 @@ Opus 5 for the heavy reasoning, Sonnet 5 as the cheaper default, Fable 5 for the
 That's exactly the question WTClaude's `compare-models` answers. It takes your **own recorded, billing-grade usage** and re-prices it across all three models, so you see what this month would have cost on each:
 
 ```
-npx wtclaude setup
+npm i -g wtclaude
+wtclaude setup
 wtclaude compare-models
 ```
 
@@ -65,13 +67,13 @@ A few things we're careful about, because they're the difference between an hone
 - **It's split by where you work.** The **Code (terminal) row is billing-grade** — Anthropic's own computed cost, re-priced. The **Cowork row is a labeled estimate**. **Chat is excluded** (there's no local cost data for it, so we say so rather than show a fake zero). Model choice is made per surface anyway, so this is the split that actually helps you decide.
 - **Cost, not quality.** We surface what each option costs. Whether Sonnet 5 is "good enough" for your work versus Opus is your call — we're not going to dress a cost tool up as a quality benchmark.
 
-You also get this everywhere you already look: the same three-model comparison renders in the CLI, in the web dashboard tile, and in the desktop companion — driven off one shared calculation so the numbers can't disagree. (Want to see how WTClaude stacks up against the other trackers first? [Here's the honest side-by-side.](/compare))
+You also get this everywhere you already look: the same three-model comparison renders in the CLI, in the web dashboard tile, and in the desktop companion — driven off one shared calculation so the numbers can't disagree. (Want to see how WTClaude stacks up against the other trackers first? [Here's the honest side-by-side.](/compare/))
 
 ## The one number you can trust underneath all of it
 
 Model prices change, allowances expire, tokenizers differ — but the anchor doesn't move: WTClaude reads **the same cost number Anthropic's own statusline computes** for terminal Code. It's Anthropic's own figure, not a third-party reconstruction from broken logs (and not a guarantee of your final invoice — it's Anthropic-computed, terminal-Code). Everything else — the Fable forecast, the cross-model comparison, desktop and Cowork estimates — is clearly labeled as an estimate, so you always know which numbers are solid and which are projections.
 
-That's the whole idea: when the model landscape gets confusing, the tracker's job is to make *your* costs legible, honestly. If you want the full picture of how Claude Code billing fits together — pools, credits, and limits — [start here](/developers).
+That's the whole idea: when the model landscape gets confusing, the tracker's job is to make *your* costs legible, honestly. If you want the full picture of how Claude Code billing fits together — pools, credits, and limits — [start here](/developers/).
 
 ## FAQ
 
@@ -92,4 +94,4 @@ No — it's an independent, free, open-source project, not affiliated with Anthr
 
 ---
 
-*WTClaude is a free, open-source, billing-grade Claude Code cost tracker. See what your month would cost on each model: `npx wtclaude setup`, then `wtclaude compare-models`. Numbers are billing-grade for terminal Code (Anthropic-computed) and clearly-labeled estimates everywhere else.*
+*WTClaude is a free, open-source, billing-grade Claude Code cost tracker. See what your month would cost on each model: `npm i -g wtclaude`, `wtclaude setup`, then `wtclaude compare-models`. Numbers are billing-grade for terminal Code (Anthropic-computed) and clearly-labeled estimates everywhere else.*

@@ -12,6 +12,9 @@ interface Props {
   class?: string;
 }
 const { code, track = 'install_cmd_copied', variant = 'dark', class: cls = '' } = Astro.props;
+// A multi-command block (e.g. the install: `npm i -g wtclaude` then `wtclaude setup`) keeps
+// one command per line, left-aligned even inside a centered section; Copy copies every line.
+const multiline = code.includes('\n');
 
 const base =
   variant === 'dark'
@@ -23,14 +26,14 @@ const base =
   class={`group relative flex items-center justify-between gap-3 rounded-xl px-4 py-3 font-mono text-sm sm:text-base ${base} ${cls}`}
   data-codeblock
 >
-  <code class="select-all overflow-x-auto whitespace-nowrap" data-code>{code}</code>
+  <code class={`select-all overflow-x-auto ${multiline ? 'whitespace-pre text-left leading-relaxed' : 'whitespace-nowrap'}`} data-code>{code}</code>
   <button
     type="button"
     class="shrink-0 rounded-md border border-current/20 bg-current/10 px-2.5 py-1 text-xs font-medium opacity-80 transition hover:opacity-100 focus-visible:outline-2 focus-visible:outline-amber"
     data-copy
     data-value={code}
     data-track={track}
-    aria-label={`Copy: ${code}`}
+    aria-label={`Copy: ${multiline ? code.split('\n').join(', then ') : code}`}
   >
     Copy
   </button>

@@ -2,6 +2,7 @@
 title: 'June 15 was going to change how you pay for Claude. Here’s the plain version.'
 description: 'Anthropic announced a June 15 split of Claude billing into two pools — Interactive and Agent SDK Credits — then paused it before it took effect. Here’s what was announced, who it would have hit, and where it stands.'
 pubDate: 2026-06-05
+updatedDate: 2026-08-24
 author: 'Peter Bean'
 readingTime: '4 min read'
 draftProse: false
@@ -9,7 +10,7 @@ draftProse: false
 
 > **Update — August 24, 2026: still paused.** More than two months on, the Agent-SDK billing split has not taken effect. Agent SDK, `claude -p`, and third-party apps continue to draw from your subscription’s usage limits, and there is no separate credit pool to run dry. Anthropic has said it will give advance notice before any revised version takes effect. Everything below is the original announcement, kept as a record.
 
-> **Update — June 15, 2026: this change was PAUSED. It did not take effect.** Anthropic paused the Agent-SDK billing split before June 15 — Agent SDK, `claude -p`, and third-party apps still draw from your subscription's usage limits, exactly as before, and there's no credit to claim. Anthropic says it's reworking the plan and will give advance notice before anything takes effect. We've kept this post as a record of what was announced, and we're watching for if/when a revised version returns. ([Anthropic's note](https://support.claude.com/en/articles/15036540-use-the-claude-agent-sdk-with-your-claude-plan).)
+> **Update — June 15, 2026: this change was PAUSED. It did not take effect.** Anthropic paused the Agent-SDK billing split on June 15, before it took effect — Agent SDK, `claude -p`, and third-party apps still draw from your subscription's usage limits, exactly as before, and there's no credit to claim. Anthropic says it's reworking the plan and will give advance notice before anything takes effect. We've kept this post as a record of what was announced, and we're watching for if/when a revised version returns. ([Anthropic's note](https://support.claude.com/en/articles/15036540-use-the-claude-agent-sdk-with-your-claude-plan).)
 
 If you use Claude Code, the way you pay for it **was set to change on June 15** — and if you run agents, it would have changed in a way that can bite you mid-month. Here’s what was announced, who it would have affected, and how to not get surprised if a revised version returns. No hype, just the mechanics.
 
@@ -47,14 +48,15 @@ You don’t need a new workflow. You need three things:
 WTClaude is a free, open-source usage tracker for Claude Code, and it’s built for exactly this moment. A few things worth knowing:
 
 - **It reads the right data.** Instead of the broken session logs, it reads the statusline — the same billing-grade source behind your bill — so your Claude Code numbers are real, not drifting. *(It tracks Claude Code in your terminal today; Cowork and Chat are on the roadmap, and they’ll be clearly labeled as estimates when they arrive.)*
-- **It’s built for both pools.** The dual-pool view is built and ready — if a revised split lands, the dual-pool view lights up automatically, no reinstall. `wtclaude today` shows your spend **per-pool**, billing-grade in the terminal.
+- **It’s built for both pools.** The dual-pool view is built and ready — if a revised split lands, it would switch on with a WTClaude update, and `wtclaude today` would then split your spend **per pool**.
 - **It projects your agent-pool burn.** If a revised split lands, a daily projection shows your expected agent-pool spend against your included credits, at standard API list rates; bundle discounts up to 30% and promos not reflected. **This is a forecast, not a crystal ball:** the cost math is billing-grade, but classifying which usage lands in which pool is a heuristic, so we label the whole thing an estimate. Every day of real data makes the projection tighter.
 - **It gives you a credits-enough check.** If and when there is a pool to check against, one line: are your credits enough, yes or no, plus the single thing to do about it. Clearly labeled as an estimate from your tracked usage — never presented as your guaranteed bill.
 
 Install takes about a minute, in your terminal:
 
 ```bash
-npx wtclaude setup
+npm i -g wtclaude
+wtclaude setup
 ```
 
 It’s free and MIT-licensed. The point isn’t to sell you something — it’s that a split like this rewards people who track honestly, and the tool that does it is free. Start now and you’ll have the baseline ready if a revised version lands.

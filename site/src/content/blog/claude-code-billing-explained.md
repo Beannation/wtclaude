@@ -19,7 +19,7 @@ faq:
 
 Claude Code billing trips people up because there isn't one model — there are a few, depending on how you pay, and they measure different things. This is the plain-English version: how you're charged, what the limits actually mean, what the credit pools are, and how to see where you stand. (For the specifics that change over time, always check Anthropic's official docs — this is the mental model, not the rate card.)
 
-<p class="rounded-lg border border-amber/30 bg-amber-light/40 px-4 py-3 text-sm"><a href="/business/audit" data-track="cta_spend_audit_blog_billing_explained" class="font-semibold text-amber-deep hover:text-amber">Audit your team's Claude spend, free →</a></p>
+<p class="rounded-lg border border-amber/30 bg-amber-light/40 px-4 py-3 text-sm"><a href="/business/audit/" data-track="cta_spend_audit_blog_billing_explained" class="font-semibold text-amber-deep hover:text-amber">Audit your team's Claude spend, free →</a></p>
 
 ## Two ways you pay
 
@@ -48,7 +48,7 @@ Claude Code uses **usage credits** for paid plans. There's also a billing change
 - an **Interactive** pool, for the back-and-forth work you do directly, and
 - an **Agent-SDK** pool, for agentic / SDK-driven workloads.
 
-**That split was paused on June 15, 2026, before it took effect.** As of now, agentic and SDK usage — `claude -p`, the Agent SDK, third-party apps — still draws from your subscription's usage limits exactly as before. There's no separate Agent-SDK pool to budget against today, and no separate credit to claim. Anthropic has said it's reworking the plan and will give advance notice before anything changes. ([We tracked the whole back-and-forth here.](/blog/two-claude-billing-changes-neither-happened))
+**That split was paused on June 15, 2026, before it took effect.** As of now, agentic and SDK usage — `claude -p`, the Agent SDK, third-party apps — still draws from your subscription's usage limits exactly as before. There's no separate Agent-SDK pool to budget against today, and no separate credit to claim. Anthropic has said it's reworking the plan and will give advance notice before anything changes. ([We tracked the whole back-and-forth here.](/blog/two-claude-billing-changes-neither-happened/))
 
 It's still worth holding the mental model, because if a revised version returns the reason it matters is simple: if your work leans heavily toward agentic runs, a separate pool would draw down faster than you'd expect, and budgeting against a single combined number would stop working. For now, though, it's one combined picture.
 
@@ -60,14 +60,15 @@ One more distinction worth nailing down: **rate limits** (how fast/much you can 
 
 Whatever you pay, the useful end-state is the same: a clear, current picture of your usage that you trust. Three things get you there:
 
-1. **A real cost number, not an estimate.** Most trackers reconstruct cost from local logs, which drifts from your bill. Reading the statusline (the billing source) is billing-grade in the terminal — [here's why that distinction matters](/blog/is-claude-code-cost-accurate).
+1. **A real cost number, not an estimate.** Most trackers reconstruct cost from local logs, which drifts from your bill. Reading the statusline (the billing source) is billing-grade in the terminal — [here's why that distinction matters](/blog/is-claude-code-cost-accurate/).
 2. **Your limit, with countdowns.** So you see the wall coming.
 3. **The pool picture.** Today that's one combined limit; if Anthropic's announced Interactive/Agent-SDK split returns, you'll want to see which budget you're drawing down.
 
 You can get all three for free:
 
 ```
-npx wtclaude setup
+npm i -g wtclaude
+wtclaude setup
 wtclaude today        # real cost, billing-grade in the terminal
 wtclaude limit        # your overall plan limit + reset countdowns
 wtclaude readiness    # are your credits enough? (a labeled forecast — ready if the pool split returns)
@@ -81,7 +82,7 @@ wtclaude readiness    # are your credits enough? (a labeled forecast — ready i
 Two models: subscription (Pro/Max) where you pay a flat fee and use within rolling limits, and API/usage-credits where you pay per token. Subscriptions measure usage against time windows; API measures it in dollars.
 
 **What are the Claude Code credit pools?**
-Anthropic announced a plan to split usage into a separate Interactive pool and Agent-SDK pool, but **paused it on June 15, 2026 before it took effect**. Today, agentic and SDK usage still draws from your subscription's usage limits as before — there's no separate pool to budget against right now. Anthropic says it's reworking the plan and will give notice before anything changes. [The full story.](/blog/two-claude-billing-changes-neither-happened)
+Anthropic announced a plan to split usage into a separate Interactive pool and Agent-SDK pool, but **paused it on June 15, 2026 before it took effect**. Today, agentic and SDK usage still draws from your subscription's usage limits as before — there's no separate pool to budget against right now. Anthropic says it's reworking the plan and will give notice before anything changes. [The full story.](/blog/two-claude-billing-changes-neither-happened/)
 
 **What's the difference between a rate limit and cost in Claude Code?**
 A rate limit is how much you can use within a window; cost is what that usage is worth or billed. They're independent — you can hit one without the other.
@@ -90,8 +91,8 @@ A rate limit is how much you can use within a window; cost is what that usage is
 Use `/usage` in a session for a snapshot, or a tracker that shows your overall plan limit with reset countdowns continuously (e.g. `wtclaude limit`).
 
 **Is the cost my tracker shows the same as my bill?**
-Only if it reads the billing source. Log-based estimates can drift; statusline-based readings are billing-grade in the terminal. [Why they disagree.](/blog/is-claude-code-cost-accurate)
+Only if it reads the billing source. Log-based estimates can drift; statusline-based readings are billing-grade in the terminal. [Why they disagree.](/blog/is-claude-code-cost-accurate/)
 
 ---
 
-*WTClaude is a free, open-source, billing-grade Claude Code cost tracker — cost and limits, honestly labeled. `npx wtclaude setup`.*
+*WTClaude is a free, open-source, billing-grade Claude Code cost tracker — cost and limits, honestly labeled. `npm i -g wtclaude`, then `wtclaude setup`.*

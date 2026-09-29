@@ -2,17 +2,19 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import CodeBlock from '../components/CodeBlock.astro';
 import HonestyBadge from '../components/HonestyBadge.astro';
-import { SHOW_TASKS_FEATURE, GUARDIAN_PRICE, CLOUD_LIVE, SPLIT_LIVE } from '../config';
+import { SHOW_TASKS_FEATURE, GUARDIAN_PRICE, CLOUD_LIVE, SPLIT_LIVE, INSTALL_CMD } from '../config';
 import { faqPage, breadcrumbs } from '../lib/schema';
 
 const title = 'WTClaude docs — install & CLI reference';
 const description =
-  'Install WTClaude in 60 seconds and track your real Claude Code usage. Quick start, the full CLI command reference (v0.3.1), and FAQ.';
+  'Install WTClaude in 60 seconds and track your real Claude Code usage. Quick start, the full CLI command reference (v0.3.2), and FAQ.';
 
 // CLI reference — organized by what you're doing. Every description + flag was
-// verified against the shipped `wtclaude --help` (v0.3.1 — command set and flags
-// diffed against 0.3.0 on 2026-09-27: identical; only two descriptions changed). Run
-// `wtclaude <command> --help` for the authoritative flag list on your install.
+// verified against the shipped `wtclaude --help` (v0.3.2, 2026-09-28: setup takes the
+// Team and Enterprise plans, whatif takes Team plans and Fable, --group-by takes device;
+// debrief, credits and devices print what their rows now say). docs-cli.test.js diffs the
+// plan / model / group-by lists against --help. Run `wtclaude <command> --help` for the
+// authoritative flag list on your install.
 
 // The Agent-SDK credit cluster (forecast / credits / readiness) was built for the
 // June-15 Agent-SDK billing split, which Anthropic PAUSED before it took effect
@@ -23,12 +25,12 @@ const forecastingExtra = [
     badge: 'estimate' as const,
     desc: SPLIT_LIVE
       ? 'projected Agent-SDK credit spend vs your included credits, with a countdown. `--days <n>`, `--json`.'
-      : 'projected Agent-SDK credit spend vs your included credits. (The June-15 credit split it was built for was paused — this stays ready if a revised split lands.) `--days <n>`, `--json`.',
+      : 'projected Agent-SDK spend from your recorded usage; if a revised split lands, it compares that against the credits the split includes. (The June-15 credit split it was built for was paused.) `--days <n>`, `--json`.',
   },
   {
     name: 'credits',
     badge: 'estimate' as const,
-    desc: 'your Agent-SDK + fast-mode credit balance and burn. `--json`.',
+    desc: 'your fast-mode credit spend this month (billing-grade when Claude Code reports it, otherwise labeled inferred); the Agent-SDK credit pool shows as paused. WTClaude can’t read your usage-credit balance yet — check it in Claude’s usage settings. `--json`.',
   },
   {
     name: 'readiness',
@@ -41,7 +43,7 @@ const cloudCommands = CLOUD_LIVE
   ? [
       {
         name: 'sync',
-        desc: 'opt-in cloud backup + multi-device totals. `--status` / `--enable` / `--disable`. Local-first — nothing leaves your machine until you enable it, and you preview exactly what would sync before it does.',
+        desc: 'opt-in cloud sync + multi-device totals. `--status` / `--enable` / `--disable`. Local-first — nothing leaves your machine until you enable it, and you see a preview of what would sync before it does.',
       },
       {
         name: 'dashboard',
@@ -58,7 +60,7 @@ const sections = [
       {
         name: 'today · week · month',
         badge: 'billing-grade' as const,
-        desc: 'real cost, tokens, and model breakdown for the day / last 7 / last 30 days. Flags: `--json`, `--csv`, `--clipboard`, `--since`/`--until`, `--group-by <project|branch|cost_center|task>`, `--currency <ISO>`.',
+        desc: 'real cost, tokens, and model breakdown for the day / last 7 / last 30 days. Flags: `--json`, `--csv`, `--clipboard`, `--since`/`--until`, `--group-by <project|branch|cost_center|task|device>`, `--currency <ISO>`.',
       },
       {
         name: 'compare',
@@ -68,7 +70,7 @@ const sections = [
       {
         name: 'report',
         badge: 'billing-grade' as const,
-        desc: 'a monthly cost report. `--month <YYYY-MM>` picks the month; `--cost-center` breaks it down by cost center.',
+        desc: 'a monthly cost-center report: `wtclaude report --cost-center`. `--month <YYYY-MM>` picks the month.',
       },
       {
         name: 'session [id]',
@@ -83,7 +85,7 @@ const sections = [
       {
         name: 'blocks',
         badge: 'billing-grade' as const,
-        desc: 'usage bucketed into the rolling 5-hour windows your subscription limit resets on, so you can pace against it. `--limit <n>` caps how many show.',
+        desc: 'usage in fixed 5-hour UTC buckets on a set grid — not your limit window (for that, see `limit`). `--limit <n>` caps how many show.',
       },
       {
         name: 'limit',
@@ -92,7 +94,7 @@ const sections = [
       },
       {
         name: 'watch',
-        desc: 'a live terminal monitor: today’s cost, current 5h-block burn, and the plan-limit gauge with a basic, **non-predictive** time-to-limit. `--once` renders one frame; `--interval <s>` sets the refresh.',
+        desc: 'a live terminal monitor: today’s cost, the current UTC 5h-block burn, and the plan-limit gauge with a basic, **non-predictive** time-to-limit. `--once` renders one frame; `--interval <s>` sets the refresh.',
       },
     ],
   },
@@ -108,7 +110,7 @@ const sections = [
       {
         name: 'whatif',
         badge: 'estimate' as const,
-        desc: 'quick plan- and model-comparison math on your recent usage. Flags: `--plan <pro|max5|max20>`, `--model <haiku|sonnet|opus>`, `--days <n>`.',
+        desc: 'quick plan- and model-comparison math on your recent usage. Flags: `--plan [plan]` (on its own, every plan; or one of pro, max_5x, max_20x, team_standard, team_premium), `--model <haiku|sonnet|opus|fable>`, `--days <n>`.',
       },
       {
         name: 'fable',
@@ -125,13 +127,14 @@ const sections = [
     commands: [
       {
         name: 'waste',
-        desc: '**new** — reveals the always-loaded skills and rules you never invoke, and what re-reading them costs, computed at **billing-grade cache-read rates** (each item’s token size is a labeled estimate). A read-only reveal: it recommends a **REVIEW**, never removes or changes anything. `--days <n>`, `--all`, `--json`.',
+        badge: 'estimate' as const,
+        desc: '**new** — reveals the always-loaded skills and subagents you never invoke, and what re-reading them costs, computed at **list cache-read rates** (each item’s token size is a labeled estimate). CLAUDE.md files are listed as always loaded but not judged. A read-only reveal: it recommends a **REVIEW**, never removes or changes anything. `--days <n>`, `--all`, `--json`.',
       },
       {
         name: 'quality',
-        desc: 'your one-shot success rate — edits the model landed without a retry (file-aware, salted). Supports `--since`/`--until`, `--json`, `--csv`.',
+        desc: 'your one-shot success rate — edits the model landed without a retry (file-aware, salted). The command ships; the edit-target field it reads isn’t in current Claude Code payloads yet, so today it reports “not available yet”. Supports `--since`/`--until`, `--json`, `--csv`.',
       },
-      { name: 'debrief', desc: 'an end-of-day summary — your costliest turn and a tip.' },
+      { name: 'debrief', desc: 'an end-of-day summary — the day’s total with its cost basis, your costliest turn, and the cache-read share of your recorded input-side tokens (context occupancy, not a hit rate).' },
       {
         name: 'tasks',
         comingSoon: !SHOW_TASKS_FEATURE,
@@ -153,7 +156,7 @@ const sections = [
       ...cloudCommands,
       {
         name: 'devices',
-        desc: 'combined + per-device totals (rides cloud sync; with sync off it’s a local-only view of this machine, plus a hint to enable sync).',
+        desc: 'per-device usage from this machine’s session files — always a local-only view; with sync on, cross-device totals are on the dashboard. Supports `--since`/`--until`, `--json`, `--csv`.',
       },
       {
         name: 'share',
@@ -168,7 +171,7 @@ const sections = [
     commands: [
       {
         name: 'setup',
-        desc: 'configure WTClaude — wires the Claude Code statusline and creates your local data dir; reads the credential Claude already wrote (no login). `--plan <pro|max5|max20>`, `--yes` for non-interactive.',
+        desc: 'configure WTClaude — wires the Claude Code statusline and creates your local data dir — no login, no account. `--plan <plan>` (pro, max5, max20, team_standard, team_premium, enterprise_standard or enterprise_premium), `--yes` for non-interactive.',
       },
       {
         name: 'export',
@@ -197,7 +200,7 @@ const faqs = [
   },
   {
     q: 'Does it work with the Claude desktop app?',
-    a: 'Tracking requires the Claude Code CLI in your terminal — the statusline WTClaude reads only fires there. The desktop app and Cowork don’t emit it, so install via the terminal. (Desktop/Cowork coverage is on the roadmap.)',
+    a: 'Tracking requires the Claude Code CLI in your terminal — the statusline WTClaude reads only fires there. The desktop app and Cowork don’t emit it, so install via the terminal. (Cowork already shows up in wtclaude compare-models as a labeled estimate; desktop-app tracking comes later.)',
   },
   {
     q: 'Will it slow me down?',
@@ -245,17 +248,23 @@ const mdToHtml = (s: string) =>
       <h1 class="font-head text-4xl">Get started</h1>
       <ol class="mt-8 space-y-6">
         <li>
-          <div class="flex items-baseline gap-3">
+          <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
             <span class="font-head text-amber">1</span>
-            <code class="font-mono text-sm font-semibold">npx wtclaude setup</code>
+            <code class="font-mono text-sm font-semibold">npm i -g wtclaude</code>
+            <span class="text-sm text-ink/60">then</span>
+            <code class="font-mono text-sm font-semibold">wtclaude setup</code>
           </div>
           <p class="mt-2 pl-7 text-sm leading-relaxed text-ink/70">
-            wires up the statusline so WTClaude reads billing-grade data; reads the credential Claude
-            already wrote, so there’s no login.
+            installs WTClaude globally, so Claude Code’s statusline has a stable command to run; then
+            setup wires up the statusline so WTClaude reads billing-grade data, and creates your local
+            data dir — no login, no account.
           </p>
           <div class="mt-3 pl-7">
-            <CodeBlock code="npx wtclaude setup" />
+            <CodeBlock code={INSTALL_CMD} />
           </div>
+          <p class="mt-3 pl-7 text-sm leading-relaxed text-ink/60">
+            Set up with 0.3.1 or earlier? Run <code class="whitespace-nowrap rounded bg-ink/5 px-1 py-0.5 font-mono text-[13px]">npm i -g wtclaude</code>, then <code class="whitespace-nowrap rounded bg-ink/5 px-1 py-0.5 font-mono text-[13px]">wtclaude setup</code> once: those versions wrote the statusline entry without <code class="whitespace-nowrap rounded bg-ink/5 px-1 py-0.5 font-mono text-[13px]">"type": "command"</code>, which Claude Code needs to run it.
+          </p>
         </li>
         <li>
           <div class="flex items-baseline gap-3">
@@ -289,7 +298,9 @@ const mdToHtml = (s: string) =>
       </p>
       <p class="mt-3 rounded-lg border border-ink/10 bg-card px-4 py-3 text-sm leading-relaxed text-ink/70">
         WTClaude reads the statusline, which only the terminal CLI emits — the Claude desktop app and
-        Cowork don’t run it. (Desktop/Cowork tracking comes later, as clearly-labeled estimates.)
+        Cowork don’t run it. (Cowork already shows up in
+        <code class="rounded bg-ink/5 px-1 py-0.5 font-mono text-[13px]">wtclaude compare-models</code> as a
+        labeled estimate; desktop-app tracking comes later.)
       </p>
     </section>
 
@@ -297,7 +308,7 @@ const mdToHtml = (s: string) =>
     <section class="mt-16">
       <h2 class="font-head text-2xl">CLI reference</h2>
       <p class="mt-2 text-sm leading-relaxed text-warm">
-        Everything the shipped CLI (v0.3.1) runs — run
+        Everything the shipped CLI (v0.3.2) runs — run
         <code class="rounded bg-ink/5 px-1 py-0.5 font-mono text-[13px]">wtclaude &lt;command&gt; --help</code> for the full flags on
         your install. <strong class="font-medium text-ink/75">Billing-grade</strong> = terminal Code, Anthropic-computed (not a
         guarantee of your invoice); everything else is a labeled estimate.

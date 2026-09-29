@@ -12,6 +12,7 @@ import WhatIf from './pages/WhatIf';
 import Leaderboard from './pages/Leaderboard';
 import Badges from './pages/Badges';
 import Settings from './pages/Settings';
+import NotFound from './pages/NotFound';
 
 function App() {
   return (
@@ -30,6 +31,7 @@ function App() {
             <Route path="/leaderboard" element={<Leaderboard />} />
             <Route path="/badges" element={<Badges />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="*" element={<NotFound />} />
           </Route>
         </Routes>
       </BrowserRouter>

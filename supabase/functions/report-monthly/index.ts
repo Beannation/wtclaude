@@ -7,14 +7,16 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 //
 // Content: totals, month-over-month trend, top model, busiest day. Optional
 // email via Resend if RESEND_API_KEY is set and the user opted in
-// (users.preferences.report_email). All cost is billing-grade (anchored on
-// cost.total_cost_usd); the figure is the bill, not an estimate.
+// (users.preferences.report_email), sent only by the scheduled batch run. The
+// cost figure is billing-grade (the sum of cost.total_cost_usd anchors); turns
+// without an anchor are reported separately as estimated_only_usd (since
+// migration 009 the daily estimated_cost_usd total includes them).
 //
 // DEPLOYMENT: code-complete. Goes live only once SEC Phase C is deployed (it
 // needs the service secret + the schema). Set the cron after deploy:
 //   select cron.schedule('wtclaude-monthly','0 8 1 * *',
 //     $$ select net.http_post(url:='…/functions/v1/report-monthly',
-//        headers:='{"Authorization":"Bearer <service>"}'::jsonb) $$);
+//        headers:='{"x-cron-secret":"<CRON_SECRET>"}'::jsonb) $$);
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -22,6 +24,20 @@ const corsHeaders = {
 };
 const json = (b: unknown, status = 200) =>
   new Response(JSON.stringify(b), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+// QA-0928-125: batch mode (no x-anonymous-id) runs over every user, so only the
+// scheduler may start it — it must send x-cron-secret equal to the CRON_SECRET
+// function secret. With CRON_SECRET unset, batch mode is off.
+function cronAuthorized(req: Request): boolean {
+  const secret = Deno.env.get("CRON_SECRET");
+  const given = req.headers.get("x-cron-secret");
+  if (!secret || !given) return false;
+  const a = new TextEncoder().encode(secret), b = new TextEncoder().encode(given);
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a[i] ^ b[i];
+  return diff === 0;
+}
 
 function monthRange(offset = -1) {
   // offset -1 = previous month relative to today.
@@ -45,8 +61,9 @@ async function buildReport(supabase: any, userId: string) {
   const prevRows = (rows || []).filter((r: any) => r.date >= prev.startStr && r.date < prev.endStr);
 
   const sum = (rs: any[], k: string) => rs.reduce((a, r) => a + Number(r[k] || 0), 0);
-  const curCost = sum(curRows, "estimated_cost_usd");
-  const prevCost = sum(prevRows, "estimated_cost_usd");
+  const curCost = sum(curRows, "anchored_cost_usd");
+  const curEstimate = sum(curRows, "estimated_only_cost_usd");
+  const prevCost = sum(prevRows, "anchored_cost_usd");
   const trendPct = prevCost > 0 ? ((curCost - prevCost) / prevCost) * 100 : null;
 
   const models: Record<string, number> = {};
@@ -62,6 +79,7 @@ async function buildReport(supabase: any, userId: string) {
     month: cur.label,
     cost_usd: Math.round(curCost * 100) / 100,
     cost_basis: "billing-grade",
+    estimated_only_usd: Math.round(curEstimate * 100) / 100,
     tokens: sum(curRows, "total_input_tokens") + sum(curRows, "total_output_tokens"),
     sessions: sum(curRows, "session_count"),
     turns: sum(curRows, "turn_count"),
@@ -80,7 +98,7 @@ async function maybeEmail(supabase: any, userId: string, report: any) {
   const to = user?.preferences?.report_email;
   if (!to) return { emailed: false, reason: "no opt-in email" };
   const html = `<h2>WTClaude — ${report.month} Monthly Lite</h2>
-    <p><strong>$${report.cost_usd}</strong> billing-grade · ${report.sessions} sessions · ${report.turns} turns</p>
+    <p><strong>$${report.cost_usd}</strong> billing-grade${report.estimated_only_usd > 0 ? ` + $${report.estimated_only_usd} estimated` : ""} · ${report.sessions} sessions · ${report.turns} turns</p>
     <p>Trend vs prior month: ${report.trend_vs_prev_pct == null ? "n/a" : report.trend_vs_prev_pct + "%"}</p>
     <p>Top model: ${report.top_model ?? "—"} · Busiest day: ${report.busiest_day}</p>
     <p style="color:#888;font-size:12px">Independent project, not affiliated with Anthropic.</p>`;
@@ -102,11 +120,11 @@ serve(async (req) => {
       const { data: user } = await supabase.from("users").select("id").eq("anonymous_id", anonymousId).single();
       if (!user) return json({ error: "User not found" }, 404);
       const report = await buildReport(supabase, user.id);
-      const email = await maybeEmail(supabase, user.id, report);
-      return json({ report, email });
+      return json({ report, email: { emailed: false, reason: "sent only by the scheduled run" } });
     }
 
     // Cron/batch mode: every user.
+    if (!cronAuthorized(req)) return json({ error: "Unauthorized" }, 401);
     const { data: users } = await supabase.from("users").select("id");
     let count = 0;
     for (const u of users || []) {

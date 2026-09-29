@@ -1,11 +1,13 @@
 ---
 import { CAPTURE_ENDPOINT, CAPTURE_METHOD } from '../config';
+import { EMAIL_MAX } from '../lib/lead-contract';
 
 /**
  * Reusable email-capture form — the launch conversion path.
  * Client validation + loading/success/error states + a single pluggable endpoint
  * (config.CAPTURE_ENDPOINT). With no endpoint set it confirms locally (nothing stored)
- * and logs the submission for QA; with one set it POSTs `{ email, tag, source, consent }`
+ * and logs the submission for QA; with one set it POSTs `{ email, tag, source, website, consent }`
+ * (the shared lead contract: lib/lead-contract.ts)
  * (consent = the unticked-by-default marketing opt-in, PM-WEB-014).
  *
  * NOTE: SMB pricing is embargoed — never render a price near an SMB capture.
@@ -45,6 +47,7 @@ const id = `capture-${tag}`;
       name="email"
       type="email"
       required
+      maxlength={EMAIL_MAX}
       placeholder={placeholder}
       autocomplete="email"
       class="w-full rounded-lg border border-ink/15 bg-card px-3.5 py-2.5 text-sm text-ink placeholder:text-warm focus-visible:outline-2 focus-visible:outline-amber aria-[invalid=true]:border-alert"

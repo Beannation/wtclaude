@@ -59,3 +59,11 @@ test('east of Pacific time, the last live hours read "today", never a negative c
   assert.match(lines, /that is today/);
   assert.doesNotMatch(lines, /-\d+ day/);
 });
+
+// QA-0928-175: the no-Fable hint says which Claude Code version selects Fable 5.1.
+test('fable: the no-Fable-turns hint names the version that selects Fable 5.1', async () => {
+  const { readFileSync } = await import('node:fs');
+  const src = readFileSync(new URL('./fable.js', import.meta.url), 'utf8');
+  assert.match(src, /2\.1\.170\+;/);
+  assert.match(src, /from 2\.1\.257 that selects Fable 5\.1/);
+});

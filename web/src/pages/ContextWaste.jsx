@@ -3,7 +3,7 @@ import { useApp } from '../context/AppContext';
 import { formatCost, formatTokens } from '../lib/format';
 import { wasteFromDashboard, WASTE_MECHANISMS } from '../lib/contextWaste';
 import HonestyBadge from '../components/HonestyBadge';
-import EmptyState from '../components/EmptyState';
+import EmptyState, { ErrorState } from '../components/EmptyState';
 import { LinkPrompt } from './Overview';
 
 // The three ways dead weight costs you — always shown, so the mechanism is
@@ -25,13 +25,13 @@ function Mechanisms() {
 }
 
 export default function ContextWaste() {
-  const { data, loading, error, linked } = useDashboard();
+  const { data, loading, error, errorInfo, linked } = useDashboard();
   const { currency } = useApp();
   const fc = (v) => formatCost(v, currency);
 
   if (loading) return <p className="text-[var(--muted)]">Loading…</p>;
   if (!linked) return <LinkPrompt />;
-  if (error) return <EmptyState title="Couldn't load Context Waste" body={error} />;
+  if (error) return <ErrorState info={errorInfo} fallbackTitle="Couldn't load Context Waste" />;
 
   // The browser can't scan ~/.claude, so this is null unless a fixture carries a
   // context_inventory. When null we render the honest explanatory state.
@@ -44,9 +44,9 @@ export default function ContextWaste() {
         <HonestyBadge tier="estimate" />
       </div>
       <p className="text-[var(--muted)] max-w-3xl">
-        Always-loaded skills, MCP tools and memory files that you never invoke still get re-read on
-        every turn after the first, billed at your model's cache-read rate — a fraction of its input
-        rate (<code className="font-mono text-[var(--text)]">wtclaude waste</code> shows the rate for the model
+        Always-loaded skills and subagents that you never invoke still get re-read on every turn after
+        the first, billed at the cache-read rate of the model that ran the turn — a fraction of its input
+        rate (<code className="font-mono text-[var(--text)]">wtclaude waste</code> shows the rate for each model
         you actually ran). This tile
         surfaces what that dead weight costs — and flags each item for{' '}
         <span className="text-[var(--text-strong)]">review</span>, never removal.
@@ -90,7 +90,7 @@ export default function ContextWaste() {
               // the figure is a true $0 even when no rate can be named.
               <p className="text-xs text-[var(--faint)] mt-4">
                 {waste.loaded_count} always-loaded items, {waste.used_count} used.{' '}
-                {waste.monthly_usd === null ? 'No dollar figure is shown: ' : 'Nothing is being re-read, so the figure is $0 — but no rate is named: '}
+                {waste.monthly_usd === null ? 'No dollar figure is shown: ' : 'Nothing is being re-read, so the figure is zero — but no rate is named: '}
                 {waste.model_id ? (
                   <span className="font-mono text-[var(--muted)]">{waste.model_id}</span>
                 ) : (
@@ -162,7 +162,7 @@ export default function ContextWaste() {
           <EmptyState
             title="This reveal runs on your machine"
             body={
-              "The full inventory of always-loaded skills, MCP tools and memory files lives under ~/.claude — the " +
+              "The full inventory of always-loaded skills, subagents and CLAUDE.md files lives on your machine — the " +
               'browser can\'t read your filesystem, so we won\'t guess at it here. Run the command below in your terminal ' +
               'for the full reveal: which items are dead weight, how many tokens each costs, and the monthly re-read total.'
             }

@@ -24,13 +24,14 @@ const jsonLd: object[] = [
     headline: post.data.title,
     description: post.data.description,
     datePublished: post.data.pubDate.toISOString(),
+    dateModified: post.data.updatedDate?.toISOString(),
     author: post.data.author,
     image: ogImage,
   }),
   breadcrumbs([
     { name: 'Home', path: '/' },
     { name: 'Blog', path: '/blog' },
-    { name: post.data.title, path: `/blog/${post.id}` },
+    { name: post.data.title, path: `/blog/${post.id}/` },
   ]),
 ];
 if (post.data.faq?.length) jsonLd.push(faqPage(post.data.faq));

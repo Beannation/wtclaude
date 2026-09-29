@@ -1,8 +1,9 @@
 import { getSessionsForDateRange } from '../utils/sessions.js';
-import { output } from './_summary.js';
+import { output, resolveRange } from './_summary.js';
 import { toCSV } from '../utils/export.js';
 import { daysAgo } from './_summary.js';
 import { localDate } from '../utils/time.js';
+import { coldStartMessage } from '../utils/firstrun.js';
 import { SCHEMA_VERSION } from '../utils/schema.js';
 
 // `wtclaude quality` — one-shot success rate (BUILD-016). A "one-shot success"
@@ -48,8 +49,17 @@ export function registerQuality(program) {
     .option('--until <date>', 'End date (YYYY-MM-DD)')
     .action((opts) => {
       const o = opts || {};
-      const start = o.since || daysAgo(29);
-      const end = o.until || localDate(); // local calendar date (QA-BUG-10)
+      // QA-0928-169: the same range rules as today/week/month — a malformed
+      // date is refused, never echoed back as the range. QA-0928-56: --until
+      // alone ends quality's own 30-day window on that day.
+      let start, end;
+      try {
+        ({ startStr: start, endStr: end } = resolveRange(daysAgo(29), localDate(), o, { span: 30 })); // local calendar dates (QA-BUG-10)
+      } catch (err) {
+        console.error(`\n  ${err.message}\n`);
+        process.exitCode = 1;
+        return;
+      }
       const turns = getSessionsForDateRange(start, end).flatMap(s => s.turns);
       const r = computeOneShot(turns);
       const rate = r.targets > 0 ? r.oneShot / r.targets : null;
@@ -68,6 +78,12 @@ export function registerQuality(program) {
       }
       if (o.csv) {
         output(toCSV([{ one_shot_rate: rate == null ? '' : rate.toFixed(4), edit_targets: r.targets, one_shot_successes: r.oneShot }]), o);
+        return;
+      }
+
+      // No turns at all is a cold start, not a payload gap (QA-0928-169).
+      if (r.total === 0) {
+        output(coldStartMessage(`${start} to ${end}`), o);
         return;
       }
 

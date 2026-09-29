@@ -9,6 +9,14 @@
 
 export const SITE_URL = 'https://wtclaude.com';
 
+/**
+ * The site's one URL form for pages: trailing slash, matching the canonical tags and the
+ * sitemap (QA-0928-197). Files (an extension), query strings, fragments and absolute URLs
+ * pass through unchanged.
+ */
+export const pagePath = (path: string): string =>
+  /^https?:|[?#]|\.[a-z0-9]+$/i.test(path) || path.endsWith('/') ? path : `${path}/`;
+
 /** Absolute URL helper for schema fields. */
 export const abs = (path: string): string =>
   path.startsWith('http') ? path : `${SITE_URL}${path.startsWith('/') ? '' : '/'}${path}`;
@@ -112,7 +120,7 @@ export function breadcrumbs(items: { name: string; path: string }[]) {
       '@type': 'ListItem',
       position: i + 1,
       name: it.name,
-      item: abs(it.path),
+      item: abs(pagePath(it.path)),
     })),
   };
 }

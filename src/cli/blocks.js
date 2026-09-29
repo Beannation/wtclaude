@@ -1,11 +1,16 @@
-import { listSessions, readSession } from '../utils/sessions.js';
-import { computeTurnCost, formatCost, formatTokens } from '../utils/cost.js';
+import { listSessions, readSession, summarizeTurns } from '../utils/sessions.js';
+import { formatTokens } from '../utils/cost.js';
+import { costBasisJson, basisTag, tableAmount, basisBadgeText, excludedLines, mergeExcluded, tokensAll, TOKENS_ALL_LABEL } from '../utils/format.js';
 import { SCHEMA_VERSION } from '../utils/schema.js';
 
-// `wtclaude blocks` — the rolling 5-HOUR-BLOCK view (A1 parity vs ccusage).
-// Subscription limits reset on a 5-hour window; this buckets every turn into
-// fixed 5h blocks (aligned to the UTC clock) so users can pace against the
-// window. Billing-grade: each block's cost sums the per-turn `cost_usd` anchor.
+// `wtclaude blocks` — usage in FIXED 5-hour UTC buckets (A1 parity vs ccusage).
+// Buckets are aligned to the Unix epoch (so the grid moves 4 hours a day, since
+// 24 is not a multiple of 5) and are the same for everyone. They are NOT the
+// rate-limit window: that window starts with your first message after the last
+// one expired, so its real resets fall at arbitrary times (e.g. 15:10Z) —
+// QA-0928-62. Relabelled only; re-bucketing by rate_limit_5h_resets_at is a
+// product decision. Each block's cost sums the per-turn anchor where present,
+// labelled when any of it is estimated (QA-0928-55).
 
 const BLOCK_MS = 5 * 60 * 60 * 1000;
 
@@ -25,17 +30,16 @@ function buildBlocks() {
     const ms = Date.parse(t.ts);
     if (Number.isNaN(ms)) continue;
     const key = blockStart(ms);
-    if (!byBlock.has(key)) byBlock.set(key, { start: key, cost: 0, input: 0, output: 0, cacheRead: 0, cacheWrite: 0, turns: 0, sessions: new Set() });
+    if (!byBlock.has(key)) byBlock.set(key, { start: key, turns: [], sessions: new Set() });
     const b = byBlock.get(key);
-    b.cost += computeTurnCost(t);
-    b.input += t.input_tokens || 0;
-    b.output += t.output_tokens || 0;
-    b.cacheRead += t.cache_read_tokens || 0;
-    b.cacheWrite += t.cache_write_tokens || 0;
-    b.turns += 1;
+    b.turns.push(t);
     if (t.session_id) b.sessions.add(t.session_id);
   }
-  return [...byBlock.values()].sort((a, b) => b.start - a.start); // newest first
+  // Each block is summarized by the same engine as today/week/month, so its cost
+  // carries the same billing-grade / estimated split and exclusions (QA-0928-55).
+  return [...byBlock.values()]
+    .map(b => ({ start: b.start, sessions: b.sessions, turns: b.turns, summary: summarizeTurns(b.turns) }))
+    .sort((a, b) => b.start - a.start); // newest first
 }
 
 function fmtBlockRange(startMs) {
@@ -49,26 +53,34 @@ function fmtBlockRange(startMs) {
 export function registerBlocks(program) {
   program
     .command('blocks')
-    .description('Show usage grouped into rolling 5-hour blocks (supports --json, --limit)')
+    .description('Show usage in fixed 5-hour UTC blocks — not your limit window (supports --json, --limit)')
     .option('--json', 'Output machine-readable JSON')
     .option('--limit <n>', 'Max number of blocks to show', '10')
     .action((opts) => {
       const o = opts || {};
+      // A whole number of 1 or more (QA-0928-159): 0 used to show 10 blocks.
+      const limit = Number(o.limit);
+      if (!Number.isInteger(limit) || limit < 1) {
+        console.error(`\n  --limit must be a whole number of 1 or more (got "${o.limit}")\n`);
+        process.exitCode = 1;
+        return;
+      }
       const blocks = buildBlocks();
       const nowBlock = blockStart(Date.now());
-      const limit = Math.max(1, parseInt(o.limit, 10) || 10);
 
       if (o.json) {
         console.log(JSON.stringify({
           schema_version: SCHEMA_VERSION,
+          note: 'fixed 5-hour UTC buckets (epoch-aligned) — not your rate-limit window',
           blocks: blocks.slice(0, limit).map(b => ({
             block_start: new Date(b.start).toISOString(),
             block_end: new Date(b.start + BLOCK_MS).toISOString(),
             active: b.start === nowBlock,
-            turns: b.turns,
+            turns: b.summary.turn_count,
             sessions: b.sessions.size,
-            cost_usd: round(b.cost),
-            tokens: { input: b.input, output: b.output, cache_read: b.cacheRead, cache_write: b.cacheWrite },
+            cost_usd: round(b.summary.cost),
+            cost_basis: costBasisJson(b.summary), // QA-0928-55
+            tokens: { input: b.summary.input_tokens, output: b.summary.output_tokens, cache_read: b.summary.cache_read_tokens, cache_write: b.summary.cache_write_tokens },
           })),
         }, null, 2));
         return;
@@ -77,12 +89,23 @@ export function registerBlocks(program) {
       if (blocks.length === 0) { console.log('\n  No usage data yet.\n'); return; }
       console.log('\n  5-hour blocks (newest first)');
       console.log('  ============================');
-      console.log(`  ${'Block'.padEnd(26)} ${'Turns'.padStart(5)} ${'Cost'.padStart(10)} ${'Tokens'.padStart(8)}`);
-      for (const b of blocks.slice(0, limit)) {
+      console.log('  Fixed 5-hour UTC buckets on a set grid — not your limit window.');
+      console.log(`  ${'Block'.padEnd(26)} ${'Turns'.padStart(5)} ${'Cost'.padStart(10)} ${'Tokens'.padStart(8)}  Basis`);
+      const shown = blocks.slice(0, limit);
+      for (const b of shown) {
+        const s = b.summary;
         const mark = b.start === nowBlock ? ' ◀ active' : '';
-        const tokens = b.input + b.output + b.cacheRead + b.cacheWrite;
-        console.log(`  ${fmtBlockRange(b.start).padEnd(26)} ${String(b.turns).padStart(5)} ${formatCost(b.cost).padStart(10)} ${formatTokens(tokens).padStart(8)}${mark}`);
+        const tokens = tokensAll(s);
+        console.log(`  ${fmtBlockRange(b.start).padEnd(26)} ${String(s.turn_count).padStart(5)} ${tableAmount(s.cost, s).padStart(10)} ${formatTokens(tokens).padStart(8)}  ${basisTag(s).tag}${mark}`);
       }
+      // When any shown block is estimated in part, spell out the split for the
+      // blocks shown, as today/week/month do (QA-0928-55).
+      if (shown.some(b => basisTag(b.summary).tilde)) {
+        const all = summarizeTurns(shown.flatMap(b => b.turns));
+        console.log(`  Shown: ${tableAmount(all.cost, all)} across ${shown.length} block${shown.length === 1 ? '' : 's'}  (${basisBadgeText(all.cost, all)})`);
+      }
+      for (const l of excludedLines(mergeExcluded(shown.map(b => b.summary)))) console.log(l);
+      console.log(`  Tokens = ${TOKENS_ALL_LABEL}.`); // QA-0928-174
       console.log('');
     });
 }

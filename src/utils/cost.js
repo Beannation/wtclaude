@@ -67,21 +67,57 @@ export function expectedCost(model, speedTier, tokens, today) {
   return priceTurn(model, speedTier, tokens, today).usd;
 }
 
+// Does a stored turn carry Claude Code's own cost (the billing-grade anchor)?
+// Yes when `cost_usd` is a number — except the row collectors before 0.3.2
+// wrote for a payload with no cost block: cost_usd 0 with cumulative_cost_usd
+// null (QA-0928-52). That 0 is not a figure Claude Code reported, so the row is
+// unanchored. A $0 anchor with a cumulative figure, or an old row with no
+// cumulative key at all, stays anchored.
+export function hasCostAnchor(turn) {
+  if (!turn || typeof turn.cost_usd !== 'number') return false;
+  return !(turn.cost_usd === 0 && turn.cumulative_cost_usd === null);
+}
+
 // Back-compat: cost for a stored turn record. Prefers the billing-grade anchor
 // (`cost_usd`) when present; otherwise falls back to the secondary calc so old
 // (pre-anchor) records still summarize.
 export function computeTurnCost(turn) {
-  if (typeof turn.cost_usd === 'number') return turn.cost_usd;
+  if (hasCostAnchor(turn)) return turn.cost_usd;
   return expectedCost(turn.model, turn.speed_tier, turn);
+}
+
+// A stored turn's cost AND how much we can say about it (QA-0928-54). The anchor
+// is billing-grade; without one, a priceable model gives a labelled list-rate
+// estimate; a model we cannot price (unresolved, partner-platform, or a family
+// fallback) on a turn that carries tokens is 'excluded' — no figure, because any
+// number here would be a guess presented as ours. A zero-token turn is $0 on any
+// rate, so it is never an exclusion (same rule as compare-models and whatif).
+// Every summary and pool view (today/week/month, credits, forecast, readiness,
+// fable) costs turns through this; computeTurnCost() above stays only as the
+// raw-number shim, because its fallback figure must never reach a total.
+export function turnCostBasis(turn) {
+  if (hasCostAnchor(turn)) return { usd: turn.cost_usd, basis: 'billing-grade', reason: null };
+  const p = priceTurn(turn.model, turn.speed_tier, turn);
+  if (!p.priceable && hasTokens(turn)) return { usd: 0, basis: 'excluded', reason: p.reason };
+  return { usd: p.usd, basis: 'estimated', reason: null };
 }
 
 export function formatCost(usd) {
   // Sign before the $ (QA-0610-07): a negative diff is "-$10.69", not "$-10.6931".
   const sign = usd < 0 ? '-' : '';
   const v = Math.abs(usd);
+  if (v === 0) return '$0.00'; // QA-0928-164: nothing spent reads "$0.00", not "$0.0000"
   if (v < 0.01) return `${sign}$${v.toFixed(4)}`;
   if (v < 1) return `${sign}$${v.toFixed(3)}`;
-  return `${sign}$${v.toFixed(2)}`;
+  return `${sign}$${groupDigits(v.toFixed(2))}`;
+}
+
+// Thousands separators for display (QA-0928-156): "12,345.67", not "12345.67".
+// Takes an already-fixed decimal string; only the integer part is grouped.
+export function groupDigits(fixed) {
+  const [int, frac] = String(fixed).split('.');
+  const grouped = int.replace(/\B(?=(\d{3})+$)/g, ',');
+  return frac != null ? `${grouped}.${frac}` : grouped;
 }
 
 export function formatTokens(count) {

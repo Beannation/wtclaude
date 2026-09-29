@@ -11,10 +11,11 @@
 //    different model emits different token counts for identical work (Sonnet 5's
 //    tokenizer runs ~1.0–1.35× heavier than Opus), so holding tokens fixed
 //    UNDERSTATES the true gap. Every projected number is a labeled estimate.
-//  • Per-surface split: Code = billing-grade tokens (anchored terminal capture),
-//    Cowork = labeled estimate (audit.jsonl token counts × rate), Chat = excluded
-//    (no local cost data). Model choice is made per surface, and data quality
-//    differs per surface — so the split is the honest unit, not one blended figure.
+//  • Per-surface split: Code = % differences only, beside the billing-grade total
+//    for the window (see "Decision 4" below), Cowork = labeled estimate (tokens
+//    from Cowork's local logs × rate), Chat = excluded (no local cost data).
+//    Model choice is made per surface, and data quality differs per surface — so
+//    the split is the honest unit, not one blended figure.
 //  • Cost only, not quality — we surface what the choice costs; we never judge which
 //    model is "better."
 
@@ -114,36 +115,75 @@ export function repriceSurface(turns, { today, days = 30 } = {}) {
   };
 }
 
-// Assemble the full per-surface comparison. `codeTurns` are billing-grade terminal
-// turns (collector ndjson); `coworkTurns` are labeled-estimate Cowork audit turns
-// (empty when no Cowork log is present on this machine). Chat is always excluded.
-export function computeComparison({ codeTurns = [], coworkTurns = [], today, days = 30 } = {}) {
-  const code = repriceSurface(codeTurns, { today, days });
-  const cowork = repriceSurface(coworkTurns, { today, days });
-  const combined = repriceSurface([...codeTurns, ...coworkTurns], { today, days });
+// DECISION 4 (Peter, 2026-09-28; QA-0928-21). The Code surface's recorded
+// per-turn tokens are context-window occupancy, not billed tokens (BUILD-014),
+// so re-pricing them came out 3.5-7x below the billing-grade spend for the same
+// window — while the table called them "billing-grade tokens" and the baseline
+// "what you actually run". Until the collector re-shape, every re-priced DOLLAR
+// figure on a surface built from those tokens is withheld; the percentage
+// differences stand (both sides are priced on the same tokens, so the ratio is
+// the honest part), and the real billed total is shown beside them.
+export const USD_WITHHELD_REASON =
+  'Dollar figures withheld: re-pricing uses your recorded tokens, which don’t reproduce the billed total yet.';
+
+function withholdUsd(s) {
+  return {
+    ...s,
+    usd_withheld: true,
+    withheld_reason: USD_WITHHELD_REASON,
+    baseline_window_usd: null,
+    baseline_monthly_usd: null,
+    models: s.models.map(m => ({
+      ...m, window_usd: null, monthly_usd: null, delta_vs_baseline_usd: null, monthly_delta_vs_baseline_usd: null,
+    })),
+  };
+}
+
+// Assemble the full per-surface comparison. `codeTurns` are the terminal turns
+// (collector ndjson); `coworkTurns` are labeled-estimate Cowork turns (empty when
+// no Cowork log is present on this machine). Chat is always excluded.
+//
+// `days` is the requested window. `coveredDays` ({ code, cowork }) is how many of
+// those days each surface's data actually covers (QA-0928-22) — the /mo figures
+// scale by it, never by the window alone. `billed` is the Code surface's billed
+// total for the window ({ usd, anchored_usd, estimated_usd, anchored_turns,
+// estimated_turns }), shown beside its percentages.
+export function computeComparison({ codeTurns = [], coworkTurns = [], today, days = 30, coveredDays = {}, billed = null } = {}) {
+  const codeDays = coveredDays.code ?? days;
+  const coworkDays = coveredDays.cowork ?? days;
+  const code = repriceSurface(codeTurns, { today, days: codeDays });
+  const cowork = repriceSurface(coworkTurns, { today, days: coworkDays });
+  const combinedDays = Math.max(codeDays, coworkDays);
+  const combined = repriceSurface([...codeTurns, ...coworkTurns], { today, days: combinedDays });
 
   return {
     days,
     today: today || new Date().toISOString().slice(0, 10),
     models: COMPARE_MODELS,
     surfaces: {
-      code: { key: 'code', label: 'Code (terminal)', grade: 'billing-grade', ...code },
-      cowork: { key: 'cowork', label: 'Cowork', grade: 'estimate', ...cowork },
+      code: withholdUsd({ key: 'code', label: 'Code (terminal)', grade: 'estimate', covered_days: codeDays, billed, ...code }),
+      cowork: { key: 'cowork', label: 'Cowork', grade: 'estimate', covered_days: coworkDays, ...cowork },
       chat: {
         key: 'chat', label: 'Chat', grade: 'excluded', present: false,
         reason: 'no local cost data — Chat is not metered on this machine',
       },
     },
-    // The total inherits the LOWEST label present (billing-grade Code tokens +
-    // estimate Cowork tokens => estimate-tinted). Per-surface rows stay visible so
-    // the billing-grade Code number is never diluted by the Cowork estimate.
-    total: { key: 'total', label: 'All tracked surfaces', grade: 'estimate', ...combined },
+    // The total mixes the Code surface in, so its dollars are withheld too.
+    // Per-surface rows stay visible so the Cowork estimate is never blended
+    // into the Code comparison.
+    total: withholdUsd({ key: 'total', label: 'All tracked surfaces', grade: 'estimate', covered_days: combinedDays, ...combined }),
     caveats: CAVEATS,
   };
 }
 
 // Honesty caveats carried on every surface (handback §C rails). No "first/only";
 // Fable is framed as an allowance cap (never "free"); every projection is labeled.
+//
+// CORRECTED 2026-09-28 (BUILD-018) — the last line. "Code is billing-grade (your
+// anchored terminal tokens)" was false: the anchor is the cost, not the tokens
+// (decision 4 above). "audit-log tokens × rate" stopped being true when the
+// reader started using the run transcripts (QA-0928-23), and the line now says
+// what the Cowork logs leave out (QA-0928-81). PMO owns the final wording (E-7).
 //
 // CORRECTED 2026-09-07. The Fable caveat carried a countdown — "included ... through
 // ~July 19 (extended from July 7 → July 12 → July 19), then usage credits" — which
@@ -158,7 +198,7 @@ export const CAVEATS = [
   'Fable 5.1 and Fable 5 have identical $10/$50 base rates; their cached-input rates differ. A cache read costs $0.25/MTok on Fable 5.1 against $1/MTok on Fable 5, so on a cache-heavy session that gap is most of the difference between the two models.',
   opusRateCaveat(rateCard('opus-5-5'), rateCard('opus-5')),
   'Cost, not quality — we surface what the choice costs you; we don’t judge which model is better.',
-  'Code is billing-grade (your anchored terminal tokens). Cowork is a labeled estimate (audit-log tokens × rate). Chat is excluded (no local cost data).',
+  'Code: the billed total is billing-grade (the cost Claude Code itself reports); the re-priced comparison is an estimate on your recorded tokens, shown as percentages, not dollars. Cowork is a labeled estimate (tokens from Cowork’s local logs × rate); helper-model calls such as web search and fetch, and search fees, don’t appear in those logs and are left out. Chat is excluded (no local cost data).',
 ];
 
 // ADDED 2026-09-27 — a fact caveat, not a claim. The Opus row moved from Opus 5

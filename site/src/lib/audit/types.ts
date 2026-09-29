@@ -16,7 +16,7 @@ export interface SpendRow {
   account_uuid: string;
   product: string; // Claude Code | Chat | Cowork | Office Agents | …
   model: string; // claude-opus-4-6, …
-  model_family: string; // Opus | Sonnet | Haiku | (other, normalized)
+  model_family: string; // Opus | Sonnet | Haiku | Fable | Mythos | (other, normalized)
   total_requests: number;
   total_prompt_tokens: number;
   total_completion_tokens: number;
@@ -50,9 +50,11 @@ export interface Person {
   net: number; // Σ net_spend
   gross: number; // Σ gross_spend
   requests: number;
+  /** requests on rows that carry $ (net or gross > $0.005) — on seat plans, the overage requests. */
+  paidRequests: number;
   promptTokens: number;
   completionTokens: number;
-  /** net spend by model family (Opus/Sonnet/Haiku/other). */
+  /** net spend by model family (Opus/Sonnet/Haiku/Fable/Mythos/other). */
   byFamily: Record<string, number>;
   /** net spend by product surface. */
   byProduct: Record<string, number>;
@@ -64,8 +66,8 @@ export interface PersonFlag {
   key:
     | 'power-user'
     | 'near-dormant'
-    | 'heavy-opus'
-    | 'opus-cheap-surface'
+    | 'heavy-premium'
+    | 'premium-cheap-surface'
     | 'dollar-per-req-outlier'
     | 'context-heavy';
   label: string;
@@ -74,16 +76,20 @@ export interface PersonFlag {
 export interface PersonRow extends Person {
   dollarPerReq: number | null;
   contextRatio: number | null; // prompt:completion
-  opusShare: number; // 0..1 of this person's spend on Opus
+  premiumShare: number; // 0..1 of this person's spend on premium families (Opus/Fable/Mythos)
   flags: PersonFlag[];
   /** which 1-based rank in the pareto sort (1 = top spender). */
   rank: number;
 }
 
-/** Seat-pricing config — versioned, list-price ESTIMATES only (never billing-grade). */
+/** Seat-pricing config — list prices mirrored from the rate sheet; ESTIMATES only (never billing-grade). */
 export interface SeatPricing {
   version: string;
+  /** per seat per month, billed annually */
+  premiumAnnualUsd: number;
+  /** per seat per month, billed monthly */
   premiumMonthlyUsd: number;
+  standardAnnualUsd: number;
   standardMonthlyUsd: number;
   note: string;
 }
@@ -101,17 +107,21 @@ export interface HookH2 {
   seatCount: number | null;
   activeUsers: number;
   dormantSeats: number | null; // seatCount − activeUsers (needs seat count)
+  /** the seat count entered is below the people in the export (reclaim can't be computed). */
+  seatsBelowPeople: boolean;
   nearDormant: { email: string; requests: number; net: number }[];
-  reclaimUsdPerYear: number | null; // needs seat count (assumes Premium)
+  reclaimUsdPerYear: number | null; // needs seat count (assumes Premium, billed annually)
   basis: 'spend' | 'volume';
 }
 export interface HookH3 {
   available: boolean;
-  opusUsd: number;
-  opusPctOfSpend: number;
-  opusPeople: number;
-  topOpusUsers: { email: string; usd: number }[];
-  opusOnCheapSurface: { email: string; usd: number; product: string }[];
+  /** premium families present in the export (Opus/Fable/Mythos), largest spend first. */
+  premiumFamilies: string[];
+  premiumUsd: number;
+  premiumPctOfSpend: number;
+  premiumPeople: number;
+  topPremiumUsers: { email: string; usd: number }[];
+  premiumOnCheapSurface: { email: string; usd: number; product: string; family: string }[];
 }
 export interface HookH4 {
   available: boolean;
@@ -119,7 +129,7 @@ export interface HookH4 {
 }
 export interface HookH5 {
   available: boolean;
-  teamAvgPerReq: number; // total net ÷ total requests (the "$0.90" baseline)
+  teamAvgPerReq: number; // total net ÷ total requests (the "$0.90" baseline); overage-only: ÷ paid requests
   outliers: { email: string; perReq: number; multiple: number }[];
 }
 export interface HookH6 {
@@ -141,6 +151,13 @@ export interface HookH8 {
 export interface Hooks {
   /** true when the export carries $ (most plans); false on seat-based no-overage exports. */
   hasSpend: boolean;
+  /**
+   * Seat-based plan WITH some overage: in-seat usage shows as requests at $0, so every $ figure
+   * is overage only (not the bill) and $/request is computed over the paid requests only.
+   */
+  overageOnly: boolean;
+  /** requests on rows with $0 net AND $0 gross (in-seat usage on seat-based plans; credit-zeroed rows are not). */
+  inSeatRequests: number;
   totalNet: number;
   totalGross: number;
   totalRequests: number;
@@ -174,13 +191,13 @@ export interface LeadAggregate {
   discount_pct: number | null;
   pareto_people_for_80pct: number;
   top_vs_median_multiple: number;
-  opus_pct_of_spend: number | null;
-  opus_people: number;
+  premium_pct_of_spend: number | null;
+  premium_people: number;
   deadweight_seats: number | null;
   deadweight_reclaim_usd_yr: number | null;
   near_dormant_users: number;
   dollar_per_req_outliers: number;
-  opus_in_chat_users: number;
+  premium_on_cheap_surface_users: number;
   /** generic Anthropic surface names only (Code/Chat/Cowork/Office Agents) — not identifying. */
   product_mix: Record<string, number>;
   /** COUNT only — never the domain names (a domain can identify the company). */

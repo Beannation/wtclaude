@@ -1,10 +1,16 @@
 import { listSessions, readSession, summarizeTurns } from '../utils/sessions.js';
-import { checkBadges } from './check.js';
+import { localDateOf } from '../utils/time.js';
+import { checkBadges, longestStreak } from './check.js';
+import { costBasisJson } from '../utils/format.js';
 
-// Local leaderboard logic. Computes the anonymized, share-safe metrics that feed
-// the community leaderboard (build-spec M7 get-leaderboard) and assigns a LOCAL
-// tier so the feature works fully offline. Privacy non-negotiable: counts/flags
-// and aggregates ONLY — never paths, prompts, code, file names, or project paths.
+// Local leaderboard logic (build-spec M7). Computes the stats `wtclaude
+// leaderboard` shows and assigns a LOCAL tier so the feature works fully
+// offline. The stats are totals over local data — tokens, cost, sessions,
+// turns, active days, streak, badge count — and nothing here reads paths,
+// prompts, code or file names. They are NOT what reaches the cloud: the cloud
+// leaderboard (get-leaderboard) ranks from what sync uploads, the per-turn
+// manifest in sync/index.js (SYNC_TURN_FIELDS), which is what the privacy
+// previews list.
 
 // Token-volume tiers (local, deterministic). Mirrors the badge ladder so the
 // rank a user sees offline matches the cloud bucket they'd land in.
@@ -24,9 +30,13 @@ export function localTier(totalTokens) {
   return { ...tier, next: next ? { label: next.label, min: next.min, remaining: next.min - totalTokens } : null };
 }
 
+// `cost_basis` (RC 2026-09-28): how much of total_cost_usd is the billing-grade
+// anchor and how much a list-rate estimate, and which turns it leaves out —
+// the same breakdown `today` gives — so the total is never shown unlabelled.
 export function computeLeaderboardStats() {
   let totalTokens = 0, totalCost = 0, totalTurns = 0;
   const activeDates = new Set();
+  const basis = { cost: 0, anchored_cost: 0, estimated_cost: 0, anchored_turns: 0, estimated_turns: 0, excluded_turns: 0, excluded_models: {} };
 
   for (const id of listSessions()) {
     const turns = readSession(id);
@@ -35,22 +45,20 @@ export function computeLeaderboardStats() {
     totalTokens += s.input_tokens + s.output_tokens + s.cache_read_tokens + s.cache_write_tokens;
     totalCost += s.cost;
     totalTurns += s.turn_count;
-    for (const t of turns) activeDates.add(t.ts.slice(0, 10));
+    for (const k of ['cost', 'anchored_cost', 'estimated_cost', 'anchored_turns', 'estimated_turns', 'excluded_turns']) basis[k] += s[k] || 0;
+    for (const [m, c] of Object.entries(s.excluded_models || {})) basis.excluded_models[m] = (basis.excluded_models[m] || 0) + c;
+    for (const t of turns) activeDates.add(localDateOf(t.ts));
   }
 
-  // Longest active-day streak (same approach as badge stats).
-  const sorted = [...activeDates].sort();
-  let longest = 0, cur = sorted.length ? 1 : 0;
-  for (let i = 1; i < sorted.length; i++) {
-    const diff = (Date.parse(sorted[i]) - Date.parse(sorted[i - 1])) / 86_400_000;
-    if (diff === 1) cur++; else { if (cur > longest) longest = cur; cur = 1; }
-  }
-  if (cur > longest) longest = cur;
+  // Longest active-day streak — the badge's own function, on LOCAL days, so
+  // the leaderboard and Week Warrior can never disagree (QA-0928-86).
+  const longest = longestStreak([...activeDates]);
 
   const badges = checkBadges();
   return {
     total_tokens: totalTokens,
     total_cost_usd: Math.round(totalCost * 1e6) / 1e6,
+    cost_basis: costBasisJson(basis),
     total_sessions: listSessions().filter(id => readSession(id).length > 0).length,
     total_turns: totalTurns,
     active_days: activeDates.size,

@@ -36,6 +36,13 @@ export function getLatestPricing() {
 // `key` drops the `claude-` prefix, any `[…]` context-window suffix (e.g.
 // `[1m]`), and any `-YYYYMMDD` date suffix.
 //
+// Partner id shapes (QA-0928-148) are normalised too, and each one marks the
+// turn partner-served: Bedrock's `-v1:0` model-version suffix and its
+// cross-region inference-profile prefixes (`us.anthropic.…`, `eu.`, `apac.`,
+// `global.`, `jp.`, `au.`), and Vertex's `@YYYYMMDD` version suffix. Before
+// this the -v1:0 and @date ids fell to the opus family fallback and the
+// profile-prefixed id resolved to nothing.
+//
 // The `[1m]` long-context alias (live payload: `claude-opus-5[1m]`) carries NO
 // long-context premium — Claude 4.6 and later include the full 1M window at
 // standard rates — so we strip the suffix and resolve to the same entry.
@@ -49,15 +56,27 @@ export function parseModelId(id) {
     provider = s.slice(0, slash);
     s = s.slice(slash + 1);
   }
+  // Bedrock cross-region inference profile: `us.anthropic.claude-…`.
+  const profile = s.match(/^(?:us|eu|apac|global|jp|au)\.(?=anthropic\.)/);
+  if (profile) s = s.slice(profile[0].length);
   // Bedrock-style vendor namespace, with or without a provider prefix.
   if (s.startsWith('anthropic.')) {
     provider = provider || 'bedrock';
     s = s.slice('anthropic.'.length);
   }
 
+  s = s.replace(/\[[^\]]*\]$/, '');   // drop context-window suffix, e.g. [1m]
+  if (/-v\d+(?::\d+)?$/.test(s)) {    // Bedrock model version, e.g. -v1:0
+    provider = provider || 'bedrock';
+    s = s.replace(/-v\d+(?::\d+)?$/, '');
+  }
+  if (/@\d{8}$/.test(s)) {            // Vertex model version, e.g. @20260922
+    provider = provider || 'vertex';
+    s = s.replace(/@\d{8}$/, '');
+  }
+
   const key = s
     .replace(/^claude-/, '')
-    .replace(/\[[^\]]*\]$/, '')   // drop context-window suffix, e.g. [1m]
     .replace(/-\d{8}$/, '');
 
   return { provider, key: key || null };

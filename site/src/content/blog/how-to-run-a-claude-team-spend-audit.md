@@ -15,7 +15,7 @@ faq:
 
 If your Claude bill has quietly grown and you're not sure where the money's going, a spend audit is the fastest way to find out — and you can do it in about a minute, for free, without handing your data to anyone. Here's exactly how.
 
-<p class="rounded-lg border border-amber/30 bg-amber-light/40 px-4 py-3 text-sm"><a href="/business/audit" data-track="cta_spend_audit_blog_how_to_run" class="font-semibold text-amber-deep hover:text-amber">Audit your team's Claude spend, free →</a></p>
+<p class="rounded-lg border border-amber/30 bg-amber-light/40 px-4 py-3 text-sm"><a href="/business/audit/" data-track="cta_spend_audit_blog_how_to_run" class="font-semibold text-amber-deep hover:text-amber">Audit your team's Claude spend, free →</a></p>
 
 ## What you'll need
 
@@ -38,7 +38,7 @@ You'll get a CSV with one row per person × model: usage volume (requests and to
 
 Head to the free audit and drop the CSV in:
 
-→ **[Run the free spend audit](/business/audit)**
+→ **[Run the free spend audit](/business/audit/)**
 
 The whole thing runs **on your device** — your spend file (which carries employee emails and dollars) **is never uploaded or stored**. It parses locally and runs 8 checks:
 
@@ -57,7 +57,7 @@ You'll see an instant headline number first (no email), then the full per-person
 
 Everything the audit shows is a **recommendation you confirm** — it never changes anything in your account. The usual moves:
 
-- **Right-size** over-tiered seats (Premium → Standard) and **reclaim** dormant ones. *(To turn "uses Standard-level volume" into a downgrade, pair it with your seat roster — the audit is explicit about that. More on [seat tiers and how to spot the overpay](/blog/claude-team-seat-pricing-premium-vs-standard).)*
+- **Right-size** over-tiered seats (Premium → Standard) and **reclaim** dormant ones. *(To turn "uses Standard-level volume" into a downgrade, pair it with your seat roster — the audit is explicit about that. More on [seat tiers and how to spot the overpay](/blog/claude-team-seat-pricing-premium-vs-standard/).)*
 - **Nudge model mix** — move cheap tasks off the expensive model.
 - **Investigate the $/request outliers** — that's where runaway spend hides.
 
@@ -73,12 +73,12 @@ Team composition drifts every month, so a one-time cleanup drifts back. The audi
 
 That's the whole process. It's independent (we don't sell Claude seats), free, and your data never leaves your browser.
 
-→ **[Run the free spend audit](/business/audit)** — or see [WTClaude for Business](/business), and the [broader July 2026 pricing picture](/blog/state-of-claude-pricing-july-2026) this audit fits into.
+→ **[Run the free spend audit](/business/audit/)** — or see [WTClaude for Business](/business/), and the [broader July 2026 pricing picture](/blog/state-of-claude-pricing-july-2026/) this audit fits into.
 
 ## FAQ
 
 **How do I audit my team's Claude Code spending?**
-Export the Anthropic Spend Report CSV (Settings → Analytics, as an Owner), then run it through the free [browser-based audit](/business/audit) — 8 checks, nothing uploaded.
+Export the Anthropic Spend Report CSV (Settings → Analytics, as an Owner), then run it through the free [browser-based audit](/business/audit/) — 8 checks, nothing uploaded.
 
 **Where do I get the Anthropic Spend Report?**
 claude.ai → Settings → Analytics → Export Spend Report; pick your window. Requires Owner/Primary-Owner on Team.
@@ -91,4 +91,4 @@ Eight things: dead-weight seats, spend concentration, model mix, hidden metered 
 
 ---
 
-*WTClaude is a free, open-source, billing-grade Claude Code cost tracker — independent, not affiliated with Anthropic. [Run the spend audit](/business/audit) — 8 checks, in your browser, nothing uploaded.*
+*WTClaude is a free, open-source, billing-grade Claude Code cost tracker — independent, not affiliated with Anthropic. [Run the spend audit](/business/audit/) — 8 checks, in your browser, nothing uploaded.*

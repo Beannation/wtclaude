@@ -1,26 +1,34 @@
 import { getSessionsForDateRange } from '../utils/sessions.js';
-import { poolSpend, getExtraUsage } from '../utils/agentpool.js';
-import { loadConfig, getPlanKey, getDualPoolActivationDate, isDualPoolActive, daysUntil, AGENT_SDK_POOL_PAUSED_NOTE } from '../utils/config.js';
+import { poolSpend, getExtraUsage, fastModeLabel, fastPoolText } from '../utils/agentpool.js';
+import { amountWithBasis, excludedLines, costBasisJson, costBasisBadge } from '../utils/format.js';
+import { loadConfig, getPlanKey, getDualPoolActivationDate, isDualPoolActive, AGENT_SDK_POOL_PAUSED_NOTE } from '../utils/config.js';
 import { getLatestPricing } from '../utils/pricing.js';
 import { formatCost } from '../utils/cost.js';
 import { output } from './_summary.js';
 import { localDate } from '../utils/time.js';
 import { SCHEMA_VERSION } from '../utils/schema.js';
 
-// `wtclaude credits` — Agent-SDK + fast-mode credit balance/burn (build-spec M4,
-// M7). Follows the June-15 progressive disclosure (§8): pre-activation the
-// Agent-SDK pool shows a "coming soon" + countdown state (data is still recorded
-// in the background); post-activation it shows balance/burn. Fast-mode usage
-// credits already exist today, so that pool is shown live in both phases.
+// `wtclaude credits` — Agent-SDK + fast-mode credit usage (build-spec M4, M7).
+// The Agent-SDK split announced for June 15, 2026 was PAUSED and never took
+// effect, so that pool is shown as paused (the spend is still recorded); if
+// the split is ever switched on, the same view shows balance/burn. Fast-mode
+// usage credits exist today, so that pool is always shown live.
 //
-// The OAuth `extra_usage` figure (the readable balance) is captured by sync as a
-// cached aggregate; when present we show it with a staleness label, else we
-// degrade to the local billing-grade spend and say so.
+// CORRECTED 2026-09-28 (QA-0928-75/76/77): the description and JSON no longer
+// frame the paused split as a countdown; the OAuth `extra_usage` balance is
+// NOT fetched by anything (sync included), so we no longer tell users to
+// "enable sync to populate" it; and inferred fast-mode spend is labelled
+// inferred, as `today` labels it, never billing-grade.
+//
+// FIXED 2026-09-28 (RC, QA-0928-54): both pools cost each turn the way `today`
+// does. "(billing-grade)" is printed only when every priced turn in the pool
+// is anchored; estimates say so; unanchored turns on a model this version
+// cannot price are left out and named under "Not priced".
 
 export function registerCredits(program) {
   program
     .command('credits')
-    .description('Agent-SDK + fast-mode credit balance/burn (June-15 progressive disclosure)')
+    .description('Agent-SDK + fast-mode credit usage (split paused)')
     .option('--json', 'Output machine-readable JSON')
     .action((opts) => {
       const o = opts || {};
@@ -32,7 +40,6 @@ export function registerCredits(program) {
       const extra = getExtraUsage(cfg);
       const activation = getDualPoolActivationDate();
       const active = isDualPoolActive(today);
-      const countdown = daysUntil(activation, today);
 
       const planKey = getPlanKey();
       const pricing = getLatestPricing();
@@ -43,12 +50,19 @@ export function registerCredits(program) {
         output(JSON.stringify({
           schema_version: SCHEMA_VERSION,
           dual_pool_active: active,
-          activation_date: activation,
-          days_until_activation: countdown,
+          split_status: active ? 'active' : 'paused',
+          // The date the split was ANNOUNCED for — history, not a countdown
+          // target, so there is no days-until figure (it read -105).
+          announced_activation_date: activation,
+          days_until_activation: null,
           plan: planKey, included_agent_credits_monthly: includedCredits,
           month_to_date: {
             agent_sdk_usd: round(spend.agent),
+            agent_sdk_label: costBasisBadge(spend.agentBasis).label,
+            agent_sdk_cost_basis: costBasisJson(spend.agentBasis),
             fast_mode_usd: round(spend.fast),
+            fast_mode_label: spend.fastTurns > 0 ? fastModeLabel(spend).label : null,
+            fast_mode_cost_basis: costBasisJson(spend.fastBasis),
             subscription_usd: round(spend.subscription),
           },
           oauth_extra_usage: extra,
@@ -70,9 +84,9 @@ export function registerCredits(program) {
         lines.push('  PAUSED. ' + AGENT_SDK_POOL_PAUSED_NOTE.replace(/^The Agent-SDK credit split /, 'The split ')); 
         lines.push('  Your Agent-SDK spend is still recorded, so this view is accurate if it');
         lines.push('  ever switches on.');
-        lines.push(`  Recorded so far this month: ${formatCost(spend.agent)} (billing-grade).`);
+        lines.push(`  Recorded so far this month: ${amountWithBasis(spend.agent, spend.agentBasis)}.`);
       } else {
-        lines.push(`  Spent this month: ${formatCost(spend.agent)} (billing-grade, ${spend.agentTurns} turns).`);
+        lines.push(`  Spent this month: ${amountWithBasis(spend.agent, spend.agentBasis)} across ${spend.agentTurns} turn${spend.agentTurns === 1 ? '' : 's'}.`);
         if (includedCredits != null) {
           const remaining = Math.max(0, includedCredits - spend.agent);
           lines.push(`  Included with ${plan.label}: $${includedCredits}/mo · est. remaining ${formatCost(remaining)} (no rollover).`);
@@ -80,16 +94,20 @@ export function registerCredits(program) {
           lines.push('  Set your plan at `wtclaude setup` to see remaining included credits.');
         }
       }
+      lines.push(...excludedLines(spend.agentBasis));
 
       // ── Fast-mode usage credits (live today) ──
       lines.push('');
       lines.push('  Fast-mode usage credits');
       lines.push('  -----------------------');
       if (spend.fast > 0) {
-        lines.push(`  Spent this month: ${formatCost(spend.fast)} (billing-grade, ${spend.fastTurns} fast turns).`);
+        lines.push(`  Spent this month: ${fastPoolText(spend)}.`);
+      } else if (spend.fastBasis.excluded_turns > 0 && spend.fastTurns === 0) {
+        lines.push('  Spent this month: — (not priced).');
       } else {
         lines.push('  No fast-mode spend this month.');
       }
+      lines.push(...excludedLines(spend.fastBasis));
 
       // ── OAuth extra_usage (cached aggregate) ──
       if (extra) {
@@ -99,11 +117,11 @@ export function registerCredits(program) {
         const u = extra.used_credits != null ? `${extra.currency} ${extra.used_credits}` : '—';
         const l = extra.monthly_limit != null ? `${extra.currency} ${extra.monthly_limit}` : '—';
         lines.push(`  Used ${u} of ${l}${extra.as_of ? ` · as of ${extra.as_of}` : ' · staleness unknown'}.`);
-        lines.push('  (Aggregate across surfaces, not fast-isolated; refreshed by sync.)');
+        lines.push('  (Aggregate across surfaces, not fast-isolated.)');
       } else {
         lines.push('');
-        lines.push('  (OAuth extra_usage balance not cached yet — enable sync to populate it;');
-        lines.push('   the figures above are local billing-grade spend.)');
+        lines.push("  (WTClaude can't read your usage-credit balance yet — check it in Claude's");
+        lines.push('   usage settings. The figures above are your locally recorded spend.)');
       }
       // R-27: pre-purchased usage bundles cut the effective rate by up to 30%
       // ($50->$45, $250->$200, $1000->$700) and local data cannot see which

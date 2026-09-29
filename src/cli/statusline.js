@@ -1,4 +1,5 @@
 import { listSessions, readSession } from '../utils/sessions.js';
+import { formatContext } from '../utils/statusline-format.js';
 
 // `wtclaude statusline` — render the short status string on demand (A1 parity).
 // Mirrors what the collector prints back into Claude Code's status line, but
@@ -15,12 +16,6 @@ function latestTurn() {
   return latest;
 }
 
-function fmtTokens(n) {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(0)}K`;
-  return `${n}`;
-}
-
 export function registerStatusline(program) {
   program
     .command('statusline')
@@ -29,7 +24,9 @@ export function registerStatusline(program) {
       const t = latestTurn();
       if (!t) { console.log('wtclaude · $— · no data'); return; }
       const cost = typeof t.cumulative_cost_usd === 'number' ? `$${t.cumulative_cost_usd.toFixed(2)}` : '$—';
-      const tokens = (t.cumulative_input || 0) + (t.cumulative_output || 0) + (t.cumulative_cache_read || 0) + (t.cumulative_cache_write || 0);
-      console.log(`wtclaude · ${cost} · ${fmtTokens(tokens)} tok`);
+      // Stored cumulative_input is the payload's context_window.total_input_tokens:
+      // the context size at that turn (cache reads/writes already included).
+      const ctx = formatContext(Number(t.cumulative_input) || 0);
+      console.log(`wtclaude · ${cost}${ctx ? ` · ${ctx}` : ''}`);
     });
 }

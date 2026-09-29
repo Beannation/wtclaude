@@ -23,7 +23,7 @@ You're not imagining it, and you're not doing anything wrong. The number is off 
 
 Most Claude Code trackers — and the built-in cost estimate — reconstruct your cost from local **session logs**. Those logs don't carry billing-grade cost, so the total is an estimate. A different source, the Claude Code **statusline**, reflects the cost computed the same way your bill is. Read that instead, and the number stops drifting.
 
-That's the whole idea behind the tool I build, [WTClaude](/developers) — but the explanation is useful whether or not you ever install it, so let's actually walk through it.
+That's the whole idea behind the tool I build, [WTClaude](/developers/) — but the explanation is useful whether or not you ever install it, so let's actually walk through it.
 
 ## Where the numbers come from
 
@@ -50,7 +50,8 @@ If a tracker reads *that*, it isn't estimating anymore. That's the difference be
 Here's the part you can check for yourself. WTClaude reads the statusline, so `today` / `week` / `month` are billing-grade in the terminal. And there's one command built specifically for this question:
 
 ```
-npx wtclaude setup
+npm i -g wtclaude
+wtclaude setup
 wtclaude compare
 ```
 
@@ -58,7 +59,7 @@ wtclaude compare
 
 ## Why this matters even more around billing changes
 
-It's always nicer to know your real number than a guess. And it matters even more around billing changes — like the [announced-then-paused June 15 split](/blog/the-june-15-split), which would have moved Claude Code usage into two separate credit pools (Interactive and Agent-SDK). If your tracker is already drifting, a change like that splits the drift across two buckets and makes "about right" a lot less comfortable. Knowing which pool your usage actually lands in — from the real source — is worth the ten seconds.
+It's always nicer to know your real number than a guess. And it matters even more around billing changes — like the [announced-then-paused June 15 split](/blog/the-june-15-split/), which would have moved Claude Code usage into two separate credit pools (Interactive and Agent-SDK). If your tracker is already drifting, a change like that splits the drift across two buckets and makes "about right" a lot less comfortable. Knowing which pool your usage actually lands in — from the real source — is worth the ten seconds.
 
 ## So, is `/cost` "wrong"?
 
@@ -80,6 +81,6 @@ No. It's an independent, free, open-source (MIT) project. Being independent is p
 
 ---
 
-*WTClaude is a free, open-source, billing-grade cost tracker for Claude Code. See your real number: `npx wtclaude setup`, then `wtclaude compare`. [How it compares to other trackers →](/compare)*
+*WTClaude is a free, open-source, billing-grade cost tracker for Claude Code. See your real number: `npm i -g wtclaude`, `wtclaude setup`, then `wtclaude compare`. [How it compares to other trackers →](/compare/)*
 
-*Further reading: [Claude Fable 5 pricing, explained →](/blog/claude-fable-5-pricing-explained)*
+*Further reading: [Claude Fable 5 pricing, explained →](/blog/claude-fable-5-pricing-explained/)*

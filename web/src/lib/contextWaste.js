@@ -196,7 +196,7 @@ export function computeWaste({ items = [], usedIds = new Set(), turns = 0, days 
 export const WASTE_MECHANISMS = [
   {
     title: 'Re-read every turn',
-    body: "Always-loaded items you never invoke are re-sent on every turn after the first, billed at your model's cache-read rate — a fraction of its input rate. Small per turn, compounding across a month.",
+    body: "Always-loaded items you never invoke are re-sent on every turn after the first, billed at the cache-read rate of the model that ran the turn — a fraction of its input rate. Small per turn, compounding across a month.",
   },
   {
     title: 'Context-window bloat',

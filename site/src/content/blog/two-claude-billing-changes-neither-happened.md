@@ -2,6 +2,7 @@
 title: "Two Claude Billing Changes Were Announced in Two Weeks. Neither Happened."
 description: "The June 15 Agent-SDK credit split was paused before it took effect, and Claude Fable 5 was pulled days after launch. What the whiplash says about building on AI tools — and the one thing you can still control."
 pubDate: 2026-06-16
+updatedDate: 2026-08-24
 author: "Peter Bean"
 readingTime: "7 min read"
 faq:
@@ -23,7 +24,7 @@ Here's what actually happened, and what it means for anyone who builds on these 
 
 ## Change one: the June 15 Agent-SDK billing split — paused
 
-Back on May 14, Anthropic announced that starting June 15, Agent SDK usage, the `claude -p` command, and third-party apps would stop drawing from your subscription's usage limits and move to a separate monthly credit, billed at API rates once it ran out. We covered it in detail — both in a [dedicated explainer on the split](/blog/the-june-15-split) and a [field guide to both changes](/blog/claude-billing-changes-june-2026) — it was a real, significant change, especially for anyone running agents.
+Back on May 14, Anthropic announced that starting June 15, Agent SDK usage, the `claude -p` command, and third-party apps would stop drawing from your subscription's usage limits and move to a separate monthly credit, billed at API rates once it ran out. We covered it in detail — both in a [dedicated explainer on the split](/blog/the-june-15-split/) and a [field guide to both changes](/blog/claude-billing-changes-june-2026/) — it was a real, significant change, especially for anyone running agents.
 
 Then, on June 15, [Anthropic paused it](https://support.claude.com/en/articles/15036540-use-the-claude-agent-sdk-with-your-claude-plan) before it took effect. In their words: "nothing has changed" — the Agent SDK, `claude -p`, and third-party apps still draw from your subscription's usage limits, exactly as before. There's no separate credit to claim. Anthropic said it's reworking the plan "to better support how users build with Claude subscriptions," and that it'll give notice before anything takes effect.
 
@@ -31,7 +32,7 @@ So if you spent the last few weeks bracing for the split: you can exhale. Nothin
 
 ## Change two: Claude Fable 5 — launched, then pulled
 
-A few days earlier, on June 9, Anthropic released Claude Fable 5 — its most powerful generally available model. By June 12 it was gone: a US export-control directive required Anthropic to disable Fable 5 (and Mythos 5) for all users worldwide. That one wasn't a pricing decision at all — it was a government order — but the effect on anyone who'd started building around Fable was the same: here today, gone in three days. (We'd [broken down its pricing](/blog/claude-fable-5-pricing-explained) during its brief free window.)
+A few days earlier, on June 9, Anthropic released Claude Fable 5 — its most powerful generally available model. By June 12 it was gone: a US export-control directive required Anthropic to disable Fable 5 (and Mythos 5) for all users worldwide. That one wasn't a pricing decision at all — it was a government order — but the effect on anyone who'd started building around Fable was the same: here today, gone in three days. (We'd [broken down its pricing](/blog/claude-fable-5-pricing-explained/) during its brief free window.)
 
 ## We're not here to dunk on anyone
 
@@ -51,7 +52,7 @@ That number doesn't care which billing model is live this week. Whether your age
 
 We'll be straight with you, because that's the whole point of this project: we built for both of these changes. We shipped a dual-pool view for the June-15 split and a cost forecast for Fable's pricing. Then both got pulled out from under us, like everyone else.
 
-Here's why it didn't really matter. The core of WTClaude never depended on either change. It reads the statusline — [the same billing-grade source behind your bill](/blog/is-claude-code-cost-accurate) — so whatever Anthropic ships, pauses, or pulls next, you can still see your actual Claude Code usage, billing-grade, in your terminal, today. The dual-pool view is sitting ready if the split returns. Fable did come back — redeployed July 1, 2026 — and the Fable support is ready. And everything stays labeled for exactly what it is, including the parts that might change again.
+Here's why it didn't really matter. The core of WTClaude never depended on either change. It reads the statusline — [the same billing-grade source behind your bill](/blog/is-claude-code-cost-accurate/) — so whatever Anthropic ships, pauses, or pulls next, you can still see your actual Claude Code usage, billing-grade, in your terminal, today. The dual-pool view is sitting ready if the split returns. Fable did come back — redeployed July 1, 2026 — and the Fable support is ready. And everything stays labeled for exactly what it is, including the parts that might change again.
 
 That's the posture we'd recommend to anyone right now: track what's real, and stay ready for what's next. You don't have to predict Anthropic's roadmap. You just have to be able to see your own numbers when the dust settles — which, lately, it keeps having to.
 
@@ -71,4 +72,4 @@ Yes. It tracks your real Claude Code usage in the terminal — billing-grade —
 
 ---
 
-*WTClaude is a free, open-source, billing-grade cost tracker for Claude Code — built to show you your real numbers no matter how the rules change. Independent, not affiliated with Anthropic. `npx wtclaude setup`.*
+*WTClaude is a free, open-source, billing-grade cost tracker for Claude Code — built to show you your real numbers no matter how the rules change. Independent, not affiliated with Anthropic. `npm i -g wtclaude`, then `wtclaude setup`.*

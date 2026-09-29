@@ -15,7 +15,7 @@ faq:
 
 If you administer Claude for a team, seat tiers are the quietest line item on your bill — and often the most overpaid. The reason is simple: a **Premium seat costs roughly 5× a Standard one**, and the difference is mostly **usage capacity, not features**. Both tiers include Claude Code and Cowork; Fable 5 is the exception — Team Premium includes it up to 50% of the weekly usage limit, while Team Standard bills it as usage credits from the first token. So the instinct to put everyone on Premium "to be safe" can quietly multiply your bill for capacity most people never touch. *(Tiers and prices change — check Anthropic's current seat pricing for the exact figures.)*
 
-<p class="rounded-lg border border-amber/30 bg-amber-light/40 px-4 py-3 text-sm"><a href="/business/audit" data-track="cta_spend_audit_blog_seat_pricing" class="font-semibold text-amber-deep hover:text-amber">Audit your team's Claude spend, free →</a></p>
+<p class="rounded-lg border border-amber/30 bg-amber-light/40 px-4 py-3 text-sm"><a href="/business/audit/" data-track="cta_spend_audit_blog_seat_pricing" class="font-semibold text-amber-deep hover:text-amber">Audit your team's Claude spend, free →</a></p>
 
 Here's how to think about it, and how to find the seats you could right-size.
 
@@ -42,9 +42,9 @@ Both are *configuration facts*, not guesses: "this Premium seat used Standard-le
 
 You don't need a procurement project. Anthropic gives Team owners a per-user, per-model **Spend Report CSV** (Settings → Analytics → Export Spend Report). That file has what you need: each person's usage volume and spend.
 
-WTClaude's free **spend audit** reads that CSV and does the analysis for you — one of its 8 checks is exactly this: which seats look over-tiered, and which look dormant. It runs **entirely in your browser** — your spend file (which carries employee emails and dollars) **never leaves your device**, nothing is uploaded — and everything it surfaces is a **recommendation you confirm**, never a change we make to your account. ([Here's the step-by-step for running one.](/blog/how-to-run-a-claude-team-spend-audit))
+WTClaude's free **spend audit** reads that CSV and does the analysis for you — one of its 8 checks is exactly this: which seats look over-tiered, and which look dormant. It runs **entirely in your browser** — your spend file (which carries employee emails and dollars) **never leaves your device**, nothing is uploaded — and everything it surfaces is a **recommendation you confirm**, never a change we make to your account. ([Here's the step-by-step for running one.](/blog/how-to-run-a-claude-team-spend-audit/))
 
-→ **[Run the free spend audit](/business/audit)**
+→ **[Run the free spend audit](/business/audit/)**
 
 One honest caveat: the Spend CSV shows *usage volume*, not the *tier* each person is on. So to turn "this person uses Standard-level volume" into "downgrade them from Premium," you pair the usage read with your seat roster (Org settings → Seats). The audit is upfront about this — it flags the volume-based candidates, and exact Premium→Standard right-sizing confirms against the roster. No magic, just an honest read you act on.
 
@@ -54,7 +54,7 @@ One honest caveat: the Spend CSV shows *usage volume*, not the *tier* each perso
 - **Reclaim** the dormant ones (unassign or remove).
 - **Put it on a cadence.** Composition drifts, so a one-time cleanup drifts back. A quarterly re-run (the audit takes a minute) keeps the savings from creeping back.
 
-That's the whole play: seats are where the easy, provable money is. See yours in about 60 seconds — [run the free spend audit](/business/audit). It's independent (we don't sell Claude seats), free, and your data stays in your browser. Seats are one piece of the picture — for the rest of what was moving in Claude pricing in July 2026, see [the July 2026 field guide](/blog/state-of-claude-pricing-july-2026) or the [plain billing explainer](/blog/claude-code-billing-explained).
+That's the whole play: seats are where the easy, provable money is. See yours in about 60 seconds — [run the free spend audit](/business/audit/). It's independent (we don't sell Claude seats), free, and your data stays in your browser. Seats are one piece of the picture — for the rest of what was moving in Claude pricing in July 2026, see [the July 2026 field guide](/blog/state-of-claude-pricing-july-2026/) or the [plain billing explainer](/blog/claude-code-billing-explained/).
 
 ## FAQ
 
@@ -62,7 +62,7 @@ That's the whole play: seats are where the easy, provable money is. See yours in
 Mostly usage capacity, not features — both include Claude Code and Cowork. The exception is Fable 5: Team Premium includes it up to 50% of the weekly usage limit, while Team Standard bills it as usage credits from the first token. Premium runs roughly 5× a Standard seat, so a light user on Premium is a real overpay. Check Anthropic's current pricing for exact numbers.
 
 **How do I know which Claude seats to downgrade?**
-Compare each person's usage volume to their tier: Premium seats using Standard-level volume are downgrade candidates; near-zero-usage seats are reclaim candidates. The [free spend audit](/business/audit) flags both from your Spend CSV, as recommendations you confirm.
+Compare each person's usage volume to their tier: Premium seats using Standard-level volume are downgrade candidates; near-zero-usage seats are reclaim candidates. The [free spend audit](/business/audit/) flags both from your Spend CSV, as recommendations you confirm.
 
 **Does Anthropic automatically right-size my Claude seats?**
 No — it recommends periodic manual review. An independent tool can flag the candidates so you don't have to hunt for them.
@@ -72,4 +72,4 @@ Yes — the audit runs entirely in your browser. Your spend file is never upload
 
 ---
 
-*WTClaude is a free, open-source, billing-grade Claude Code cost tracker — independent, not affiliated with Anthropic. Find over-tiered and dormant seats in your browser: [run the spend audit](/business/audit).*
+*WTClaude is a free, open-source, billing-grade Claude Code cost tracker — independent, not affiliated with Anthropic. Find over-tiered and dormant seats in your browser: [run the spend audit](/business/audit/).*

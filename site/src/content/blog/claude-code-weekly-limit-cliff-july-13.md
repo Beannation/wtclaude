@@ -2,6 +2,7 @@
 title: "Claude Code's +50% Weekly Limits Didn't Expire in July — They Were Extended Again. Here's What Changes."
 description: "The temporary 50% boost to Claude Code weekly limits was set to end July 13, 2026, then ~July 19 — Anthropic extended it again, and it ran through September 13, 2026; since September 14, weekly limits in Claude Code are 25% higher than before the promotion. It's a usage change, not a price change. Here's who it affects and how to know where you stand."
 pubDate: 2026-06-19
+updatedDate: 2026-09-27
 author: "Peter Bean"
 readingTime: "6 min read"
 faq:
@@ -25,7 +26,7 @@ faq:
 
 If you've felt like Claude Code has been more generous since May, you're right — and one part of that generosity has an end date. The **+50% boost to Claude Code weekly limits was set to expire July 13, 2026 (6 PM PDT)**, then ~July 19, and Anthropic has extended it again — most recently through **August 31, 2026 at 11:59 PM PT**, unless it extends again. Here's what's actually changing, who it touches, and the calm way to handle it.
 
-<p class="rounded-lg border border-amber/30 bg-amber-light/40 px-4 py-3 text-sm"><a href="/business/audit" data-track="cta_spend_audit_blog_weekly_limit_cliff" class="font-semibold text-amber-deep hover:text-amber">Audit your team's Claude spend, free →</a></p>
+<p class="rounded-lg border border-amber/30 bg-amber-light/40 px-4 py-3 text-sm"><a href="/business/audit/" data-track="cta_spend_audit_blog_weekly_limit_cliff" class="font-semibold text-amber-deep hover:text-amber">Audit your team's Claude spend, free →</a></p>
 
 ## What's happening
 
@@ -34,7 +35,7 @@ Back in mid-May, Anthropic raised Claude Code's **weekly usage limits by 50%** f
 Two things to be clear about:
 
 - **This is a usage-limit change, not a price change.** Pro is still $20/mo, Max 5× $100, Max 20× $200. Nothing about what you pay is moving. What's moving is how much you can *do* per week before you hit a wall.
-- **It may be extended again.** Anthropic hasn't said what the ceiling becomes after the current end date. Given how fluid Claude's limits and billing have been lately (the June-15 Agent-SDK change was [announced and then paused](/blog/two-claude-billing-changes-neither-happened)), and this boost has already moved more than once (July 13 → ~July 19 → August 31), treat the date as one to watch, not a certainty. We're watching it; we'll update if it changes again.
+- **It may be extended again.** Anthropic hasn't said what the ceiling becomes after the current end date. Given how fluid Claude's limits and billing have been lately (the June-15 Agent-SDK change was [announced and then paused](/blog/two-claude-billing-changes-neither-happened/)), and this boost has already moved more than once (July 13 → ~July 19 → August 31), treat the date as one to watch, not a certainty. We're watching it; we'll update if it changes again.
 
 ## What it means if it does lapse
 
@@ -83,4 +84,4 @@ It was, more than once — from July 13 to ~July 19, and again after that, until
 
 ---
 
-*WTClaude is a free, open-source, billing-grade Claude Code cost tracker. It shows your real usage against your plan's limits, reading Anthropic's own data — independent, not affiliated with Anthropic. `npx wtclaude setup`.*
+*WTClaude is a free, open-source, billing-grade Claude Code cost tracker. It shows your real usage against your plan's limits, reading Anthropic's own data — independent, not affiliated with Anthropic. `npm i -g wtclaude`, then `wtclaude setup`.*

@@ -1,23 +1,13 @@
 import { useDashboard } from '../lib/useDashboard';
-import EmptyState from '../components/EmptyState';
+import { ErrorState } from '../components/EmptyState';
 import { LinkPrompt } from './Overview';
-
-const ALL_BADGES = [
-  { type: 'first_session', label: 'First Steps', description: 'Tracked your first session' },
-  { type: '100k_club', label: '100K Club', description: 'Tracked 100,000 tokens' },
-  { type: 'million_club', label: 'Million Club', description: 'Tracked 1,000,000 tokens' },
-  { type: '10m_club', label: '10M Club', description: 'Tracked 10,000,000 tokens' },
-  { type: 'week_streak', label: 'Week Warrior', description: '7 consecutive days tracked' },
-  { type: 'month_streak', label: 'Month Master', description: '30 consecutive days tracked' },
-  { type: 'efficient_day', label: 'Cache Champion', description: '50%+ cache hit rate in a day' },
-  { type: 'model_mixer', label: 'Model Mixer', description: 'Used 2+ models in one session' },
-];
+import { ALL_BADGES } from '../lib/badges';
 
 export default function Badges() {
-  const { data, loading, error, linked } = useDashboard();
+  const { data, loading, error, errorInfo, linked } = useDashboard();
   if (loading) return <p className="text-[var(--muted)]">Loading…</p>;
   if (!linked) return <LinkPrompt />;
-  if (error) return <EmptyState title="Couldn't load badges" body={error} />;
+  if (error) return <ErrorState info={errorInfo} fallbackTitle="Couldn't load badges" />;
 
   const earnedTypes = new Set((data.badges || []).map((b) => b.badge_type));
   const earned = ALL_BADGES.filter((b) => earnedTypes.has(b.type));

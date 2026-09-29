@@ -1,5 +1,148 @@
 # Changelog
 
+## 0.3.2 — 2026-09-28
+
+A full-product clickthrough: every command, the collector, sync end to end, every
+dashboard page and every site page, each finding reproduced twice. This release
+fixes the CLI side. The dashboard and website fixes ship in the same deploy.
+
+### Do this once
+
+- **If `wtclaude today` shows nothing, re-run `wtclaude setup`.** Earlier versions
+  wrote the Claude Code `statusLine` entry without `"type": "command"`, which
+  current Claude Code needs before it runs the collector. 0.3.2 writes it and
+  repairs an existing entry.
+- **Install globally.** `setup` no longer pins a path inside npm's temporary npx
+  cache (it can be cleaned away under you). Use `npm i -g wtclaude`, then
+  `wtclaude setup`.
+
+### Sync
+
+- **Sync could get stuck forever, silently.** The whole backlog went up as one
+  request, the server takes a batch all-or-nothing, and progress only moved on
+  success, so a backlog that outgrew one request could never shrink. Uploads are
+  now bounded (1,000 turns / 1.5 MB), resume where they stopped, and record
+  failures. `sync --status` shows the last failed attempt and what is waiting; a
+  failed `wtclaude sync` exits 1; autosync backs off after failures instead of
+  re-trying on every command; one sync runs at a time.
+- Turns written while a sync was in flight were never uploaded. Fixed; the first
+  0.3.2 sync after the server update re-sends your history once to fill any gaps
+  (the server ignores duplicates). A `wtclaude sync` with nothing new asks the
+  server whether it can take that re-send, so it doesn't wait for new activity.
+- A failed sync no longer announces the same new badge on every retry.
+- A sync running while you ran `sync --disable` turned sync back on, and a first
+  sync on a config without an anonymous id lost the new id. Both fixed.
+- **What sync sends is now exactly what the preview says.** Git branch names go up
+  as salted hashes, never raw. The `sync --enable`, `share --preview` and
+  `leaderboard` previews and the README list every field that is sent; the old
+  "counts/flags + salted hashes only" and "ONLY these aggregates" lines were not
+  true and are gone. Fields the server never stored are no longer sent.
+- `share --enable` now reaches the cloud leaderboard (after the server update).
+- `sync --status` and the opt-in preview show your anonymous id shortened; it
+  opens your dashboard, so treat it like a password. `wtclaude dashboard` passes
+  it in the URL fragment, which browsers never send to a server.
+- Turning sync off, or `uninstall --purge`, now says the cloud copy stays and that
+  deleting it isn't self-serve yet. `--purge` on a synced install shows your id,
+  asks first, and saves the id before deleting local data.
+
+### The status line
+
+- The token figure counted cached tokens twice and called a context snapshot
+  "tok". It now reads `wtclaude · $2.50 · context 150K`: the tokens in the current
+  context, once. The dollar figure is unchanged.
+- After a session's cost counter restarts (resume, restart), the next reading is
+  no longer lost, and the status line no longer shows a stale pre-reset figure.
+  A restart is told apart from an older reading that arrives late by when Claude
+  Code's process started, so neither is counted twice.
+
+### Setup, uninstall and the collector
+
+- `setup` no longer overwrites a `settings.json` it can't parse (comments, trailing
+  commas, a byte-order mark): it leaves the file untouched and prints what to add.
+  It honours `CLAUDE_CONFIG_DIR`, never claims "capturing" when the status line
+  isn't wired, and accepts the Team and Enterprise plans. It recognises its own
+  entry when the install path contains quotes, parentheses, `&`, `$` or `;`, says
+  when the collector on your PATH is an older wtclaude and how to update it, says
+  an entry pointing into the npx cache works only until npm prunes it, and gives
+  an empty settings file a whole document to paste.
+- A `config.json` that doesn't parse is never overwritten and never causes a new
+  anonymous id. Commands that would write it (`setup`, `sync`, `share` and the
+  like) name the file and stop; read commands keep working on your local data and
+  print a one-line warning naming the file (plan, display currency and sync are
+  off until it is fixed). The collector keeps recording meanwhile, without the
+  device id, project hash and branch that depend on that file. A fresh install no
+  longer crashes `dashboard`, `share`, `invite` or `sync --disable`.
+- `uninstall` removes the status line only if it is exactly ours, quoted or not.
+- The collector skips a truncated last line instead of double-counting the
+  session, writes no row for a payload with no cost and no tokens, stores a
+  missing cost as unknown (an estimate) instead of $0, reads only the tail of the
+  session file, logs an unrecognised model once rather than every turn, and
+  rotates `collector.log`.
+- Partner-platform model ids (Bedrock `-v1:0`, `us.`/`eu.` inference profiles,
+  Vertex `@date`) resolve to the right model; they stay excluded from dollar
+  figures, as before.
+
+### Every command
+
+- One damaged line in a session file used to crash every command and block sync
+  forever. It is now skipped and named by every read command (on stderr, so JSON
+  and CSV output stay clean), and `export` records it.
+- Headline totals never include a guessed figure: an unanchored turn on an
+  unknown, partner-platform or family-fallback model is left out and named under
+  "Not priced" — in `credits`, `forecast`, `readiness`, `fable` and `leaderboard`
+  too. Every command that mixes billing-grade and estimated cost says so, and
+  converted currencies are marked approximate.
+- An unknown `whatif --model` or `project` id exits 1, as an unknown session or
+  plan does; look-back labels say "last 1 day", not "last 1 days".
+- `--until` without `--since`, invalid dates and invalid `--days` give a clear
+  error instead of a wrong window. `--days` means the same (1–365) everywhere.
+- `session` shows local dates; `limit` and `watch` say how old a rate-limit reading
+  is; `watch`'s time-to-limit is corrected; `blocks` says its 5-hour blocks are
+  fixed UTC-aligned buckets, not your limit window.
+- `export` redacts the anonymous id, the hash salt, the invite code and any key,
+  says so truthfully, and writes 0600; CSV cells that would run as spreadsheet
+  formulas are neutralised.
+
+### Figures that moved (and why)
+
+- **`compare`:** the session-log side now takes the final usage record per
+  response (it took the first, understating log output 1.5–5×), is priced at the
+  models the logs record rather than a pinned Sonnet 4.6 rate, and compares only
+  sessions both sides saw over the same local-date window. The gap it reports is
+  smaller, and the "undercounts … N×" line prints only when the session-log figure
+  really is lower. `compare --share` labels its totals correctly. The table and
+  the sentence under it state one ratio, billing ÷ log.
+- **`compare-models` and `whatif --model`:** differences are shown as percentages
+  beside your real billing-grade total. The re-priced dollar baseline was 3.5–7×
+  below real spend (recorded tokens are context occupancy) and was labelled
+  "billing-grade"; it is withheld until the collector records billed tokens.
+- **Cowork estimates rose (about 27% on the machine we measured).** The reader took the start-of-reply usage
+  snapshot and missed subagent requests; it now reads each run's own session logs
+  as well and keeps the final record. Still labelled estimates.
+- **`waste`** no longer runs out of memory on large transcript folders, prices each
+  turn at its own model, stops calling never-used skills "used", and lists
+  CLAUDE.md files as always loaded rather than judging them. Its /mo figure now
+  projects from the days your transcripts cover, not the `--days` you asked for
+  (one day of data read up to 30× low at the default).
+- `fable`, `forecast` and `readiness` project from the window you asked for, not
+  from days with usage (which inflated /month). The paused June-15 split is no
+  longer presented as a countdown. `credits` no longer promises a balance sync
+  never fetches, and inferred fast-mode spend is labelled inferred. Agent-pool and
+  fast-mode spend is called billing-grade only when Claude Code reported every
+  turn's cost; a list-rate estimate is labelled as one.
+- `whatif`'s plan view shows no $0 bill, projection or plan verdicts when nothing
+  in the window could be priced. `leaderboard` labels its total cost.
+- Badges and streaks use local dates. Cache Champion needs a real day (10+ turns),
+  no longer calls occupancy tokens a "cache hit rate", and counts each input-side
+  token once (it counted cache tokens twice, which put the badge out of reach);
+  `debrief`'s cache-read share is corrected the same way. Model Mixer counts
+  models, not context sizes. `invite` no longer promises a badge that doesn't
+  exist.
+
+Requires Node 18 or later. For contributors: `npm test` is the CLI suite and runs
+on Node 18 or later from any shell (Windows included); `npm run test:all` adds the
+dashboard and website suites and needs Node 22.18 or later.
+
 ## 0.3.1 — 2026-09-27
 
 Two new default models, and the schema change they forced: **cache-read pricing

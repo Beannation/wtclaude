@@ -6,7 +6,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 // x-anonymous-id. Cost is billing-grade (cost.total_cost_usd anchor).
 //
 // DEPLOYMENT: code-complete; live after SEC Phase C. Cron after deploy, e.g.:
-//   select cron.schedule('wtclaude-daily','0 23 * * *', $$ … report-daily … $$);
+//   select cron.schedule('wtclaude-daily','0 23 * * *', $$ select net.http_post(
+//     url:='…/functions/v1/report-daily',
+//     headers:='{"x-cron-secret":"<CRON_SECRET>"}'::jsonb) $$);
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -15,12 +17,42 @@ const corsHeaders = {
 const json = (b: unknown, status = 200) =>
   new Response(JSON.stringify(b), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
+// QA-0928-125: batch mode (no x-anonymous-id) runs over every user, so only the
+// scheduler may start it — it must send x-cron-secret equal to the CRON_SECRET
+// function secret. With CRON_SECRET unset, batch mode is off.
+function cronAuthorized(req: Request): boolean {
+  const secret = Deno.env.get("CRON_SECRET");
+  const given = req.headers.get("x-cron-secret");
+  if (!secret || !given) return false;
+  const a = new TextEncoder().encode(secret), b = new TextEncoder().encode(given);
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a[i] ^ b[i];
+  return diff === 0;
+}
+
 function pickTip(d: any): string {
   if (d.cost_usd === 0) return "No spend today — your limits reset clean.";
   if (d.cache_ratio >= 0.6) return "Strong cache reuse today — that's keeping per-turn cost down.";
   if (d.fast_share >= 0.25) return "A quarter of today's spend was fast-mode (usage credits, not your 5h/weekly limit).";
   if (d.costliest_turn && d.costliest_turn.share >= 0.3) return "One turn drove a third of today's cost — tighter context on big turns helps.";
   return "Steady day. Watch the run-rate tile to stay ahead of the monthly projection.";
+}
+
+// The day's turns, read in pages: a heavy day passes PostgREST's 1,000-row cap.
+async function dayTurns(supabase: any, userId: string, dayStart: string, dayEnd: string) {
+  const out: any[] = [];
+  for (;;) {
+    const { data, error } = await supabase.from("turns")
+      .select("cost_usd, model, input_tokens, output_tokens, cache_read_tokens, speed_tier, timestamp")
+      .eq("user_id", userId).gte("timestamp", dayStart).lte("timestamp", dayEnd)
+      .order("timestamp", { ascending: true }).order("id", { ascending: true })
+      .range(out.length, out.length + 999);
+    if (error) throw error;
+    if (!data || data.length === 0) break;
+    out.push(...data);
+  }
+  return { data: out };
 }
 
 async function buildDebrief(supabase: any, userId: string, dateStr: string) {
@@ -33,8 +65,7 @@ async function buildDebrief(supabase: any, userId: string, dateStr: string) {
     // (which errors on >1 row). Pre-flip this is a single 'interactive' row.
     supabase.from("daily_summaries").select("session_count, total_cache_read")
       .eq("user_id", userId).eq("date", dateStr),
-    supabase.from("turns").select("cost_usd, model, input_tokens, output_tokens, cache_read_tokens, speed_tier, timestamp")
-      .eq("user_id", userId).gte("timestamp", dayStart).lte("timestamp", dayEnd),
+    dayTurns(supabase, userId, dayStart, dayEnd),
   ]);
   const summary = (summaryRows || []).reduce(
     (a: any, r: any) => ({
@@ -84,6 +115,7 @@ serve(async (req) => {
       return json({ report: await buildDebrief(supabase, user.id, dateStr) });
     }
 
+    if (!cronAuthorized(req)) return json({ error: "Unauthorized" }, 401);
     const { data: users } = await supabase.from("users").select("id");
     const reports = [];
     for (const u of users || []) reports.push(await buildDebrief(supabase, u.id, dateStr));

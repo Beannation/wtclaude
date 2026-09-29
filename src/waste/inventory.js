@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
-import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { estimateTokens } from './tokens.js';
+import { claudeRoot, displayPath } from '../compare/jsonl-reader.js';
 
 // Inventory of ALWAYS-LOADED prose Claude injects every session — skill and subagent
 // DESCRIPTIONS and prose rule files (CLAUDE.md). We deliberately do NOT count tool /
@@ -111,19 +111,25 @@ function ruleItem(path, name, sourceLabel) {
 }
 
 // Scan the always-loaded prose inventory. `baseDir`/`projectDir` are injectable for
-// tests (default: ~/.claude and the current project).
+// tests (default: Claude Code's config root and the current project).
+//
+// QA-0928-72 (2026-09-28): the default root was hard-coded to ~/.claude while
+// the transcripts honoured CLAUDE_CONFIG_DIR, so a relocated config reported
+// "nothing loaded". Both now use the same claudeRoot(), and the source labels
+// name the real location.
 export function scanInventory({ baseDir, projectDir } = {}) {
-  const base = baseDir || join(homedir(), '.claude');
+  const base = baseDir || claudeRoot();
   const proj = projectDir || process.cwd();
+  const label = displayPath(base);
   const items = [];
 
-  items.push(...skillItems(join(base, 'skills'), '~/.claude/skills'));
+  items.push(...skillItems(join(base, 'skills'), `${label}/skills`));
   items.push(...skillItems(join(proj, '.claude', 'skills'), './.claude/skills'));
-  items.push(...pluginSkillItems(join(base, 'plugins'), '~/.claude/plugins'));
-  items.push(...agentItems(join(base, 'agents'), '~/.claude/agents'));
+  items.push(...pluginSkillItems(join(base, 'plugins'), `${label}/plugins`));
+  items.push(...agentItems(join(base, 'agents'), `${label}/agents`));
   items.push(...agentItems(join(proj, '.claude', 'agents'), './.claude/agents'));
 
-  const userRule = ruleItem(join(base, 'CLAUDE.md'), 'CLAUDE.md (user)', '~/.claude');
+  const userRule = ruleItem(join(base, 'CLAUDE.md'), 'CLAUDE.md (user)', label);
   if (userRule) items.push(userRule);
   const projRule = ruleItem(join(proj, 'CLAUDE.md'), 'CLAUDE.md (project)', './');
   if (projRule) items.push(projRule);

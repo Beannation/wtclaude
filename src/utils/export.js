@@ -6,8 +6,13 @@ import { spawnSync } from 'node:child_process';
 
 function escapeCell(v) {
   if (v == null) return '';
-  const s = String(v);
-  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  let s = String(v);
+  // QA-0928-162 (OWASP CSV injection): a text cell starting with = + - @ tab or
+  // CR would be evaluated as a formula when the file is opened in a spreadsheet.
+  // Git allows branch names like that, so prefix a single quote to keep it text.
+  // Numbers are left alone: -10.69 is a value, not a formula.
+  if (typeof v !== 'number' && /^[=+\-@\t\r]/.test(s)) s = `'${s}`;
+  return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
 // rows: array of objects. columns: [{ key, label }] (label optional).

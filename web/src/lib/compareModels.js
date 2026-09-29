@@ -109,16 +109,26 @@ const todayStr = () => new Date().toISOString().slice(0, 10);
 // Without the provider handling these ids missed every key AND every alias, fell
 // through the opus-only family fallback, and resolved to null — so the dashboard
 // priced them at $0 and silently dropped them out of the comparison.
+//
+// QA-0928-148 (mirrors the CLI): Bedrock's cross-region inference-profile
+// prefixes (`us.` `eu.` `apac.` `global.` `jp.` `au.` before `anthropic.`) and
+// its `-v1:0` model-version suffix, and Vertex's `@YYYYMMDD` version suffix,
+// are stripped too, and each marks the turn partner-served (bedrock / vertex).
+// web-parity.test.js pins this against the CLI id for id.
 export function parseModelId(id) {
   if (!id) return { provider: null, key: null };
   let s = String(id).toLowerCase().trim();
   let provider = null;
   const slash = s.indexOf('/');
   if (slash > 0) { provider = s.slice(0, slash); s = s.slice(slash + 1); }
+  const profile = s.match(/^(?:us|eu|apac|global|jp|au)\.(?=anthropic\.)/);
+  if (profile) s = s.slice(profile[0].length);
   if (s.startsWith('anthropic.')) { provider = provider || 'bedrock'; s = s.slice('anthropic.'.length); }
+  s = s.replace(/\[[^\]]*\]$/, '');
+  if (/-v\d+(?::\d+)?$/.test(s)) { provider = provider || 'bedrock'; s = s.replace(/-v\d+(?::\d+)?$/, ''); }
+  if (/@\d{8}$/.test(s)) { provider = provider || 'vertex'; s = s.replace(/@\d{8}$/, ''); }
   const key = s
     .replace(/^claude-/, '')
-    .replace(/\[[^\]]*\]$/, '')
     .replace(/-\d{8}$/, '');
   return { provider, key: key || null };
 }
@@ -301,22 +311,51 @@ export function repriceSurface(turns, { today = todayStr(), days = 30 } = {}) {
   };
 }
 
-// Build the billing-grade "Code (terminal)" re-priceable turns from the synced
-// dashboard payload. The payload carries session-level aggregate tokens plus
-// per-session models_used turn counts (per-turn detail is not synced), so we
-// attribute each session's tokens across its models by turn-share — the same
-// honest attribution derive.costByModel uses. Each per-model bucket becomes ONE
-// re-priceable "turn" tagged with the model the user ACTUALLY ran, so the
-// baseline prices at the real mix and a no-op switch nets ~$0.
+// Build the "Code (terminal)" re-priceable turns from the synced dashboard
+// payload. Per-turn detail is not synced, so each session becomes one
+// re-priceable "turn" per model it ran, tagged with that model, so the
+// baseline prices at the real mix and a no-op switch nets ~0%.
+//
+// Which tokens (RC 0.3.2, dash-prod): `wtclaude compare-models --days N`
+// re-prices the turns INSIDE the window. This used to re-price each session's
+// whole tokens (total_*), so a session that began before the window brought
+// its earlier turns in. In order of preference:
+//  • window_models (per-model in-window sums, when the server sends them):
+//    each model's own in-window tokens — the CLI's figures exactly;
+//  • window_input_tokens / window_output_tokens / window_cache_read_tokens /
+//    window_cache_write_tokens (contract B, get-dashboard 0.3.2): the tokens of
+//    the turns inside the window, split across the session's models by
+//    turn share (models_used covers the whole session);
+//  • total_* (servers before 0.3.2): the whole session, by turn share.
+// A session listed with no turns in the window (window_turn_count 0) adds
+// nothing. web-parity.test.js pins this against the CLI on a session that
+// straddles the window.
+const WINDOW_TOKEN_FIELDS = ['window_input_tokens', 'window_output_tokens', 'window_cache_read_tokens', 'window_cache_write_tokens'];
+const tok = (v) => Number(v || 0);
+
 export function codeTurnsFromSessions(sessions) {
   const turns = [];
   for (const s of sessions || []) {
+    if (s.window_models && typeof s.window_models === 'object') {
+      for (const [model, m] of Object.entries(s.window_models)) {
+        turns.push({
+          model,
+          input_tokens: tok(m?.input_tokens),
+          output_tokens: tok(m?.output_tokens),
+          cache_read_tokens: tok(m?.cache_read_tokens),
+          cache_write_tokens: tok(m?.cache_write_tokens),
+        });
+      }
+      continue;
+    }
+    const inWindow = WINDOW_TOKEN_FIELDS.some((k) => s[k] != null);
+    if (inWindow && s.window_turn_count != null && tok(s.window_turn_count) === 0) continue;
+    const inTok = tok(inWindow ? s.window_input_tokens : s.total_input_tokens);
+    const outTok = tok(inWindow ? s.window_output_tokens : s.total_output_tokens);
+    const cr = tok(inWindow ? s.window_cache_read_tokens : s.total_cache_read);
+    const cw = tok(inWindow ? s.window_cache_write_tokens : s.total_cache_write);
     const models = s.models_used || {};
     const totalTurns = Object.values(models).reduce((a, b) => a + b, 0) || 1;
-    const inTok = Number(s.total_input_tokens || 0);
-    const outTok = Number(s.total_output_tokens || 0);
-    const cr = Number(s.total_cache_read || 0);
-    const cw = Number(s.total_cache_write || 0);
     for (const [model, count] of Object.entries(models)) {
       const share = count / totalTurns;
       turns.push({
@@ -331,24 +370,52 @@ export function codeTurnsFromSessions(sessions) {
   return turns;
 }
 
+// DECISION 4 (Peter, 2026-09-28) — mirror of the CLI. The Code surface's recorded
+// tokens are context-window occupancy, not billed tokens (BUILD-014), so a
+// token × rate re-price of them came out 3.5-7x below the billing-grade spend
+// while this tile wore a BILLING-GRADE badge (QA-0928-105). Every re-priced
+// dollar figure on the Code surface is withheld until the collector re-shape;
+// the % differences stand, beside the real billed total. web-parity.test.js
+// pins this whole result against the CLI's.
+export const USD_WITHHELD_REASON =
+  'Dollar figures withheld: re-pricing uses your recorded tokens, which don’t reproduce the billed total yet.';
+
+function withholdUsd(s) {
+  return {
+    ...s,
+    usd_withheld: true,
+    withheld_reason: USD_WITHHELD_REASON,
+    baseline_window_usd: null,
+    baseline_monthly_usd: null,
+    models: s.models.map((m) => ({
+      ...m, window_usd: null, monthly_usd: null, delta_vs_baseline_usd: null, monthly_delta_vs_baseline_usd: null,
+    })),
+  };
+}
+
 // Assemble the per-surface comparison for the dashboard tile. `codeTurns` are
-// billing-grade terminal turns; `coworkTurns` are labeled-estimate Cowork turns
-// (empty when the dashboard has no per-surface Cowork breakdown). Chat is always
-// excluded (no local cost data). Mirrors the CLI computeComparison contract.
-export function computeComparison({ codeTurns = [], coworkTurns = [], today = todayStr(), days = 30 } = {}) {
-  const code = repriceSurface(codeTurns, { today, days });
-  const cowork = repriceSurface(coworkTurns, { today, days });
+// the terminal turns; `coworkTurns` are labeled-estimate Cowork turns (empty
+// when the dashboard has no per-surface Cowork breakdown). Chat is always
+// excluded (no local cost data). Mirrors the CLI computeComparison contract:
+// `coveredDays` ({ code, cowork }) is how many days each surface's data covers
+// (the /mo basis), `billed` the Code surface's billed total for the window.
+export function computeComparison({ codeTurns = [], coworkTurns = [], today = todayStr(), days = 30, coveredDays = {}, billed = null } = {}) {
+  const codeDays = coveredDays.code ?? days;
+  const coworkDays = coveredDays.cowork ?? days;
+  const code = repriceSurface(codeTurns, { today, days: codeDays });
+  const cowork = repriceSurface(coworkTurns, { today, days: coworkDays });
 
   return {
     days,
     today,
     models: COMPARE_MODELS,
     surfaces: {
-      code: { key: 'code', label: 'Code (terminal)', grade: 'billing-grade', ...code },
+      code: withholdUsd({ key: 'code', label: 'Code (terminal)', grade: 'estimate', covered_days: codeDays, billed, ...code }),
       cowork: {
         key: 'cowork',
         label: 'Cowork',
         grade: 'estimate',
+        covered_days: coworkDays,
         // Honest placeholder: the synced dashboard payload carries no per-surface
         // Cowork breakdown, so we render the label + how to get it, never a number.
         available: cowork.present,
@@ -374,6 +441,7 @@ export function computeComparison({ codeTurns = [], coworkTurns = [], today = to
 // EXTENDED 2026-09-27 with the Opus 5.5 rate caveat, built from THIS table by
 // the same function shape as the CLI's; web-parity.test.js asserts the two
 // arrays are identical, string for string.
+// CORRECTED 2026-09-28 (BUILD-018): the last line — see the CLI's note.
 function rateCard(key) {
   const r = getRates(`claude-${key}`, todayStr());
   return { input: r.input, output: r.output, cacheRead: r.input * r.cache_read_multiplier };
@@ -394,9 +462,105 @@ export const CAVEATS = [
   'Fable 5.1 and Fable 5 have identical $10/$50 base rates; their cached-input rates differ. A cache read costs $0.25/MTok on Fable 5.1 against $1/MTok on Fable 5, so on a cache-heavy session that gap is most of the difference between the two models.',
   opusRateCaveat(rateCard('opus-5-5'), rateCard('opus-5')),
   'Cost, not quality — we surface what the choice costs you; we don’t judge which model is better.',
-  'Code is billing-grade (your anchored terminal tokens). Cowork is a labeled estimate (audit-log tokens × rate). Chat is excluded (no local cost data).',
+  'Code: the billed total is billing-grade (the cost Claude Code itself reports); the re-priced comparison is an estimate on your recorded tokens, shown as percentages, not dollars. Cowork is a labeled estimate (tokens from Cowork’s local logs × rate); helper-model calls such as web search and fetch, and search fees, don’t appear in those logs and are left out. Chat is excluded (no local cost data).',
 ];
 
 // The under-block honesty line — VERBATIM per the build spec. Do not reword.
 export const COMPARE_HONESTY_LINE =
   'Comparisons re-price your recorded usage, not the same task run on each model — every projection is a labeled estimate. We surface the cost of the choice; we don’t judge which model is "better."';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Page helpers for /compare-models and /whatif (BUILD-018). Pure, so node
+// tests can pin them (src/compare-models/web-pages.test.js).
+// ─────────────────────────────────────────────────────────────────────────────
+
+// MIRROR of the rate sheet's priced plans (src/config/pricing-2026-09-27.json
+// `plans`), in sheet order. /whatif typed its own three-row table in during
+// Phase 0, outside every parity guard, while the CLI showed all five
+// (QA-0928-184). web-parity.test.js asserts this equals the sheet. Team prices
+// are per seat.
+export const PLANS = [
+  { key: 'pro', label: 'Pro', price: 20 },
+  { key: 'max_5x', label: 'Max 5x', price: 100 },
+  { key: 'max_20x', label: 'Max 20x', price: 200 },
+  { key: 'team_standard', label: 'Team Standard', price: 25, per_seat: true },
+  { key: 'team_premium', label: 'Team Premium', price: 125, per_seat: true },
+];
+
+// The requested window, in days. FIXED 2026-09-28 (QA-0928-26): both pages used
+// `daily.length` — but daily rows exist only for days WITH usage, so a month
+// with idle days was scaled by 30 ÷ active days and read well above the CLI.
+// get-dashboard returns the window as meta.days; mock and older payloads mean 30.
+export function windowDays(data) {
+  const d = Number(data?.meta?.days);
+  return Number.isInteger(d) && d > 0 ? d : 30;
+}
+
+// Daily rows for the window: contract-B `daily_local` (local days in the
+// viewer's zone) when the server sends it, else `daily_summaries` (UTC days).
+function dailyRows(data) {
+  if (Array.isArray(data?.daily_local)) {
+    return {
+      local: true,
+      rows: data.daily_local.map((r) => ({ date: r.date, usd: +r.total_usd || 0, anchored: +r.anchored_usd || 0, estimated: +r.estimate_usd || 0 })),
+    };
+  }
+  return {
+    local: false,
+    rows: (data?.daily_summaries || []).map((r) => ({
+      date: r.date, usd: +r.estimated_cost_usd || 0, anchored: +r.anchored_cost_usd || 0, estimated: +r.estimated_only_cost_usd || 0,
+    })),
+  };
+}
+
+// The billed total for the window — the one absolute figure these pages show
+// (decision 4). `usd` is the anchored cost plus any estimate-only turns.
+// `local_days` is false when the rows are daily_summaries' UTC days.
+export function billedFromPayload(data) {
+  const { rows, local } = dailyRows(data);
+  const out = { usd: 0, anchored_usd: 0, estimated_usd: 0, first_date: null, local_days: local };
+  for (const r of rows) {
+    out.usd += r.usd;
+    out.anchored_usd += r.anchored;
+    out.estimated_usd += r.estimated;
+    if (r.date && (!out.first_date || r.date < out.first_date)) out.first_date = r.date;
+  }
+  for (const k of ['usd', 'anchored_usd', 'estimated_usd']) out[k] = round(out[k]);
+  return out;
+}
+
+// The billed-total label. Contract B: without daily_local the rows are UTC
+// days, and the page says so rather than implying the viewer's own days.
+export function billedLabel(billed, days) {
+  return `Billed in the last ${days} day${days === 1 ? '' : 's'}${billed.local_days ? '' : ' (days are UTC)'}`;
+}
+
+// The /mo projection basis is not here (RC 0.3.2): both pages read the
+// Overview's rule — derive.monthlyProjectionBasis (/whatif) and
+// derive.coveredDays (/compare-models) on derive.dailyView(data). Its own copy
+// divided by the whole window whenever the server did not send
+// meta.first_activity_at, which read several times low at 365 days for anyone
+// tracked for under a year.
+
+// A % difference's tone and text. 0% is neutral, never a saving (QA-0928-183).
+export function deltaTone(pct) {
+  return pct > 0 ? 'more' : pct < 0 ? 'less' : 'same';
+}
+
+export function fmtPct(pct) {
+  if (pct === 0) return '0% (no change)';
+  return `${pct > 0 ? '+' : '−'}${Math.abs(pct)}%`;
+}
+
+// A load error in words a user can act on, for /compare-models and /whatif.
+// Reads useDashboard().errorInfo — lib/errors.describeError's
+// { code, title, message, body, command, detail } — rather than parsing the
+// error text: `error` is a friendly string with no status in it. Every state
+// is the shared description, exactly what ErrorState renders on the other
+// pages, with the server's detail kept behind the toggle. (RC 0.3.2: an id
+// with nothing synced got these pages' own wording and `wtclaude sync` here,
+// and `wtclaude sync --enable` everywhere else.) → { title, body, command, details }.
+export function loadErrorView(info, fallbackTitle) {
+  const i = info || {};
+  return { title: i.title || fallbackTitle, body: i.body || i.message || null, command: i.command || null, details: i.detail || null };
+}

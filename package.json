@@ -1,8 +1,11 @@
 {
   "name": "wtclaude",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Billing-grade cost tracking for Claude Code — reads the statusline (the source behind your bill), not the session logs. Free and open source.",
   "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
   "type": "module",
   "bin": {
     "wtclaude": "bin/wtclaude.js",
@@ -12,6 +15,7 @@
     "bin/",
     "src/",
     "!**/*.test.js",
+    "!bin/run-tests.js",
     "README.md",
     "LICENSE",
     "docs/DATA-NOTES.md",
@@ -25,7 +29,8 @@
     "anthropic"
   ],
   "scripts": {
-    "test": "node --test \"src/**/*.test.js\" \"bin/**/*.test.js\""
+    "test": "node bin/run-tests.js",
+    "test:all": "npm test && npm --prefix web test && npm --prefix site test"
   },
   "dependencies": {
     "commander": "^13.0.0"

@@ -7,6 +7,8 @@ const blog = defineCollection({
     title: z.string(),
     description: z.string(),
     pubDate: z.coerce.date(),
+    /** Date of the latest dated update box — becomes BlogPosting.dateModified (QA-0928-197). */
+    updatedDate: z.coerce.date().optional(),
     author: z.string().default('Peter Bean'),
     readingTime: z.string().optional(),
     /** Set true while the body is an outline/skeleton awaiting GTM final prose. */

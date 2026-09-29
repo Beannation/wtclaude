@@ -7,6 +7,7 @@ import sitemap from '@astrojs/sitemap';
 import vercel from '@astrojs/vercel';
 import tailwindcss from '@tailwindcss/vite';
 import { SHOW_DASHBOARD_LINK } from './src/config.ts';
+import { noSlashPageHrefs } from './src/lib/url-form.ts';
 
 /**
  * Build-time guard: while SHOW_DASHBOARD_LINK is false (SEC Phase C not deployed),
@@ -48,6 +49,49 @@ function dashboardLinkGuard() {
   };
 }
 
+/**
+ * Build-time guard: every internal link to a built page must use the trailing-slash form
+ * (the canonical/sitemap form). Both forms serve 200, so a no-slash link emits a duplicate
+ * URL (QA-0928-197). Links to files, /api/ and redirect sources (e.g. /dashboard) pass.
+ */
+function urlFormGuard() {
+  return {
+    name: 'wtclaude:url-form-guard',
+    hooks: {
+      'astro:build:done': ({ dir, logger }) => {
+        const root = fileURLToPath(dir);
+        const htmlFiles = [];
+        const pages = new Set();
+        const walk = (d) => {
+          for (const entry of fs.readdirSync(d, { withFileTypes: true })) {
+            const p = path.join(d, entry.name);
+            if (entry.isDirectory()) walk(p);
+            else if (entry.name.endsWith('.html')) htmlFiles.push(p);
+            if (entry.name === 'index.html') {
+              const rel = path.relative(root, d).split(path.sep).join('/');
+              pages.add(rel ? `/${rel}/` : '/');
+            }
+          }
+        };
+        walk(root);
+        const offenders = [];
+        for (const f of htmlFiles) {
+          for (const href of noSlashPageHrefs(fs.readFileSync(f, 'utf8'), pages))
+            offenders.push(`  - ${path.relative(root, f)}: href="${href}"`);
+        }
+        if (offenders.length) {
+          throw new Error(
+            `[url-form-guard] internal links without the trailing slash (duplicate URLs):\n` +
+              offenders.join('\n') +
+              `\nLink to the slash form, e.g. /docs/ or /blog/<slug>/ (QA-0928-197).`,
+          );
+        }
+        logger.info(`url-form-guard: OK — ${htmlFiles.length} pages link to the one slash form.`);
+      },
+    },
+  };
+}
+
 // Static SSG → Vercel. Marketing site only (Home, /developers, /complete, /business, blog, docs).
 // The /dashboard route is NOT part of this build — it is proxied via vercel.json (infra channel)
 // to the separate Phase-0 dashboard app, and is gated OFF until SEC Phase C deploys.
@@ -68,6 +112,7 @@ export default defineConfig({
       },
     }),
     dashboardLinkGuard(),
+    urlFormGuard(),
   ],
   vite: {
     plugins: [tailwindcss()],

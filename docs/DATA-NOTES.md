@@ -84,6 +84,28 @@ exclusion is also stated when it swallows a whole window: a surface whose every
 turn was excluded says so, rather than reporting "no usage" — which is what 0.3.0
 told a user whose week was all Claude Opus 5.5 before it had a rate for it.
 
+**Since 0.3.2 these surfaces show percentages, not re-priced dollars.** Re-pricing
+uses the per-turn tokens we record, and those are context-window occupancy (see
+below), so a re-priced "your mix" came out 3.5–7× below the billing-grade total
+for the same window. `compare-models` and `whatif --model` (and the dashboard's
+/compare-models and /whatif) now print each model's difference as a percentage of
+your re-priced mix, next to the real billing-grade total for the window, and
+withhold absolute re-priced $/month until the collector records billed tokens
+(BUILD-014). Nothing re-priced is labelled billing-grade.
+
+**Cowork rows (0.3.2).** Cowork's `audit.jsonl` echoes the usage snapshot taken at
+the START of each streamed reply on every line, so the final output count is not
+in it, and it omits most subagent requests. The reader now takes the union of
+each run's `audit.jsonl` and its own session transcripts
+(`<run>/.claude/projects/**/*.jsonl`, including `subagents/`), keyed by message id,
+keeping the record with the largest output (preferring one with `stop_reason` set,
+never letting an all-zero record replace a real one). Cowork figures rose about
+27% on the machine we measured. They stay labelled estimates (tokens × list rate);
+the cost fields Cowork writes on its `result` lines are deliberately not used
+(a canon question, E-7), and Haiku helper traffic that appears only in those
+result lines is a known gap. Files older than the window are skipped by
+modification time, and days are local dates, as for Code.
+
 ### A guessed rate is never a figure we present
 
 The rate sheet has one family fallback: an Opus id with no entry resolves to the
@@ -92,7 +114,11 @@ newest Opus, flagged `fallback: true` and unpriceable. It fired for real on
 `claude-opus-5-5` resolved to Opus 5's rates — cache reads at $0.50/MTok against
 a true $0.20. The rule since 0.3.1: a family-fallback rate, a partner-platform id
 or an unknown model never produces a dollar figure shown as ours.
-`compare-models` and `whatif` exclude and count the turn; `waste` (and the
+`compare-models` and `whatif` exclude and count the turn. From 0.3.2 the same
+holds for every total: an unanchored turn on such a model is left out of
+`today`/`week`/`month`, `credits`, `forecast`, `readiness`, `fable`, `debrief` and
+`leaderboard` and named under "Not priced", and none of them calls a list-rate
+estimate billing-grade. `waste` (and the
 dashboard's context-waste tile) **withholds** its dollar figure and says why,
 because every dollar on that surface is rate × multiplier × tokens, so a guessed
 rate is a guessed figure end to end. The item list and token sizes, which do not
@@ -111,8 +137,13 @@ and describes `context_window.current_usage` as "Token counts from the last API
 call". So these are **current-window and per-request values, not cumulative
 counters**, and the input figure already contains cache reads and writes.
 
-Our own corpus agrees: across 24,612 records from 75 sessions, input equals
-cache-read plus cache-write to within 1–2 tokens in **99.2%** of records.
+Our own corpus agrees: in a large local corpus, input equals cache-read plus
+cache-write to within 1–2 tokens in **over 99%** of records. So any share over
+the "input side" counts each token once: `debrief`'s cache-read share and the
+Cache Champion badge divide cache reads by the stored input where it already
+holds the cache fields, and add them only on older rows that stored uncached
+input alone (0.3.2; adding them every time counted cache twice and capped the
+share at 50%).
 
 The practical consequence: the per-turn token figures we store describe how the
 context window grew, not how many tokens were billed, and reading them as
@@ -201,8 +232,9 @@ measuring different things.
 
 **Transcript discovery used to bias it further in our favour.** Until 2026-08-24
 the reader walked one directory level and honoured neither `CLAUDE_CONFIG_DIR` nor
-nested transcripts, so it read 49 of 621 transcript files on a real machine — 2.4M
-of 5.4M session-log input tokens. Under-reading the other side inflates the gap.
+nested transcripts, so on a real machine it read fewer than a tenth of the
+transcript files and under half the session-log input tokens. Under-reading the
+other side inflates the gap.
 That is fixed; the ratio it produces is now smaller and more defensible.
 
 > **Canon flag.** The gap figure appears in public copy and in the claim ledger.
@@ -210,6 +242,44 @@ That is fixed; the ratio it produces is now smaller and more defensible.
 > routed to the PMO together with the cost-field wording. Until it is settled, the
 > honest internal reading of the ratio is "our window-growth figure against their
 > uncached-input figure", not "they undercount input by N×".
+
+**What changed in 0.3.2.** The session-log reader now keeps the FINAL usage record
+per response (Claude Code writes one at the start of each streamed reply and one
+at the end; the first understated log output 1.5–5×). The log side is priced at
+the model each record names, not a pinned Sonnet 4.6 rate, and unpriceable models
+are excluded and named. Only sessions the collector also recorded are compared,
+over the same local-date window. The "undercounts … N×" headline prints only when
+the session-log figure is actually lower and the billing-grade column is fully
+anchored; otherwise both figures are shown side by side without a verdict. Each of
+these made the gap smaller, and on current data the session-log estimate is often
+close to, or above, the billing-grade figure.
+
+## Sync — what goes up, and how it recovers (0.3.2)
+
+- **One manifest.** The payload and every privacy preview (`sync --enable`,
+  `share --preview`, `leaderboard`, the README) are built from `SYNC_TURN_FIELDS`
+  and `SYNC_SUMMARY_KEYS` in `src/sync/index.js`; a test fails if they drift.
+  Git branch names go up as `#` + 12 hex of a salted SHA-256 (the install's
+  `edit_hash_salt`), never raw; with no salt they go up as null. Local records keep
+  raw names.
+- **Estimates for unanchored turns.** A turn without a cost anchor carries
+  `cost_estimate_usd` (the list-rate estimate the CLI shows), except turns the CLI
+  excludes (family-fallback, partner-platform or unknown models), which carry null.
+- **Bounded, resumable uploads.** Requests carry at most 1,000 turns / 1.5 MB;
+  progress is the highest turn number the server confirmed per session, saved in
+  `sync-state.json` after every request, so a failed or interrupted sync resumes.
+  Failures are recorded (`last_sync_error`, `sync_failures`), shown by
+  `sync --status`, and autosync backs off 10 → 20 → 40 min … 6 h. One sync runs at
+  a time (`sync.lock`).
+- **One-time history re-send.** Installs that synced before 0.3.2 can have gaps
+  (0.3.1 skipped turns written while a request was in flight) and no estimates in
+  the cloud. `sync-state.json` version 2 marks that history as re-sent. While it is
+  below 2, the CLI re-sends the full history once — but only after a server reply
+  carries `fills_missing` (the 0.3.2 server fills missing fields on known turns and
+  ignores duplicates). Until then it syncs incrementally. With nothing else to send,
+  `wtclaude sync` sends one empty request to ask (the 0.3.2 server stores nothing
+  for it and answers with the marker; an older server's reply lacks it, and sync
+  says the re-send is waiting).
 
 ## Cache pricing
 
@@ -381,7 +451,7 @@ already stored straddle those changes.
 | 2.1.257 | **Claude Fable 5.1 added and made the default Fable model** | `claude-fable-5-1` rows begin appearing without the user opting in. Records from before wtclaude 0.3.1 had no rate-sheet entry for it. |
 | 2.1.260 | Prompt caching on Fable 5.1 fixed — context attached after tool results was being re-sent as uncached input on every tool-call turn | Fable 5.1 turns recorded on 2.1.257–2.1.259 carry genuinely higher uncached input and lower cache reads than the same work would produce today. The cost anchor is correct for what was actually billed; the token *mix* is not representative. |
 | 2.1.271 | `modelPricing` multipliers may exceed 1 (up to 10) | A managed org can now pin rates *above* list (the stated purpose is internal chargeback), so on such an org the anchor can read higher than list price, not only lower. |
-| 2.1.277 | A headless resume (`claude -p --resume`, the SDK, a VS Code reload) no longer starts the session's cost and usage totals at zero | Before this, a resumed headless session's counter restarted, which our non-decreasing clamp under-counts until the counter passes its old high-water mark. Tracked with the `/clear` case for a later release. |
+| 2.1.277 | A headless resume (`claude -p --resume`, the SDK, a VS Code reload) no longer starts the session's cost and usage totals at zero | Before this, a resumed headless session's counter restarted. Up to wtclaude 0.3.1 the collector clamped the drop, so it under-counted until the counter passed its old high-water mark. From 0.3.2 a drop is booked as a **restart** and the new reading counts in full: when `cost.total_duration_ms` fell too, a Claude Code process that started after the last anchored reading is a restart, and the same process means an older payload arriving late, which is skipped; with no duration figures, a drop below 50% of the last anchored total is a restart. Limits: with no duration figures, a restart whose first reading is still at least 50% of the old total is clamped (that reading is lost), a stale payload below 50% is booked as a restart, and the $0 baseline a restart writes counts as a turn. |
 | 2.1.280 | **Claude Opus 5.5 added and made the default model on every paid plan** — Pro and Team Standard moved from Sonnet to Opus, and the default Opus became Opus 5.5; Opus 5.5 is also the fast-mode default | `claude-opus-5-5` rows begin appearing without the user opting in. Records from before wtclaude 0.3.1 had no rate-sheet entry for it: the headline was unaffected (it is the anchor), but secondary calculations resolved it to Opus 5's rates by family fallback. From this build, nothing may call Sonnet 5 the Claude Code default. |
 
 The collector records `cc_version` on every turn, so these boundaries are

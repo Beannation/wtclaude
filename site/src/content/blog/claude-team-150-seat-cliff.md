@@ -15,7 +15,7 @@ faq:
 
 Most Claude billing surprises are gradual. This one is a step. If your team is growing toward **150 seats**, there's a boundary waiting on the other side that can roughly double your bill overnight — and almost nobody is counting down to it for you.
 
-<p class="rounded-lg border border-amber/30 bg-amber-light/40 px-4 py-3 text-sm"><a href="/business/audit" data-track="cta_spend_audit_blog_150_seat_cliff" class="font-semibold text-amber-deep hover:text-amber">Audit your team's Claude spend, free →</a></p>
+<p class="rounded-lg border border-amber/30 bg-amber-light/40 px-4 py-3 text-sm"><a href="/business/audit/" data-track="cta_spend_audit_blog_150_seat_cliff" class="font-semibold text-amber-deep hover:text-amber">Audit your team's Claude spend, free →</a></p>
 
 ## The mechanic: why the bill jumps
 
@@ -36,7 +36,7 @@ The cliff is invisible from inside the Team plan. Your per-seat bill looks smoot
 
 You can't avoid the boundary if you're growing, but you can enter it **lean and with eyes open** instead of at full, un-audited headcount. Three moves:
 
-1. **Right-size before you cross.** Every over-tiered or dormant seat you carry into Enterprise is pure waste at the worst possible time. Audit seats now (the [free spend audit](/business/audit) flags over-tiered and idle seats in your browser) so you cross with a clean roster. See also [how Premium vs Standard seat pricing works](/blog/claude-team-seat-pricing-premium-vs-standard).
+1. **Right-size before you cross.** Every over-tiered or dormant seat you carry into Enterprise is pure waste at the worst possible time. Audit seats now (the [free spend audit](/business/audit/) flags over-tiered and idle seats in your browser) so you cross with a clean roster. See also [how Premium vs Standard seat pricing works](/blog/claude-team-seat-pricing-premium-vs-standard/).
 2. **Model the usage separately from the seats.** On Enterprise, usage is its own line at API rates — so you need to know your real per-user usage volume *ahead of time* to forecast it. That's a data question, and it's answerable from your current usage.
 3. **Trim model mix.** Usage billed at API rates makes model choice a budget decision. Moving cheap tasks off the expensive model matters more on the far side of the cliff than the near side.
 
@@ -44,11 +44,11 @@ The theme: the cliff is only a shock if you meet it blind. With a real read on y
 
 ## Where this fits
 
-This is finance's cliff as much as engineering's — it's a forecastable, claim-safe budget event, and it's exactly the kind of thing the person who has to explain the Claude line item should see coming. [WTClaude for Finance](/business/finance) is built around exactly this kind of forecasting. Start with the free read of where you stand today:
+This is finance's cliff as much as engineering's — it's a forecastable, claim-safe budget event, and it's exactly the kind of thing the person who has to explain the Claude line item should see coming. [WTClaude for Finance](/business/finance/) is built around exactly this kind of forecasting. Start with the free read of where you stand today:
 
-→ **[Run the free spend audit](/business/audit)** — over-tiered and idle seats, model mix, and per-person usage, in your browser, nothing uploaded.
+→ **[Run the free spend audit](/business/audit/)** — over-tiered and idle seats, model mix, and per-person usage, in your browser, nothing uploaded.
 
-This cliff is one piece of a busy stretch for Claude pricing — see the [July 2026 field guide](/blog/state-of-claude-pricing-july-2026) for what was moving that month.
+This cliff is one piece of a busy stretch for Claude pricing — see the [July 2026 field guide](/blog/state-of-claude-pricing-july-2026/) for what was moving that month.
 
 ## FAQ
 
@@ -59,8 +59,8 @@ Up to 150 seats. Beyond that you're on Enterprise, where seats are access-only w
 Because bundled usage (Team) becomes separately-metered API-rate usage (Enterprise). Crossing can roughly double a bill; one operator reported ~$400K → ~$1.4M (his figure, not Anthropic's).
 
 **How do I prepare for the Team-to-Enterprise transition?**
-Forecast it early: right-size seats and model mix so you enter lean, and model the API-rate usage separately. Knowing your real per-user usage ahead of time turns the cliff into a planned line item. The [free spend audit](/business/audit) is a fast way to see your current seat and usage picture.
+Forecast it early: right-size seats and model mix so you enter lean, and model the API-rate usage separately. Knowing your real per-user usage ahead of time turns the cliff into a planned line item. The [free spend audit](/business/audit/) is a fast way to see your current seat and usage picture.
 
 ---
 
-*WTClaude is a free, open-source, billing-grade Claude Code cost tracker — independent, not affiliated with Anthropic. See your seat and usage picture before the cliff: [run the spend audit](/business/audit).*
+*WTClaude is a free, open-source, billing-grade Claude Code cost tracker — independent, not affiliated with Anthropic. See your seat and usage picture before the cliff: [run the spend audit](/business/audit/).*

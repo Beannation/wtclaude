@@ -1,9 +1,16 @@
+// Fixed zone first: the straddling-session fixture below puts turns on local
+// days (the CLI's splitHistory), and its synced side reads the same days.
+process.env.TZ = 'UTC';
+
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { getLatestPricing } from '../utils/pricing.js';
 import { expectedCost as cliExpectedCost } from '../utils/cost.js';
 import { computeWaste as cliComputeWaste } from '../waste/compute.js';
-import { COMPARE_MODELS as CLI_MODELS, CAVEATS as CLI_CAVEATS, repriceSurface as cliReprice } from './compute.js';
+import {
+  COMPARE_MODELS as CLI_MODELS, CAVEATS as CLI_CAVEATS, repriceSurface as cliReprice,
+  computeComparison as cliCompare, USD_WITHHELD_REASON as CLI_WITHHELD,
+} from './compute.js';
 import { getModelEntry as cliGetModelEntry } from '../utils/pricing.js';
 import {
   PRICING as WEB_PRICING,
@@ -12,7 +19,12 @@ import {
   expectedCost as webExpectedCost,
   repriceSurface as webReprice,
   resolveModel as webResolveModel,
+  computeComparison as webCompare,
+  USD_WITHHELD_REASON as WEB_WITHHELD,
+  PLANS as WEB_PLANS,
+  codeTurnsFromSessions as webCodeTurns,
 } from '../../web/src/lib/compareModels.js';
+import { splitHistory } from '../utils/window.js';
 
 // ───────────────────────────────────────────────────────────────────────────
 // S7 / A1 GUARD — the browser dashboard cannot read the rate sheet from disk,
@@ -187,6 +199,20 @@ test('web mirror parses provider-prefixed model ids the same way the CLI does', 
     'anthropic.claude-haiku-4-5',
     'claude-opus-5[1m]',
     'claude-sonnet-5',
+    // QA-0928-148: partner id shapes — Bedrock's -v1:0 version suffix and its
+    // cross-region inference-profile prefixes, and Vertex's @YYYYMMDD version.
+    'bedrock/anthropic.claude-opus-5-5-v1:0',
+    'anthropic.claude-opus-5-5-v1:0',
+    'anthropic.claude-sonnet-5-v2',
+    'us.anthropic.claude-opus-5-5-v1:0',
+    'eu.anthropic.claude-sonnet-5-v1:0',
+    'apac.anthropic.claude-haiku-4-5-20251001-v1:0',
+    'global.anthropic.claude-opus-5-5-v1:0',
+    'jp.anthropic.claude-sonnet-5-v1:0',
+    'au.anthropic.claude-fable-5-1-v1:0',
+    'claude-opus-5-5@20260922',
+    'vertex_ai/claude-sonnet-5@20260801',
+    'us.claude-opus-5-5',
   ];
   for (const id of cases) {
     const w = web.parseModelId(id);
@@ -236,6 +262,9 @@ test('web mirror resolves ids with the CLI\'s flags — key, fallback, provider,
     'claude-opus-5-5', 'claude-opus-5-5[1m]', 'claude-opus-5-5-20260922', 'vertex_ai/claude-opus-5-5',
     'bedrock/anthropic.claude-opus-5-5', 'claude-opus-9-20270101', 'claude-opus-5', 'claude-fable-5-1',
     'claude-fable-9', 'claude-sonnet-9', 'vertex_ai/claude-sonnet-5', '',
+    // QA-0928-148: partner ids resolve to the model, flagged partner-served.
+    'bedrock/anthropic.claude-opus-5-5-v1:0', 'us.anthropic.claude-opus-5-5-v1:0', 'global.anthropic.claude-sonnet-5-v1:0',
+    'claude-opus-5-5@20260922', 'claude-opus-9@20270101',
   ];
   for (const id of ids) {
     const c = cliGetModelEntry(id);
@@ -343,4 +372,151 @@ test('CLI and dashboard agree on the monthly delta at a non-30-day window (relea
   for (const m of web.models) {
     assert.ok(Math.abs(m.monthly_delta_vs_baseline_usd - (m.monthly_usd - web.baseline_monthly_usd)) < 1e-6, m.key);
   }
+});
+
+// BUILD-018, decision 4 (2026-09-28): the Code surface shows % differences only,
+// beside the billed total, on the CLI and the dashboard alike. The whole
+// per-surface result is pinned, not just the rates, so the withholding (and the
+// coverage-based /mo scaling on Cowork) cannot exist on one side only.
+test('CLI and dashboard computeComparison agree field for field, withheld dollars included', () => {
+  const t = (model) => ({ model, input_tokens: 400_000, output_tokens: 90_000, cache_read_tokens: 6_000_000, cache_write_tokens: 150_000 });
+  const args = {
+    codeTurns: [t('claude-opus-5-5[1m]'), t('claude-sonnet-5'), t('claude-opus-9-20270101')],
+    coworkTurns: [t('claude-sonnet-5')],
+    today: '2026-09-28', days: 30, coveredDays: { code: 30, cowork: 4 },
+    billed: { usd: 99.5, anchored_usd: 99.5, estimated_usd: 0, anchored_turns: 3, estimated_turns: 0 },
+  };
+  const cli = cliCompare(args);
+  const web = webCompare(args);
+  assert.equal(WEB_WITHHELD, CLI_WITHHELD);
+  for (const key of ['code', 'cowork']) {
+    const { available, ...w } = web.surfaces[key]; // `available` is the tile's own flag
+    assert.deepEqual(w, cli.surfaces[key], `${key} surface drifted`);
+  }
+  assert.equal(web.surfaces.code.usd_withheld, true);
+  assert.ok(web.surfaces.code.models.every(m => m.monthly_usd === null && Number.isInteger(m.delta_pct)));
+  assert.equal(web.surfaces.cowork.covered_days, 4);
+});
+
+// QA-0928-184 (BUILD-018): /whatif kept its own hard-coded plan table outside
+// every parity guard (3 plans; the CLI shows the sheet's 5). The mirror now
+// carries every priced plan in the sheet, in sheet order, at the sheet's price.
+test('web plan mirror equals the rate sheet\'s priced plans, price for price', () => {
+  const sheet = Object.entries(getLatestPricing().plans).filter(([, p]) => p && typeof p === 'object' && p.price_monthly);
+  assert.deepEqual(
+    WEB_PLANS.map(p => [p.key, p.label, p.price, !!p.per_seat]),
+    sheet.map(([k, p]) => [k, p.label, p.price_monthly, !!p.per_seat]),
+    'web/src/lib/compareModels.js PLANS drifted from the rate sheet');
+});
+
+// ───────────────────────────────────────────────────────────────────────────
+// RC 0.3.2 (dash-prod): /compare-models and /whatif re-priced each synced
+// session's WHOLE tokens (total_*), so a session that began before the window
+// brought its earlier turns into the comparison and the token count differed
+// from `wtclaude compare-models --days N`, which re-prices only the turns in
+// the window (splitHistory). get-dashboard 0.3.2 sends each session's
+// in-window tokens (contract B: window_input_tokens, window_output_tokens,
+// window_cache_read_tokens, window_cache_write_tokens), and per-model
+// in-window sums (window_models) when the server adds them. Synthetic history,
+// in UTC (fixed at the top of this file).
+// ───────────────────────────────────────────────────────────────────────────
+const START = '2026-09-01';
+const END = '2026-09-30';
+const turnAt = (ts, model, input, output, read, write) => ({ ts, model, input_tokens: input, output_tokens: output, cache_read_tokens: read, cache_write_tokens: write });
+const HISTORY = [
+  // Straddles the window, one model: three big turns before it, two in it.
+  { session_id: 's-one-model', turns: [
+    turnAt('2026-08-20T12:00:00Z', 'claude-opus-5-5', 9_000_000, 400_000, 8_000_000, 900_000),
+    turnAt('2026-08-25T12:00:00Z', 'claude-opus-5-5', 7_000_000, 300_000, 6_500_000, 400_000),
+    turnAt('2026-08-31T12:00:00Z', 'claude-opus-5-5', 5_000_000, 200_000, 4_600_000, 300_000),
+    turnAt('2026-09-02T12:00:00Z', 'claude-opus-5-5', 600_000, 40_000, 500_000, 90_000),
+    turnAt('2026-09-03T12:00:00Z', 'claude-opus-5-5', 800_000, 60_000, 700_000, 80_000),
+  ] },
+  // Straddles the window with a model mix that changes at the boundary: all
+  // Sonnet before it, mostly Opus inside it.
+  { session_id: 's-mixed', turns: [
+    turnAt('2026-08-29T12:00:00Z', 'claude-sonnet-5', 3_000_000, 500_000, 2_500_000, 400_000),
+    turnAt('2026-08-30T12:00:00Z', 'claude-sonnet-5', 3_200_000, 450_000, 2_900_000, 250_000),
+    turnAt('2026-09-05T12:00:00Z', 'claude-opus-5-5', 1_000_000, 90_000, 900_000, 60_000),
+    turnAt('2026-09-06T12:00:00Z', 'claude-opus-5-5', 1_100_000, 70_000, 1_000_000, 50_000),
+    turnAt('2026-09-07T12:00:00Z', 'claude-sonnet-5', 400_000, 30_000, 350_000, 40_000),
+  ] },
+  // Wholly inside the window.
+  { session_id: 's-inside', turns: [
+    turnAt('2026-09-20T12:00:00Z', 'claude-fable-5-1', 2_000_000, 150_000, 1_800_000, 120_000),
+  ] },
+];
+
+// What get-dashboard sends for a session: whole-session totals and model
+// counts (sessions columns), plus the in-window sums (dashboard_sessions).
+function sum(turns, f) { return turns.reduce((a, t) => a + t[f], 0); }
+function syncedSession(s, { windowFields = true, windowModels = false } = {}) {
+  const inWin = s.turns.filter(t => t.ts.slice(0, 10) >= START && t.ts.slice(0, 10) <= END);
+  const models_used = {};
+  for (const t of s.turns) models_used[t.model] = (models_used[t.model] || 0) + 1;
+  const out = {
+    id: s.session_id, models_used, turn_count: s.turns.length,
+    total_input_tokens: sum(s.turns, 'input_tokens'), total_output_tokens: sum(s.turns, 'output_tokens'),
+    total_cache_read: sum(s.turns, 'cache_read_tokens'), total_cache_write: sum(s.turns, 'cache_write_tokens'),
+  };
+  if (windowFields) {
+    Object.assign(out, {
+      window_turn_count: inWin.length,
+      window_input_tokens: sum(inWin, 'input_tokens'), window_output_tokens: sum(inWin, 'output_tokens'),
+      window_cache_read_tokens: sum(inWin, 'cache_read_tokens'), window_cache_write_tokens: sum(inWin, 'cache_write_tokens'),
+    });
+  }
+  if (windowModels) {
+    out.window_models = {};
+    for (const t of inWin) {
+      const m = (out.window_models[t.model] ||= { usd: 0, turns: 0, excluded_turns: 0, input_tokens: 0, output_tokens: 0, cache_read_tokens: 0, cache_write_tokens: 0 });
+      m.turns += 1;
+      for (const f of ['input_tokens', 'output_tokens', 'cache_read_tokens', 'cache_write_tokens']) m[f] += t[f];
+    }
+  }
+  return out;
+}
+
+const cliWindow = () => cliReprice(splitHistory(HISTORY, START, END).sessions.flatMap(s => s.turns), { today: END, days: 30 });
+const near = (a, b, msg) => assert.ok(Math.abs(a - b) < 1e-6, `${msg}: web ${a}, CLI ${b}`);
+
+test('a session that straddles the window: the dashboard re-prices the same in-window tokens as `compare-models --days 30`', () => {
+  const cli = cliWindow();
+  // The fixture straddles for real: the CLI leaves the earlier turns out.
+  assert.equal(cli.turn_count, 6, "2 + 3 + 1 turns in the window");
+  const all = cliReprice(HISTORY.flatMap(s => s.turns), { today: END, days: 30 });
+  assert.ok(all.tokens.input > 3 * cli.tokens.input, 'whole-session tokens are far above the window\'s');
+
+  // Contract B with per-model in-window sums: identical to the CLI, field for field.
+  const exact = webReprice(webCodeTurns(HISTORY.map(s => syncedSession(s, { windowModels: true }))), { today: END, days: 30 });
+  assert.deepEqual(exact.tokens, cli.tokens);
+  near(exact.baseline_window_usd, cli.baseline_window_usd, 'baseline');
+  for (const [i, m] of exact.models.entries()) {
+    near(m.window_usd, cli.models[i].window_usd, m.key);
+    assert.equal(m.delta_pct, cli.models[i].delta_pct, `${m.key} %`);
+  }
+  assert.equal(exact.unpriced_turn_count, 0);
+
+  // Contract B without window_models: the in-window tokens are the CLI's; only
+  // their split across a session's models is the whole-session turn share.
+  const shared = webReprice(webCodeTurns(HISTORY.map(s => syncedSession(s))), { today: END, days: 30 });
+  for (const k of Object.keys(cli.tokens)) near(shared.tokens[k], cli.tokens[k], `${k} tokens`);
+  // The single-model sessions need no split, so they match the CLI outright.
+  const singles = HISTORY.filter(s => s.session_id !== 's-mixed');
+  const cliSingles = cliReprice(splitHistory(singles, START, END).sessions.flatMap(s => s.turns), { today: END, days: 30 });
+  const webSingles = webReprice(webCodeTurns(singles.map(s => syncedSession(s))), { today: END, days: 30 });
+  assert.deepEqual(webSingles.tokens, cliSingles.tokens);
+  for (const [i, m] of webSingles.models.entries()) assert.equal(m.delta_pct, cliSingles.models[i].delta_pct, `${m.key} %`);
+
+  // A pre-0.3.2 server sends no window_* fields: whole-session totals, as before.
+  const legacy = webReprice(webCodeTurns(HISTORY.map(s => syncedSession(s, { windowFields: false }))), { today: END, days: 30 });
+  assert.deepEqual(legacy.tokens, all.tokens);
+});
+
+test('a listed session with no turns in the window adds nothing to the comparison', () => {
+  // dashboard_session_ids also lists sessions that STARTED in the window; one
+  // whose turns all fall outside it (or none synced) has window_turn_count 0.
+  const quiet = { ...syncedSession(HISTORY[0]), window_turn_count: 0, window_input_tokens: 0, window_output_tokens: 0, window_cache_read_tokens: 0, window_cache_write_tokens: 0 };
+  assert.deepEqual(webCodeTurns([quiet]), []);
+  assert.equal(webReprice(webCodeTurns([quiet]), { today: END, days: 30 }).present, false);
 });
